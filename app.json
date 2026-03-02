@@ -47,6 +47,12 @@
         }
       ],
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4f85cd30-d0c0-4db2-afde-e3072d9da88d"
+      }
+    },
+    "owner": "sinsameak"
   }
 }
