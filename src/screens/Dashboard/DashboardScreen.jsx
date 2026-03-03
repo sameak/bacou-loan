@@ -53,6 +53,8 @@ const T = {
     lent: 'Lent',
     remaining: 'Remaining',
     noCapital: 'Tap Settings → My Capital to set your capital',
+    total: 'Total',
+    left: 'Left',
   },
   km: {
     greeting: 'ថ្ងៃល្អ',
@@ -75,6 +77,8 @@ const T = {
     lent: 'បានផ្ដល់',
     remaining: 'នៅសល់',
     noCapital: 'ទៅការកំណត់ → ដើមទុនខ្ញុំ ដើម្បីកំណត់',
+    total: 'សរុប',
+    left: 'នៅសល់',
   },
 };
 
@@ -84,21 +88,33 @@ function addDays(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
-const SummaryCard = ({ label, value, color, colors }) => {
+const SummaryCard = ({ label, usdValue, khrValue, color, colors }) => {
   const { language, ff } = useLanguage();
   const isKhmer = language === 'km';
+  const hasAny = usdValue || khrValue;
   return (
     <GlassCard style={{ flex: 1 }}>
-      <View style={{ padding: 14, alignItems: 'center' }}>
-        <Text style={[{ fontSize: 18, lineHeight: 23, marginBottom: 4, ...ff('800') }, { color }]}>{value}</Text>
-        <Text style={[{ fontSize: 11, ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('600'), textAlign: 'center' }, { color: colors.textMuted }]}>{label}</Text>
+      <View style={{ padding: 12, alignItems: 'center', gap: 1 }}>
+        {hasAny ? (
+          <>
+            {usdValue ? (
+              <Text style={[{ fontSize: 15, lineHeight: 20, ...ff('800') }, { color }]}>{usdValue}</Text>
+            ) : null}
+            {khrValue ? (
+              <Text style={[{ fontSize: 12, lineHeight: 17, ...ff('700') }, { color: usdValue ? color + 'BB' : color }]}>{khrValue}</Text>
+            ) : null}
+          </>
+        ) : (
+          <Text style={[{ fontSize: 18, lineHeight: 23, ...ff('800') }, { color }]}>—</Text>
+        )}
+        <Text style={[{ fontSize: 10, ...(isKhmer ? {} : { lineHeight: 14 }), ...ff('600'), textAlign: 'center', marginTop: 3 }, { color: colors.textMuted }]}>{label}</Text>
       </View>
     </GlassCard>
   );
 };
 
 // One row in the capital card: Currency | Total | Lent | Remaining
-const CapitalRow = ({ currency, total, lent, remaining, colors, ff, fs, isKhmer }) => {
+const CapitalRow = ({ currency, total, lent, remaining, colors, ff, fs, isKhmer, tl }) => {
   const remColor = remaining >= 0 ? '#10B981' : '#EF4444';
   return (
     <View style={capStyles.row}>
@@ -111,17 +127,17 @@ const CapitalRow = ({ currency, total, lent, remaining, colors, ff, fs, isKhmer 
       <View style={capStyles.stats}>
         <View style={capStyles.statCol}>
           <Text style={[capStyles.statVal, { color: colors.text }, ff('700')]}>{total}</Text>
-          <Text style={[capStyles.statLbl, { color: colors.textMuted }, ff('500')]}>Total</Text>
+          <Text style={[capStyles.statLbl, { color: colors.textMuted }, ff('500')]}>{tl.total}</Text>
         </View>
         <View style={[capStyles.divider, { backgroundColor: colors.border }]} />
         <View style={capStyles.statCol}>
           <Text style={[capStyles.statVal, { color: '#F59E0B' }, ff('700')]}>{lent}</Text>
-          <Text style={[capStyles.statLbl, { color: colors.textMuted }, ff('500')]}>Lent</Text>
+          <Text style={[capStyles.statLbl, { color: colors.textMuted }, ff('500')]}>{tl.lent}</Text>
         </View>
         <View style={[capStyles.divider, { backgroundColor: colors.border }]} />
         <View style={capStyles.statCol}>
           <Text style={[capStyles.statVal, { color: remColor }, ff('700')]}>{remaining >= 0 ? remaining : '−' + Math.abs(remaining)}</Text>
-          <Text style={[capStyles.statLbl, { color: colors.textMuted }, ff('500')]}>Left</Text>
+          <Text style={[capStyles.statLbl, { color: colors.textMuted }, ff('500')]}>{tl.left}</Text>
         </View>
       </View>
     </View>
@@ -160,19 +176,23 @@ const DashboardScreen = ({ navigation }) => {
 
   const stats = useMemo(() => {
     const active = loans.filter(l => l.status !== 'paid');
+    const usdAll = loans.filter(l => l.currency === 'USD');
+    const khrAll = loans.filter(l => l.currency === 'KHR');
+    const usdActive = active.filter(l => l.currency === 'USD');
+    const khrActive = active.filter(l => l.currency === 'KHR');
+    const sum = (arr, key) => arr.reduce((s, l) => s + (l[key] ?? 0), 0);
     return {
-      totalLent: loans.reduce((s, l) => s + (l.originalPrincipal ?? 0), 0),
-      outstanding: active.reduce((s, l) => s + (l.currentPrincipal ?? 0), 0),
-      overdue: active.filter(l => l.status === 'overdue').reduce((s, l) => s + (l.currentPrincipal ?? 0), 0),
+      usd: {
+        totalLent:   sum(usdAll,    'originalPrincipal'),
+        outstanding: sum(usdActive, 'currentPrincipal'),
+        overdue:     sum(usdActive.filter(l => l.status === 'overdue'), 'currentPrincipal'),
+      },
+      khr: {
+        totalLent:   sum(khrAll,    'originalPrincipal'),
+        outstanding: sum(khrActive, 'currentPrincipal'),
+        overdue:     sum(khrActive.filter(l => l.status === 'overdue'), 'currentPrincipal'),
+      },
     };
-  }, [loans]);
-
-  // Per-currency outstanding (only active loans)
-  const currencyStats = useMemo(() => {
-    const active = loans.filter(l => l.status !== 'paid');
-    const usdLent = active.filter(l => l.currency === 'USD').reduce((s, l) => s + (l.currentPrincipal ?? 0), 0);
-    const khrLent = active.filter(l => l.currency === 'KHR').reduce((s, l) => s + (l.currentPrincipal ?? 0), 0);
-    return { usdLent, khrLent };
   }, [loans]);
 
   const hasCapital = capital.capitalUSD > 0 || capital.capitalKHR > 0;
@@ -213,6 +233,13 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={[styles.greeting, { color: colors.textMuted }]}>{t.greeting}</Text>
             <Text style={[styles.title, { color: colors.text }]}>Bacou</Text>
           </View>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Reports')}
+            style={[styles.reportBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="bar-chart-outline" size={20} color={colors.text} />
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
@@ -257,9 +284,9 @@ const DashboardScreen = ({ navigation }) => {
                     <CapitalRow
                       currency="USD"
                       total={fmtUSD(capital.capitalUSD)}
-                      lent={fmtUSD(currencyStats.usdLent)}
-                      remaining={fmtUSD(capital.capitalUSD - currencyStats.usdLent)}
-                      colors={colors} ff={ff} fs={fs} isKhmer={isKhmer}
+                      lent={fmtUSD(stats.usd.outstanding)}
+                      remaining={fmtUSD(capital.capitalUSD - stats.usd.outstanding)}
+                      colors={colors} ff={ff} fs={fs} isKhmer={isKhmer} tl={t}
                     />
                   )}
                   {capital.capitalUSD > 0 && capital.capitalKHR > 0 && (
@@ -269,9 +296,9 @@ const DashboardScreen = ({ navigation }) => {
                     <CapitalRow
                       currency="KHR"
                       total={fmtKHR(capital.capitalKHR)}
-                      lent={fmtKHR(currencyStats.khrLent)}
-                      remaining={fmtKHR(capital.capitalKHR - currencyStats.khrLent)}
-                      colors={colors} ff={ff} fs={fs} isKhmer={isKhmer}
+                      lent={fmtKHR(stats.khr.outstanding)}
+                      remaining={fmtKHR(capital.capitalKHR - stats.khr.outstanding)}
+                      colors={colors} ff={ff} fs={fs} isKhmer={isKhmer} tl={t}
                     />
                   )}
                 </>
@@ -280,9 +307,27 @@ const DashboardScreen = ({ navigation }) => {
 
             {/* Summary row */}
             <View style={styles.summaryRow}>
-              <SummaryCard label={t.totalLent}   value={stats.totalLent   > 0 ? '$' + Math.round(stats.totalLent).toLocaleString()   : '—'} color={ACCENT}                                                       colors={colors} />
-              <SummaryCard label={t.outstanding} value={stats.outstanding > 0 ? '$' + Math.round(stats.outstanding).toLocaleString() : '—'} color='#F59E0B'                                                      colors={colors} />
-              <SummaryCard label={t.overdue}     value={stats.overdue     > 0 ? '$' + Math.round(stats.overdue).toLocaleString()     : '—'} color={stats.overdue > 0 ? '#EF4444' : colors.textMuted}             colors={colors} />
+              <SummaryCard
+                label={t.totalLent}
+                usdValue={stats.usd.totalLent > 0 ? fmtUSD(stats.usd.totalLent) : null}
+                khrValue={stats.khr.totalLent > 0 ? fmtKHR(stats.khr.totalLent) : null}
+                color={ACCENT}
+                colors={colors}
+              />
+              <SummaryCard
+                label={t.outstanding}
+                usdValue={stats.usd.outstanding > 0 ? fmtUSD(stats.usd.outstanding) : null}
+                khrValue={stats.khr.outstanding > 0 ? fmtKHR(stats.khr.outstanding) : null}
+                color='#F59E0B'
+                colors={colors}
+              />
+              <SummaryCard
+                label={t.overdue}
+                usdValue={stats.usd.overdue > 0 ? fmtUSD(stats.usd.overdue) : null}
+                khrValue={stats.khr.overdue > 0 ? fmtKHR(stats.khr.overdue) : null}
+                color={(stats.usd.overdue > 0 || stats.khr.overdue > 0) ? '#EF4444' : colors.textMuted}
+                colors={colors}
+              />
             </View>
 
             {/* Overdue section */}
@@ -365,7 +410,8 @@ const DashboardScreen = ({ navigation }) => {
 
 const makeStyles = (ff) => StyleSheet.create({
   root: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  reportBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   greeting: { fontSize: 13, lineHeight: 18, ...ff('500'), marginBottom: 2 },
   title: { fontSize: 28, lineHeight: 34, ...ff('800'), letterSpacing: 0 },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 100 },

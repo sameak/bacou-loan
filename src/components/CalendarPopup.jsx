@@ -28,10 +28,11 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -124,10 +125,16 @@ const WEEKDAYS = {
 };
 
 const LABELS = {
-  en: { cancel: 'Cancel', done: 'Done', today: 'Today' },
-  ko: { cancel: '취소',    done: '확인',  today: '오늘' },
-  km: { cancel: 'បោះបង់',  done: 'យល់ព្រម', today: 'ថ្ងៃនេះ' },
+  en: { cancel: 'Cancel', done: 'Done', today: 'Today', back: 'Back' },
+  ko: { cancel: '취소',    done: '확인',  today: '오늘',  back: '뒤로' },
+  km: { cancel: 'បោះបង់',  done: 'យល់ព្រម', today: 'ថ្ងៃនេះ', back: 'ថយក្រោយ' },
 };
+
+// ── Year/Month jump picker constants ──────────────────────
+const YEAR_START = 2010;
+const YEAR_END   = 2035;
+const YEARS      = Array.from({ length: YEAR_END - YEAR_START + 1 }, (_, i) => YEAR_START + i);
+const YEAR_ITEM_HEIGHT = 44;
 
 // ── CalendarPopup ─────────────────────────────────────────
 
@@ -149,6 +156,12 @@ const CalendarPopup = ({
   const [viewMonth, setViewMonth] = useState(init.month);
   const [selected,  setSelected]  = useState(value || TODAY_STR);
 
+  // Year/month jump picker state
+  const [showYearMonthPicker, setShowYearMonthPicker] = useState(false);
+  const [pickerYear,  setPickerYear]  = useState(init.year);
+  const [pickerMonth, setPickerMonth] = useState(init.month);
+  const yearScrollRef = useRef(null);
+
   // Sync displayed month when value prop changes
   useEffect(() => {
     if (value) {
@@ -167,6 +180,7 @@ const CalendarPopup = ({
   useEffect(() => {
     if (visible) {
       setRendered(true);
+      setShowYearMonthPicker(false);
       bgAnim.value = withTiming(1, { duration: 220 });
       anim.value   = withTiming(1, { duration: 220 });
     } else {
@@ -177,6 +191,16 @@ const CalendarPopup = ({
     }
   }, [visible]);
 
+  // Scroll year list into view when picker opens
+  useEffect(() => {
+    if (showYearMonthPicker) {
+      const offset = (pickerYear - YEAR_START) * YEAR_ITEM_HEIGHT;
+      setTimeout(() => {
+        yearScrollRef.current?.scrollTo({ y: Math.max(0, offset - YEAR_ITEM_HEIGHT * 2), animated: false });
+      }, 50);
+    }
+  }, [showYearMonthPicker]);
+
   const cardStyle = useAnimatedStyle(() => ({
     opacity:   interpolate(anim.value, [0, 1], [0, 1], Extrapolation.CLAMP),
     transform: [{ scale: interpolate(anim.value, [0, 1], [0.88, 1], Extrapolation.CLAMP) }],
@@ -184,6 +208,18 @@ const CalendarPopup = ({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(bgAnim.value, [0, 1], [0, 1], Extrapolation.CLAMP),
   }));
+
+  // ── Year/Month picker ─────────────────────────────────
+  const openYearMonthPicker = () => {
+    setPickerYear(viewYear);
+    setPickerMonth(viewMonth);
+    setShowYearMonthPicker(true);
+  };
+  const applyYearMonth = (year, month) => {
+    setViewYear(year);
+    setViewMonth(month);
+    setShowYearMonthPicker(false);
+  };
 
   // ── Month navigation ──────────────────────────────────
   const prevMonth = () => {
@@ -245,91 +281,144 @@ const CalendarPopup = ({
 
           {/* Month / Year navigation */}
           <View style={s.navRow}>
-            <TouchableOpacity style={s.navBtn} onPress={prevMonth} activeOpacity={0.6}>
-              <Ionicons name="chevron-back" size={20} color={txtMain} />
+            <TouchableOpacity style={s.navBtn} onPress={prevMonth} activeOpacity={0.6} disabled={showYearMonthPicker}>
+              <Ionicons name="chevron-back" size={20} color={showYearMonthPicker ? 'transparent' : txtMain} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={goToToday} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={() => showYearMonthPicker ? setShowYearMonthPicker(false) : openYearMonthPicker()}
+              activeOpacity={0.7}
+              style={s.navTitleBtn}
+            >
               <Text style={[s.navTitle, kf('700'), { color: txtMain }]}>
                 {mnms[viewMonth - 1]}{'  '}{viewYear}
               </Text>
+              <Ionicons name={showYearMonthPicker ? 'chevron-up' : 'chevron-down'} size={14} color={txtMain} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={s.navBtn} onPress={nextMonth} activeOpacity={0.6}>
-              <Ionicons name="chevron-forward" size={20} color={txtMain} />
+            <TouchableOpacity style={s.navBtn} onPress={nextMonth} activeOpacity={0.6} disabled={showYearMonthPicker}>
+              <Ionicons name="chevron-forward" size={20} color={showYearMonthPicker ? 'transparent' : txtMain} />
             </TouchableOpacity>
           </View>
 
-          {/* Weekday labels */}
-          <View style={s.wdRow}>
-            {wds.map((wd, i) => (
-              <Text
-                key={i}
-                style={[
-                  s.wdLabel,
-                  kf('700'),
-                  { color: i === 0 ? '#EF4444' : txtMute },
-                  isKhmer && { fontSize: 11, textTransform: 'none' },
-                ]}
-              >
-                {wd}
-              </Text>
-            ))}
-          </View>
-
-          {/* Hairline divider */}
-          <View style={[s.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' }]} />
-
-          {/* Date grid — explicit rows so flex:1 cells never wrap */}
-          <View style={s.grid}>
-            {Array.from({ length: grid.length / 7 }, (_, row) => (
-              <View key={row} style={s.gridRow}>
-                {grid.slice(row * 7, row * 7 + 7).map((cell, col) => {
-                  const dateStr  = toStr(cell.year, cell.month, cell.day);
-                  const isSel    = !cell.other && dateStr === selected;
-                  const isToday  = !cell.other && dateStr === TODAY_STR;
-                  const disabled = isDisabled(cell);
-                  const isSun    = col === 0;
-
+          {showYearMonthPicker ? (
+            /* ── Year / Month jump picker ── */
+            <View style={s.ymPicker}>
+              {/* Year list */}
+              <ScrollView ref={yearScrollRef} style={s.ymYearList} showsVerticalScrollIndicator={false}>
+                {YEARS.map(yr => {
+                  const isSel = yr === pickerYear;
                   return (
                     <TouchableOpacity
-                      key={col}
-                      style={s.cell}
-                      onPress={() => !disabled && setSelected(dateStr)}
-                      activeOpacity={disabled ? 1 : 0.65}
-                      disabled={disabled}
+                      key={yr}
+                      style={[s.ymYearItem, isSel && { backgroundColor: accentColor + '22' }]}
+                      onPress={() => setPickerYear(yr)}
+                      activeOpacity={0.7}
                     >
-                      {isSel && (
-                        <View style={[s.selCircle, { backgroundColor: accentColor }]} />
-                      )}
-                      {isToday && !isSel && (
-                        <View style={[s.todayRing, { borderColor: accentColor }]} />
-                      )}
-                      <Text style={[
-                        s.dayText,
-                        { color: isSel ? '#fff' : cell.other ? txtMute : isSun ? '#EF4444' : txtMain },
-                        cell.other && { opacity: 0.35 },
-                        disabled && !cell.other && { opacity: 0.25 },
-                        isKhmer && { fontSize: 12 },
-                      ]}>
-                        {cell.day}
+                      <Text style={[s.ymYearText, kf(isSel ? '700' : '400'), { color: isSel ? accentColor : txtMain }]}>
+                        {yr}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              <View style={[s.ymDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.09)' }]} />
+
+              {/* Month grid (3 × 4) */}
+              <View style={s.ymMonthGrid}>
+                {mnms.map((name, idx) => {
+                  const mo = idx + 1;
+                  const isAct = pickerYear === viewYear && mo === viewMonth;
+                  return (
+                    <TouchableOpacity
+                      key={mo}
+                      style={[s.ymMonthCell, isAct && { backgroundColor: accentColor }]}
+                      onPress={() => applyYearMonth(pickerYear, mo)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[s.ymMonthText, kf(isAct ? '700' : '400'), { color: isAct ? '#fff' : txtMain }]}>
+                        {name}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
-            ))}
-          </View>
+            </View>
+          ) : (
+            <>
+              {/* Weekday labels */}
+              <View style={s.wdRow}>
+                {wds.map((wd, i) => (
+                  <Text
+                    key={i}
+                    style={[
+                      s.wdLabel,
+                      kf('700'),
+                      { color: i === 0 ? '#EF4444' : txtMute },
+                      isKhmer && { fontSize: 11, textTransform: 'none' },
+                    ]}
+                  >
+                    {wd}
+                  </Text>
+                ))}
+              </View>
 
-          {/* Today shortcut */}
-          <TouchableOpacity
-            style={[s.todayPill, { backgroundColor: accentColor + '18', borderColor: accentColor + '40' }]}
-            onPress={goToToday}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="today-outline" size={14} color={accentColor} />
-            <Text style={[s.todayText, kf('700'), { letterSpacing: isKhmer ? 0 : 0.3, color: accentColor }]}>{L.today}</Text>
-          </TouchableOpacity>
+              {/* Hairline divider */}
+              <View style={[s.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' }]} />
+
+              {/* Date grid — explicit rows so flex:1 cells never wrap */}
+              <View style={s.grid}>
+                {Array.from({ length: grid.length / 7 }, (_, row) => (
+                  <View key={row} style={s.gridRow}>
+                    {grid.slice(row * 7, row * 7 + 7).map((cell, col) => {
+                      const dateStr  = toStr(cell.year, cell.month, cell.day);
+                      const isSel    = !cell.other && dateStr === selected;
+                      const isToday  = !cell.other && dateStr === TODAY_STR;
+                      const disabled = isDisabled(cell);
+                      const isSun    = col === 0;
+
+                      return (
+                        <TouchableOpacity
+                          key={col}
+                          style={s.cell}
+                          onPress={() => !disabled && setSelected(dateStr)}
+                          activeOpacity={disabled ? 1 : 0.65}
+                          disabled={disabled}
+                        >
+                          {isSel && (
+                            <View style={[s.selCircle, { backgroundColor: accentColor }]} />
+                          )}
+                          {isToday && !isSel && (
+                            <View style={[s.todayRing, { borderColor: accentColor }]} />
+                          )}
+                          <Text style={[
+                            s.dayText,
+                            { color: isSel ? '#fff' : cell.other ? txtMute : isSun ? '#EF4444' : txtMain },
+                            cell.other && { opacity: 0.35 },
+                            disabled && !cell.other && { opacity: 0.25 },
+                            isKhmer && { fontSize: 12 },
+                          ]}>
+                            {cell.day}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+
+              {/* Today shortcut */}
+              <TouchableOpacity
+                style={[s.todayPill, { backgroundColor: accentColor + '18', borderColor: accentColor + '40' }]}
+                onPress={goToToday}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="today-outline" size={14} color={accentColor} />
+                <Text style={[s.todayText, kf('700'), { letterSpacing: isKhmer ? 0 : 0.3, color: accentColor }]}>{L.today}</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           {/* Hairline */}
           <View style={[s.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)', marginTop: 0 }]} />
@@ -393,8 +482,19 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 16,
   },
-  navBtn:   { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  navTitle: { fontSize: 16 },
+  navBtn:      { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  navTitleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  navTitle:    { fontSize: 16 },
+
+  // Year / Month jump picker
+  ymPicker:    { flexDirection: 'row', height: 220, marginBottom: 4 },
+  ymYearList:  { flex: 1 },
+  ymYearItem:  { height: YEAR_ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center', borderRadius: 10 },
+  ymYearText:  { fontSize: 15 },
+  ymDivider:   { width: StyleSheet.hairlineWidth, marginHorizontal: 4 },
+  ymMonthGrid: { flex: 1.7, flexDirection: 'row', flexWrap: 'wrap', paddingLeft: 4 },
+  ymMonthCell: { width: '33.33%', height: 48, justifyContent: 'center', alignItems: 'center', borderRadius: 10 },
+  ymMonthText: { fontSize: 12, textAlign: 'center' },
 
   // Weekday headers
   wdRow: { flexDirection: 'row', marginBottom: 8 },

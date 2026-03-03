@@ -29,9 +29,11 @@ import {
   calcAccruedInterest,
   formatCurrency,
   markLoanPaid,
+  writeOffLoan,
   deleteLoan,
   refreshOverdueStatuses,
 } from '../../services/loanService';
+// editPayment / deletePayment used via RecordPaymentScreen navigate
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import GlassCard from '../../components/GlassCard';
@@ -39,7 +41,7 @@ import Toast from '../../components/Toast';
 import { Skeleton, SkeletonRow } from '../../components/Skeleton';
 
 const ACCENT = '#6366F1';
-const STATUS_COLORS = { active: '#10B981', overdue: '#EF4444', paid: '#9CA3AF' };
+const STATUS_COLORS = { active: '#10B981', overdue: '#EF4444', paid: '#9CA3AF', written_off: '#6B7280' };
 const PERIOD_STATUS_COLORS = { upcoming: '#6366F1', paid: '#10B981', partial: '#F59E0B', overdue: '#EF4444' };
 
 const T = {
@@ -55,7 +57,7 @@ const T = {
     confirmPaidCancel: 'Cancel',
     noPayments: 'No payments recorded',
     noSchedule: 'No schedule',
-    status: { active: 'Active', overdue: 'Overdue', paid: 'Paid' },
+    status: { active: 'Active', overdue: 'Overdue', paid: 'Paid', written_off: 'Written Off' },
     periodStatus: { upcoming: 'Upcoming', paid: 'Paid', partial: 'Partial', overdue: 'Overdue' },
     accruing: 'Accruing today',
     since: 'Since',
@@ -74,6 +76,21 @@ const T = {
     notes: 'NOTES',
     addedBy: 'Added by',
     editedBy: 'Edited by',
+    writeOff: 'Write Off Loan',
+    confirmWriteOff: 'Mark this loan as written off? Accrual will stop and the loan will be frozen.',
+    confirmWriteOffYes: 'Write Off',
+    writtenOff: 'Loan written off',
+    monthPaid: 'Paid',
+    monthExpected: 'Expected',
+    tapToRecord: 'Tap to record',
+    months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    loading: 'Loading...',
+    openChip: 'Open',
+    periodsUnit: 'periods',
+    openModeNote: 'Open-ended loan — interest accrues daily',
+    abbrevP: 'P',
+    abbrevI: 'I',
+    daysSuffix: 'd',
   },
   km: {
     edit: 'កែប្រែ',
@@ -87,7 +104,7 @@ const T = {
     confirmPaidCancel: 'បោះបង់',
     noPayments: 'មិនទាន់មានការបង់',
     noSchedule: 'គ្មានកាលវិភាគ',
-    status: { active: 'ដំណើរការ', overdue: 'ហួសកំណត់', paid: 'បានបង់' },
+    status: { active: 'ដំណើរការ', overdue: 'ហួសកំណត់', paid: 'បានបង់', written_off: 'បោះបង់' },
     periodStatus: { upcoming: 'នៅមុន', paid: 'បានបង់', partial: 'មួយផ្នែក', overdue: 'ហួសកំណត់' },
     accruing: 'បង្ហូរថ្ងៃនេះ',
     since: 'តាំងពី',
@@ -106,6 +123,21 @@ const T = {
     notes: 'កំណត់ចំណាំ',
     addedBy: 'បន្ថែមដោយ',
     editedBy: 'កែដោយ',
+    writeOff: 'បោះបង់ប្រាក់កម្ចី',
+    confirmWriteOff: 'សម្គាល់ប្រាក់កម្ចីថាបោះបង់? ការប្រាក់នឹងឈប់ និងប្រាក់កម្ចីនឹងត្រូវបានបិទ។',
+    confirmWriteOffYes: 'បោះបង់',
+    writtenOff: 'បានបោះបង់ប្រាក់កម្ចី',
+    monthPaid: 'បានបង់',
+    monthExpected: 'ត្រូវបង់',
+    tapToRecord: 'ចុចដើម្បីកត់ត្រា',
+    months: ['មករា','កុម្ភៈ','មីនា','មេសា','ឧសភា','មិថុនា','កក្កដា','សីហា','កញ្ញា','តុលា','វិច្ឆិកា','ធ្នូ'],
+    loading: 'កំពុងផ្ទុក...',
+    openChip: 'បើក',
+    periodsUnit: 'ដំណាក់',
+    openModeNote: 'ប្រាក់កម្ចីបើក — ការប្រាក់គណនាប្រចាំថ្ងៃ',
+    abbrevP: 'ដើម',
+    abbrevI: 'ការប្រាក់',
+    daysSuffix: 'ថ្ងៃ',
   },
 };
 
@@ -124,8 +156,9 @@ const LoanDetailScreen = ({ navigation, route }) => {
   const [scheduleLoaded, setScheduleLoaded] = useState(false);
   const [paymentsLoaded, setPaymentsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('schedule');
-  const [markingPaid, setMarkingPaid] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [markingPaid,   setMarkingPaid]   = useState(false);
+  const [writingOff,    setWritingOff]    = useState(false);
+  const [deleting,      setDeleting]      = useState(false);
 
   // Start all 3 listeners in parallel — no waterfall
   useEffect(() => {
@@ -143,15 +176,46 @@ const LoanDetailScreen = ({ navigation, route }) => {
 
   // Refresh overdue statuses on load
   useEffect(() => {
-    if (loan && loan.scheduleMode === 'fixed' && loan.status !== 'paid') {
+    if (loan && loan.scheduleMode === 'fixed' && loan.status !== 'paid' && loan.status !== 'written_off') {
       refreshOverdueStatuses([loan]);
     }
   }, [loan?.id]);
 
   const accrued = useMemo(() => {
-    if (!loan || loan.scheduleMode !== 'open' || loan.status === 'paid') return null;
+    if (!loan || loan.scheduleMode !== 'open' || loan.status === 'paid' || loan.status === 'written_off') return null;
     return calcAccruedInterest(loan);
   }, [loan]);
+
+  // Monthly checklist for open-ended loans
+  const monthList = useMemo(() => {
+    if (!loan || loan.scheduleMode !== 'open' || !loan.startDate) return [];
+    const result = [];
+    const [sy, sm] = loan.startDate.split('-').map(Number);
+    const now = new Date();
+    const ey = now.getFullYear(), em = now.getMonth() + 1;
+    const pad2 = n => String(n).padStart(2, '0');
+    const fmtDate = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    let y = sy, m = sm;
+    while (y < ey || (y === ey && m <= em)) {
+      const lastDay = new Date(y, m, 0); // last day of this month
+      const isCurrent = (y === ey && m === em);
+      const payDate = isCurrent ? fmtDate(now) : fmtDate(lastDay);
+      result.push({ year: y, month: m, payDate, key: `${y}-${pad2(m)}` });
+      m++; if (m > 12) { m = 1; y++; }
+    }
+    return result.reverse(); // newest first
+  }, [loan]);
+
+  const paymentsByMonth = useMemo(() => {
+    const map = {};
+    payments.forEach(pay => {
+      if (!pay.date) return;
+      const key = pay.date.slice(0, 7); // 'YYYY-MM'
+      if (!map[key]) map[key] = [];
+      map[key].push(pay);
+    });
+    return map;
+  }, [payments]);
 
   const progressPct = useMemo(() => {
     if (!loan || !loan.originalPrincipal) return 0;
@@ -176,6 +240,31 @@ const LoanDetailScreen = ({ navigation, route }) => {
               Toast.show({ text: err.message, type: 'error' });
             } finally {
               setMarkingPaid(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleWriteOff = () => {
+    Alert.alert(
+      t.writeOff,
+      t.confirmWriteOff,
+      [
+        { text: t.confirmPaidCancel, style: 'cancel' },
+        {
+          text: t.confirmWriteOffYes,
+          style: 'destructive',
+          onPress: async () => {
+            setWritingOff(true);
+            try {
+              await writeOffLoan(loanId);
+              Toast.show({ text: t.writtenOff, type: 'success' });
+            } catch (err) {
+              Toast.show({ text: err.message, type: 'error' });
+            } finally {
+              setWritingOff(false);
             }
           },
         },
@@ -211,14 +300,16 @@ const LoanDetailScreen = ({ navigation, route }) => {
   if (!loan) {
     return (
       <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB', alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ color: colors.textMuted }}>Loading...</Text>
+        <Text style={{ color: colors.textMuted }}>{t.loading}</Text>
       </View>
     );
   }
 
-  const statusColor = STATUS_COLORS[loan.status] ?? STATUS_COLORS.active;
-  const isOpen = loan.scheduleMode === 'open';
-  const isPaid = loan.status === 'paid';
+  const statusColor  = STATUS_COLORS[loan.status] ?? STATUS_COLORS.active;
+  const isOpen       = loan.scheduleMode === 'open';
+  const isPaid       = loan.status === 'paid';
+  const isWrittenOff = loan.status === 'written_off';
+  const isTerminated = isPaid || isWrittenOff;
 
   return (
     <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
@@ -229,7 +320,7 @@ const LoanDetailScreen = ({ navigation, route }) => {
             <Ionicons name="chevron-back" size={26} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{loan.borrowerName}</Text>
-          {!isPaid ? (
+          {!isTerminated ? (
             <View style={styles.headerActions}>
               <TouchableOpacity
                 onPress={() => navigation.navigate('EditLoan', { loan })}
@@ -277,7 +368,7 @@ const LoanDetailScreen = ({ navigation, route }) => {
                 t.basis[loan.interestBasis] ?? loan.interestBasis,
                 t.repaymentType[loan.repaymentType] ?? loan.repaymentType,
                 t.freq[loan.frequency] ?? loan.frequency,
-                isOpen ? 'Open' : `${loan.totalPeriods} periods`,
+                isOpen ? t.openChip : `${loan.totalPeriods} ${t.periodsUnit}`,
               ].map((chip, i) => (
                 <View key={i} style={[styles.chip, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
                   <Text style={[styles.chipText, { color: colors.textMuted }]}>{chip}</Text>
@@ -379,12 +470,74 @@ const LoanDetailScreen = ({ navigation, route }) => {
                 <SkeletonRow isDark={isDark} />
               </>
             ) : isOpen ? (
-              <View style={{ padding: 20, alignItems: 'center' }}>
-                <Ionicons name="infinite-outline" size={32} color={colors.textMuted} />
-                <Text style={[styles.openModeNote, { color: colors.textMuted }]}>
-                  Open-ended loan — interest accrues daily
-                </Text>
-              </View>
+              monthList.length === 0 ? (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Ionicons name="infinite-outline" size={32} color={colors.textMuted} />
+                  <Text style={[styles.openModeNote, { color: colors.textMuted }]}>
+                    {t.openModeNote}
+                  </Text>
+                </View>
+              ) : (
+                monthList.map(({ year, month, payDate, key }, index) => {
+                  const monthPayments = paymentsByMonth[key] || [];
+                  const paid = monthPayments.length > 0;
+                  const totalInterest = monthPayments.reduce((s, p) => s + (p.interestAmount ?? 0), 0);
+                  const expectedInterest = Math.round(
+                    (loan.interestBasis === 'flat' ? loan.originalPrincipal : loan.currentPrincipal)
+                    * (loan.interestRate / 100) * 100
+                  ) / 100;
+                  const monthLabel = `${t.months[month - 1]} ${year}`;
+                  const borderStyle = index > 0
+                    ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }
+                    : {};
+
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[styles.monthRow, borderStyle]}
+                      onPress={() => {
+                        if (paid) {
+                          // Edit the first payment for this month
+                          const firstPay = monthPayments[0];
+                          navigation.navigate('RecordPayment', { loan, existingPayment: firstPay });
+                        } else {
+                          navigation.navigate('RecordPayment', { loan, prefillDate: payDate });
+                        }
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      {/* Checkbox circle */}
+                      <View style={[
+                        styles.monthCheck,
+                        paid
+                          ? { backgroundColor: '#10B981', borderColor: '#10B981' }
+                          : { borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)' },
+                      ]}>
+                        {paid && <Ionicons name="checkmark" size={13} color="#fff" />}
+                      </View>
+
+                      {/* Month info */}
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.monthLabel, { color: paid ? colors.text : colors.textMuted }]}>
+                          {monthLabel}
+                        </Text>
+                        <Text style={[styles.monthMeta, { color: paid ? '#10B981' : colors.textMuted }]}>
+                          {paid
+                            ? `${t.monthPaid}: ${formatCurrency(totalInterest, loan.currency)}`
+                            : `${t.monthExpected}: ${formatCurrency(expectedInterest, loan.currency)}`
+                          }
+                        </Text>
+                      </View>
+
+                      {/* Pencil for paid, add for unpaid */}
+                      {paid
+                        ? <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
+                        : <Ionicons name="add-circle-outline" size={22} color={ACCENT} />
+                      }
+                    </TouchableOpacity>
+                  );
+                })
+              )
             ) : schedule.length === 0 ? (
               <View style={{ padding: 20, alignItems: 'center' }}>
                 <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t.noSchedule}</Text>
@@ -406,7 +559,7 @@ const LoanDetailScreen = ({ navigation, route }) => {
                     <View style={styles.periodInfo}>
                       <Text style={[styles.periodDate, { color: colors.text }]}>{period.dueDate}</Text>
                       <Text style={[styles.periodMeta, { color: colors.textMuted }]}>
-                        P: {formatCurrency(period.principalDue, loan.currency)} + I: {formatCurrency(period.interestDue, loan.currency)}
+                        {t.abbrevP}: {formatCurrency(period.principalDue, loan.currency)} + {t.abbrevI}: {formatCurrency(period.interestDue, loan.currency)}
                       </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
@@ -436,12 +589,14 @@ const LoanDetailScreen = ({ navigation, route }) => {
               </View>
             ) : (
               payments.map((pay, index) => (
-                <View
+                <TouchableOpacity
                   key={pay.id}
                   style={[
                     styles.payRow,
                     index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' },
                   ]}
+                  onPress={() => navigation.navigate('RecordPayment', { loan, existingPayment: pay })}
+                  activeOpacity={0.7}
                 >
                   <View style={[styles.payIcon, { backgroundColor: '#10B981' + '20' }]}>
                     <Ionicons name="cash-outline" size={18} color="#10B981" />
@@ -449,20 +604,23 @@ const LoanDetailScreen = ({ navigation, route }) => {
                   <View style={styles.payInfo}>
                     <Text style={[styles.payDate, { color: colors.text }]}>{pay.date}</Text>
                     <Text style={[styles.payMeta, { color: colors.textMuted }]}>
-                      P: {formatCurrency(pay.principalAmount, loan.currency)} + I: {formatCurrency(pay.interestAmount, loan.currency)}
-                      {pay.daysAccrued ? ` · ${pay.daysAccrued}d` : ''}
+                      {t.abbrevP}: {formatCurrency(pay.principalAmount, loan.currency)} + {t.abbrevI}: {formatCurrency(pay.interestAmount, loan.currency)}
+                      {pay.daysAccrued ? ` · ${pay.daysAccrued}${t.daysSuffix}` : ''}
                     </Text>
                     {pay.notes ? <Text style={[styles.payNotes, { color: colors.textMuted }]}>{pay.notes}</Text> : null}
                   </View>
-                  <Text style={[styles.payTotal, { color: '#10B981' }]}>{formatCurrency(pay.totalAmount, loan.currency)}</Text>
-                </View>
+                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                    <Text style={[styles.payTotal, { color: '#10B981' }]}>{formatCurrency(pay.totalAmount, loan.currency)}</Text>
+                    <Ionicons name="pencil-outline" size={14} color={colors.textMuted} />
+                  </View>
+                </TouchableOpacity>
               ))
             )}
           </GlassCard>
         )}
 
         {/* Mark paid button */}
-        {!isPaid && (
+        {!isTerminated && (
           <TouchableOpacity
             style={[styles.markPaidBtn, { borderColor: colors.border }]}
             onPress={handleMarkPaid}
@@ -471,6 +629,19 @@ const LoanDetailScreen = ({ navigation, route }) => {
           >
             <Ionicons name="checkmark-circle-outline" size={18} color={colors.textMuted} />
             <Text style={[styles.markPaidText, { color: colors.textMuted }]}>{t.markPaid}</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Write Off button */}
+        {!isTerminated && (
+          <TouchableOpacity
+            style={[styles.markPaidBtn, { borderColor: '#6B728030', marginTop: 8 }]}
+            onPress={handleWriteOff}
+            disabled={writingOff}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="ban-outline" size={18} color="#6B7280" />
+            <Text style={[styles.markPaidText, { color: '#6B7280' }]}>{t.writeOff}</Text>
           </TouchableOpacity>
         )}
 
@@ -589,6 +760,12 @@ const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
       android: { elevation: 10 },
     }),
   },
+
+  // Monthly checklist (open-ended loans)
+  monthRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  monthCheck: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  monthLabel: { fontSize: fs(14), lineHeight: 19, ...ff('600'), marginBottom: 2 },
+  monthMeta:  { fontSize: fs(12), lineHeight: 16, ...ff('400') },
 
   // Misc
   openModeNote: { fontSize: fs(14), textAlign: 'center', marginTop: 8 },

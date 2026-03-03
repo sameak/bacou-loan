@@ -1,7 +1,8 @@
 /**
  * EDIT LOAN SCREEN
- * Editable fields: currency, interestRate, totalPeriods (fixed mode), notes
- * If interestRate or totalPeriods change on a fixed loan, the unpaid schedule
+ * Editable fields: currency, principal, repaymentType, interestBasis,
+ * frequency, scheduleMode, startDate, interestRate, totalPeriods, notes.
+ * If schedule-affecting fields changed on a fixed loan, the unpaid schedule
  * entries are regenerated automatically.
  */
 
@@ -24,6 +25,7 @@ import { editLoan } from '../../services/loanService';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import Toast from '../../components/Toast';
+import CalendarPopup from '../../components/CalendarPopup';
 
 const ACCENT = '#6366F1';
 const CURRENCIES = ['USD', 'KHR', 'KRW', 'Other'];
@@ -34,14 +36,32 @@ const T = {
     cancel: 'Cancel',
     save: 'Save Changes',
     currency: 'CURRENCY',
+    currencyLabels: { USD: 'USD', KHR: 'KHR', KRW: 'KRW', Other: 'Other' },
+    principal: 'PRINCIPAL AMOUNT',
+    principalPlaceholder: '0',
+    repaymentType: 'REPAYMENT TYPE',
+    interestOnly: 'Interest Only',
+    principalAndInterest: 'Principal + Interest',
+    interestBasis: 'INTEREST BASIS',
+    flat: 'Flat',
+    reducing: 'Reducing Balance',
     rate: 'INTEREST RATE (% per period)',
     ratePlaceholder: '3',
+    frequency: 'FREQUENCY',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    schedule: 'SCHEDULE',
+    fixed: 'Fixed Periods',
+    open: 'Open-Ended',
     periods: 'NUMBER OF PERIODS',
     periodsPlaceholder: '12',
+    startDate: 'START DATE',
     notes: 'NOTES (optional)',
     notesPlaceholder: 'Any notes about this loan...',
+    errPrincipal: 'Enter a valid principal amount',
     errRate: 'Enter a valid interest rate',
     errPeriods: 'Enter a valid number of periods',
+    errDate: 'Enter a valid start date',
     saved: 'Loan updated',
     scheduleWarning: 'This will regenerate the unpaid payment schedule. Already-paid periods are preserved. Continue?',
     continue: 'Continue',
@@ -52,20 +72,65 @@ const T = {
     cancel: 'បោះបង់',
     save: 'រក្សាទុក',
     currency: 'រូបិយប័ណ្ណ',
+    currencyLabels: { USD: 'ប្រាក់ដុល្លា', KHR: 'ប្រាក់រៀល', KRW: 'ប្រាក់វ៉ុន', Other: 'ផ្សេងៗ' },
+    principal: 'ចំនួនទឹកប្រាក់',
+    principalPlaceholder: '0',
+    repaymentType: 'ប្រភេទការបង់',
+    interestOnly: 'បង់តែការប្រាក់',
+    principalAndInterest: 'បង់ប្រាក់ដើម និង ការប្រាក់',
+    interestBasis: 'មូលដ្ឋានការប្រាក់',
+    flat: 'ការប្រាក់ថេរ',
+    reducing: 'ការប្រាក់ថយតាមប្រាក់ដើម',
     rate: 'អត្រាការប្រាក់ (% ក្នុងដំណាក់)',
     ratePlaceholder: '3',
+    frequency: 'ភាពញឹកញាប់',
+    weekly: 'ប្រចាំសប្ដាហ៍',
+    monthly: 'ប្រចាំខែ',
+    schedule: 'កាលវិភាគ',
+    fixed: 'ចំនួនដំណាក់ថេរ',
+    open: 'បើក',
     periods: 'ចំនួនដំណាក់',
     periodsPlaceholder: '12',
+    startDate: 'កាលបរិច្ឆេទចាប់ផ្ដើម',
     notes: 'កំណត់ចំណាំ (ស្រេចចិត្ត)',
     notesPlaceholder: 'កំណត់ចំណាំ...',
+    errPrincipal: 'បញ្ចូលចំនួនទឹកប្រាក់',
     errRate: 'បញ្ចូលអត្រាការប្រាក់',
     errPeriods: 'បញ្ចូលចំនួនដំណាក់',
+    errDate: 'បញ្ចូលកាលបរិច្ឆេទ',
     saved: 'បានធ្វើបច្ចុប្បន្នភាព',
     scheduleWarning: 'នឹងបង្កើតកាលវិភាគថ្មីសម្រាប់ដំណាក់ដែលមិនទាន់បង់។ ដំណាក់ដែលបានបង់ហើយនឹងត្រូវបានរក្សា។ បន្ត?',
     continue: 'បន្ត',
     cancel2: 'បោះបង់',
   },
 };
+
+// ── ToggleGroup helper ────────────────────────────────────────────────────────
+
+const ToggleGroup = ({ options, value, onChange, colors, isDark }) => {
+  const { ff } = useLanguage();
+  return (
+    <View style={[{ flexDirection: 'row', borderRadius: 12, padding: 3, marginBottom: 4 }, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
+      {options.map(opt => {
+        const active = value === opt.value;
+        return (
+          <TouchableOpacity
+            key={opt.value}
+            style={[{ flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' }, active && { backgroundColor: isDark ? '#fff' : '#1C1C1E' }]}
+            onPress={() => onChange(opt.value)}
+            activeOpacity={0.8}
+          >
+            <Text style={[{ fontSize: 13, lineHeight: 18, ...ff('600') }, { color: active ? (isDark ? '#000' : '#fff') : colors.textMuted }]}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
+
+// ── Screen ────────────────────────────────────────────────────────────────────
 
 const EditLoanScreen = ({ navigation, route }) => {
   const { loan } = route.params;
@@ -76,19 +141,33 @@ const EditLoanScreen = ({ navigation, route }) => {
   const styles = useMemo(() => makeStyles(ff), [ff]);
   const scrollRef = useRef(null);
 
-  const isFixed = loan.scheduleMode === 'fixed';
+  // Existing fields
+  const [currency,      setCurrency]     = useState(loan.currency ?? 'USD');
+  const [rate,          setRate]         = useState(String(loan.interestRate ?? ''));
+  const [periods,       setPeriods]      = useState(String(loan.totalPeriods ?? ''));
+  const [notes,         setNotes]        = useState(loan.notes ?? '');
 
-  const [currency, setCurrency] = useState(loan.currency ?? 'USD');
-  const [rate, setRate] = useState(String(loan.interestRate ?? ''));
-  const [periods, setPeriods] = useState(String(loan.totalPeriods ?? ''));
-  const [notes, setNotes] = useState(loan.notes ?? '');
-  const [errors, setErrors] = useState({});
+  // New fields
+  const [principal,     setPrincipal]    = useState(String(loan.originalPrincipal ?? ''));
+  const [repaymentType, setRepaymentType]= useState(loan.repaymentType ?? 'principal_and_interest');
+  const [interestBasis, setInterestBasis]= useState(loan.interestBasis ?? 'flat');
+  const [frequency,     setFrequency]    = useState(loan.frequency ?? 'monthly');
+  const [scheduleMode,  setScheduleMode] = useState(loan.scheduleMode ?? 'fixed');
+  const [startDate,     setStartDate]    = useState(loan.startDate ?? '');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const [errors,  setErrors]  = useState({});
   const [loading, setLoading] = useState(false);
+
+  const isFixed = scheduleMode === 'fixed';
 
   const validate = () => {
     const e = {};
+    const p = parseFloat(principal);
+    if (!principal || isNaN(p) || p <= 0) e.principal = t.errPrincipal;
     if (!rate || isNaN(parseFloat(rate)) || parseFloat(rate) < 0) e.rate = t.errRate;
     if (isFixed && (!periods || isNaN(Number(periods)) || Number(periods) < 1)) e.periods = t.errPeriods;
+    if (!startDate.match(/^\d{4}-\d{2}-\d{2}$/)) e.date = t.errDate;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -96,11 +175,19 @@ const EditLoanScreen = ({ navigation, route }) => {
   const doSave = async () => {
     setLoading(true);
     try {
+      const newPrincipal = parseFloat(principal);
       const updates = {
         currency,
+        originalPrincipal: newPrincipal,
+        currentPrincipal:  Math.max(0, newPrincipal - (loan.totalRepaid ?? 0)),
+        repaymentType,
+        interestBasis,
+        frequency,
+        scheduleMode,
+        startDate,
         interestRate: parseFloat(rate),
         notes,
-        ...(isFixed ? { totalPeriods: parseInt(periods, 10) } : {}),
+        ...(isFixed ? { totalPeriods: parseInt(periods, 10) } : { totalPeriods: null }),
       };
       await editLoan(loan.id, updates, loan);
       Toast.show({ text: t.saved, type: 'success' });
@@ -116,8 +203,15 @@ const EditLoanScreen = ({ navigation, route }) => {
     if (!validate()) return;
 
     const scheduleWillChange =
-      isFixed &&
-      (parseFloat(rate) !== loan.interestRate || parseInt(periods, 10) !== loan.totalPeriods);
+      (scheduleMode === 'fixed' || loan.scheduleMode === 'fixed') && (
+        parseFloat(rate)            !== loan.interestRate    ||
+        startDate                   !== loan.startDate       ||
+        repaymentType               !== loan.repaymentType   ||
+        interestBasis               !== loan.interestBasis   ||
+        frequency                   !== loan.frequency       ||
+        scheduleMode                !== loan.scheduleMode    ||
+        (isFixed && parseInt(periods, 10) !== loan.totalPeriods)
+      );
 
     if (scheduleWillChange) {
       Alert.alert(t.title, t.scheduleWarning, [
@@ -129,7 +223,7 @@ const EditLoanScreen = ({ navigation, route }) => {
     }
   };
 
-  const inputBg = isDark ? colors.surface : '#F2F4F8';
+  const inputBg    = isDark ? colors.surface : '#F2F4F8';
   const inputStyle = [styles.input, { backgroundColor: inputBg, color: colors.text }];
 
   return (
@@ -161,10 +255,48 @@ const EditLoanScreen = ({ navigation, route }) => {
                 onPress={() => setCurrency(c)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.currencyText, { color: currency === c ? '#fff' : colors.text }]}>{c}</Text>
+                <Text style={[styles.currencyText, { color: currency === c ? '#fff' : colors.text }]}>{t.currencyLabels[c] ?? c}</Text>
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Principal */}
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t.principal}</Text>
+          <TextInput
+            style={[inputStyle, errors.principal && styles.inputError, fi()]}
+            value={principal}
+            onChangeText={v => { setPrincipal(v.replace(/[^0-9.]/g, '')); if (errors.principal) setErrors(e => ({ ...e, principal: null })); }}
+            placeholder={t.principalPlaceholder}
+            placeholderTextColor={colors.textMuted}
+            keyboardType="decimal-pad"
+          />
+          {errors.principal ? <Text style={styles.errText}>{errors.principal}</Text> : null}
+
+          {/* Repayment type */}
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t.repaymentType}</Text>
+          <ToggleGroup
+            options={[
+              { value: 'interest_only',         label: t.interestOnly },
+              { value: 'principal_and_interest', label: t.principalAndInterest },
+            ]}
+            value={repaymentType}
+            onChange={setRepaymentType}
+            colors={colors}
+            isDark={isDark}
+          />
+
+          {/* Interest basis */}
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t.interestBasis}</Text>
+          <ToggleGroup
+            options={[
+              { value: 'flat',     label: t.flat },
+              { value: 'reducing', label: t.reducing },
+            ]}
+            value={interestBasis}
+            onChange={setInterestBasis}
+            colors={colors}
+            isDark={isDark}
+          />
 
           {/* Interest rate */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.rate}</Text>
@@ -180,6 +312,45 @@ const EditLoanScreen = ({ navigation, route }) => {
             <Text style={[styles.rateSuffix, { color: colors.textMuted }]}>%</Text>
           </View>
           {errors.rate ? <Text style={styles.errText}>{errors.rate}</Text> : null}
+
+          {/* Frequency */}
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t.frequency}</Text>
+          <ToggleGroup
+            options={[
+              { value: 'weekly',  label: t.weekly },
+              { value: 'monthly', label: t.monthly },
+            ]}
+            value={frequency}
+            onChange={setFrequency}
+            colors={colors}
+            isDark={isDark}
+          />
+
+          {/* Schedule mode */}
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t.schedule}</Text>
+          <ToggleGroup
+            options={[
+              { value: 'fixed', label: t.fixed },
+              { value: 'open',  label: t.open },
+            ]}
+            value={scheduleMode}
+            onChange={setScheduleMode}
+            colors={colors}
+            isDark={isDark}
+          />
+
+          {/* Start date */}
+          <Text style={[styles.label, { color: colors.textMuted }]}>{t.startDate}</Text>
+          <TouchableOpacity
+            style={[inputStyle, errors.date && styles.inputError, { justifyContent: 'center' }]}
+            onPress={() => { setShowDatePicker(true); if (errors.date) setErrors(e => ({ ...e, date: null })); }}
+            activeOpacity={0.7}
+          >
+            <Text style={{ color: startDate ? colors.text : colors.textMuted, fontSize: 15 }}>
+              {startDate || 'Select date'}
+            </Text>
+          </TouchableOpacity>
+          {errors.date ? <Text style={styles.errText}>{errors.date}</Text> : null}
 
           {/* Periods (fixed mode only) */}
           {isFixed && (
@@ -229,6 +400,18 @@ const EditLoanScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </SafeAreaView>
       </View>
+
+      <CalendarPopup
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        value={startDate}
+        onChange={v => { setStartDate(v); setShowDatePicker(false); }}
+        title={t.startDate}
+        accentColor={ACCENT}
+        colors={colors}
+        isDark={isDark}
+        language={language}
+      />
     </KeyboardAvoidingView>
   );
 };

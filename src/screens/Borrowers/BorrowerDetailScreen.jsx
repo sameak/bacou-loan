@@ -33,7 +33,7 @@ import GlassCard from '../../components/GlassCard';
 import Toast from '../../components/Toast';
 
 const ACCENT = '#6366F1';
-const STATUS_COLORS = { active: '#10B981', overdue: '#EF4444', paid: '#9CA3AF' };
+const STATUS_COLORS = { active: '#10B981', overdue: '#EF4444', paid: '#9CA3AF', written_off: '#6B7280' };
 const SCREEN_W = Dimensions.get('window').width;
 
 const AVATAR_COLORS = ['#6366F1','#8B5CF6','#EC4899','#F59E0B','#10B981','#3B82F6','#EF4444','#14B8A6'];
@@ -68,7 +68,8 @@ const T = {
     activeLoans: 'Active', overdueLoans: 'Overdue', paidLoans: 'Paid',
     noLoans: 'No loans yet', noLoansHint: 'Create a loan for this borrower',
     outstanding: 'Outstanding', totalLoans: 'Loans', activeCount: 'Active',
-    status: { active: 'Active', overdue: 'Overdue', paid: 'Paid' },
+    status: { active: 'Active', overdue: 'Overdue', paid: 'Paid', written_off: 'Written Off' },
+    writtenOffLoans: 'Written Off',
     saved: 'Borrower updated',
     deleteBorrower: 'Delete Borrower',
     confirmDelete: 'Delete this borrower and ALL their loans? This cannot be undone.',
@@ -97,7 +98,8 @@ const T = {
     activeLoans: 'ដំណើរការ', overdueLoans: 'ហួសកំណត់', paidLoans: 'បានបង់',
     noLoans: 'មិនទាន់មានប្រាក់កម្ចី', noLoansHint: 'បង្កើតប្រាក់កម្ចីសម្រាប់អ្នកខ្ចីនេះ',
     outstanding: 'នៅជំពាក់', totalLoans: 'កម្ចី', activeCount: 'ដំណើរការ',
-    status: { active: 'ដំណើរការ', overdue: 'ហួសកំណត់', paid: 'បានបង់' },
+    status: { active: 'ដំណើរការ', overdue: 'ហួសកំណត់', paid: 'បានបង់', written_off: 'បោះបង់' },
+    writtenOffLoans: 'បោះបង់',
     saved: 'បានកែប្រែ',
     deleteBorrower: 'លុបអ្នកខ្ចី',
     confirmDelete: 'លុបអ្នកខ្ចីនេះ និងប្រាក់កម្ចីទាំងអស់? មិនអាចមិនធ្វើវិញបានទេ។',
@@ -318,13 +320,14 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const groupedLoans = useMemo(() => ({
-    overdue: loans.filter(l => l.status === 'overdue'),
-    active: loans.filter(l => l.status === 'active'),
-    paid: loans.filter(l => l.status === 'paid'),
+    overdue:    loans.filter(l => l.status === 'overdue'),
+    active:     loans.filter(l => l.status === 'active'),
+    paid:       loans.filter(l => l.status === 'paid'),
+    writtenOff: loans.filter(l => l.status === 'written_off'),
   }), [loans]);
 
   const loanStats = useMemo(() => {
-    const activeLoans = loans.filter(l => l.status !== 'paid');
+    const activeLoans = loans.filter(l => l.status !== 'paid' && l.status !== 'written_off');
     const outstanding = activeLoans.reduce((s, l) => s + (l.currentPrincipal ?? 0), 0);
     const currency = loans[0]?.currency ?? 'USD';
     return { outstanding, total: loans.length, active: activeLoans.length, currency };
@@ -337,7 +340,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
 
   const renderLoanCard = (loan) => {
     const statusColor = STATUS_COLORS[loan.status] ?? STATUS_COLORS.active;
-    const accrued = loan.scheduleMode === 'open' && loan.status !== 'paid'
+    const accrued = loan.scheduleMode === 'open' && loan.status !== 'paid' && loan.status !== 'written_off'
       ? calcAccruedInterest(loan) : null;
     return (
       <TouchableOpacity
@@ -363,7 +366,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
                 </View>
               </View>
               <Text style={[styles.loanMeta, { color: colors.textMuted }]}>
-                {loan.interestRate}% · {loan.interestBasis} · {loan.repaymentType === 'interest_only' ? t.interestOnly : t.principalInterest}
+                {loan.startDate} · {loan.interestRate}% · {loan.interestBasis} · {loan.repaymentType === 'interest_only' ? t.interestOnly : t.principalInterest}
               </Text>
               {accrued !== null && accrued > 0 && (
                 <Text style={styles.accruingText}>{t.accruing}: {formatCurrency(accrued, loan.currency)}</Text>
@@ -527,6 +530,17 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
                 </View>
               </View>
               {groupedLoans.paid.map(renderLoanCard)}
+            </>
+          )}
+          {groupedLoans.writtenOff.length > 0 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: '#6B7280', fontSize: fs(12) }]}>{t.writtenOffLoans.toUpperCase()}</Text>
+                <View style={[styles.sectionBadge, { backgroundColor: '#6B728020' }]}>
+                  <Text style={[styles.sectionBadgeText, { color: '#6B7280', fontSize: fs(11) }]}>{groupedLoans.writtenOff.length}</Text>
+                </View>
+              </View>
+              {groupedLoans.writtenOff.map(renderLoanCard)}
             </>
           )}
         </>

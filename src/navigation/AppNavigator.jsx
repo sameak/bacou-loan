@@ -64,6 +64,8 @@ import CreateLoanScreen from '../screens/Loans/CreateLoanScreen';
 import RecordPaymentScreen from '../screens/Loans/RecordPaymentScreen';
 import TopUpLoanScreen from '../screens/Loans/TopUpLoanScreen';
 import EditLoanScreen from '../screens/Loans/EditLoanScreen';
+import LoanCalculatorScreen from '../screens/Loans/LoanCalculatorScreen';
+import ReportsScreen from '../screens/Reports/ReportsScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
 import SessionsScreen from '../screens/Settings/SessionsScreen';
 import SetPINScreen   from '../screens/Settings/SetPINScreen';
@@ -465,7 +467,9 @@ function MainStackNav() {
       <MainStack.Screen name="CreateLoan"     component={CreateLoanScreen} />
       <MainStack.Screen name="RecordPayment"  component={RecordPaymentScreen} />
       <MainStack.Screen name="TopUpLoan"      component={TopUpLoanScreen} />
-      <MainStack.Screen name="EditLoan"       component={EditLoanScreen} />
+      <MainStack.Screen name="EditLoan"         component={EditLoanScreen} />
+      <MainStack.Screen name="LoanCalculator" component={LoanCalculatorScreen} />
+      <MainStack.Screen name="Reports"        component={ReportsScreen} />
     </MainStack.Navigator>
   );
 }

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -21,6 +22,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   getSchedule,
   recordPayment,
+  editPayment,
+  deletePayment,
   calcAccruedInterest,
   today,
   formatCurrency,
@@ -46,7 +49,17 @@ const T = {
     notesPlaceholder: 'Payment notes...',
     accruedInfo: (days, amount, currency) => `Accrued over ${days} days: ${formatCurrency(amount, currency)}`,
     errDate: 'Enter date',
+    selectDate: 'Select date',
+    periodLabel: 'Period',
     saved: 'Payment recorded',
+    updated: 'Payment updated',
+    deleted: 'Payment deleted',
+    editTitle: 'Edit Payment',
+    update: 'Update',
+    deletePayment: 'Delete Payment',
+    confirmDelete: 'Delete this payment? The loan balance will be reversed.',
+    confirmDeleteYes: 'Delete',
+    confirmCancel: 'Cancel',
     outstanding: 'Outstanding',
     dueThisPeriod: 'Due this period',
     noPeriods: 'No upcoming periods',
@@ -65,7 +78,17 @@ const T = {
     notesPlaceholder: 'កំណត់ចំណាំ...',
     accruedInfo: (days, amount, currency) => `ប្រូងក្នុង ${days} ថ្ងៃ: ${formatCurrency(amount, currency)}`,
     errDate: 'បញ្ចូលកាលបរិច្ឆេទ',
+    selectDate: 'ជ្រើសថ្ងៃ',
+    periodLabel: 'ដំណាក់',
     saved: 'បានកត់ត្រាការបង់',
+    updated: 'បានធ្វើបច្ចុប្បន្នភាព',
+    deleted: 'បានលុបការបង់',
+    editTitle: 'កែប្រែការបង់',
+    update: 'រក្សាទុក',
+    deletePayment: 'លុបការបង់',
+    confirmDelete: 'លុបការបង់នេះ? ប្រាក់ដើមនឹងត្រូវវិលត្រឡប់។',
+    confirmDeleteYes: 'លុប',
+    confirmCancel: 'បោះបង់',
     outstanding: 'នៅជំពាក់',
     dueThisPeriod: 'ត្រូវបង់',
     noPeriods: 'គ្មានដំណាក់',
@@ -79,7 +102,8 @@ const formatNum = (raw) => {
 };
 
 const RecordPaymentScreen = ({ navigation, route }) => {
-  const { loan } = route.params;
+  const { loan, existingPayment } = route.params;
+  const isEditing = !!existingPayment;
   const { colors, isDark } = useTheme();
   const { language, ff, fi } = useLanguage();
   const t = T[language] || T.en;
@@ -88,17 +112,23 @@ const RecordPaymentScreen = ({ navigation, route }) => {
   const scrollRef = useRef(null);
 
   const isOpen = loan.scheduleMode === 'open';
-  const isInterestOnly = loan.repaymentType === 'interest_only';
+  const prefillDate = route.params?.prefillDate;
 
   const [schedule, setSchedule] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
 
-  const [principalRaw, setPrincipalRaw] = useState('0');
-  const [interestRaw, setInterestRaw] = useState('0');
-  const [paymentDate, setPaymentDate] = useState(today());
+  const [principalRaw, setPrincipalRaw] = useState(
+    isEditing ? String(existingPayment.principalAmount ?? 0) : '0'
+  );
+  const [interestRaw, setInterestRaw] = useState(
+    isEditing ? String(existingPayment.interestAmount ?? 0) : '0'
+  );
+  const [paymentDate, setPaymentDate] = useState(
+    isEditing ? (existingPayment.date ?? today()) : (prefillDate ?? today())
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(isEditing ? (existingPayment.notes ?? '') : '');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -133,19 +163,17 @@ const RecordPaymentScreen = ({ navigation, route }) => {
         // Auto-select first upcoming/overdue period
         if (unpaid.length > 0) {
           setSelectedPeriod(unpaid[0]);
-          if (!isInterestOnly) {
-            setPrincipalRaw(String(unpaid[0].principalDue ?? 0));
-          }
+          setPrincipalRaw(String(unpaid[0].principalDue ?? 0));
           setInterestRaw(String(unpaid[0].interestDue ?? 0));
         }
       });
     }
-  }, [isOpen, loan.id, isInterestOnly]);
+  }, [isOpen, loan.id]);
 
   const handlePeriodSelect = (period) => {
     setSelectedPeriod(period);
     setShowPeriodPicker(false);
-    if (!isInterestOnly) setPrincipalRaw(String(period.principalDue ?? 0));
+    setPrincipalRaw(String(period.principalDue ?? 0));
     setInterestRaw(String(period.interestDue ?? 0));
   };
 
@@ -160,21 +188,54 @@ const RecordPaymentScreen = ({ navigation, route }) => {
     if (!validate()) return;
     setLoading(true);
     try {
-      await recordPayment(loan.id, {
+      const newData = {
         principalAmount: parseFloat(principalRaw) || 0,
-        interestAmount: parseFloat(interestRaw) || 0,
+        interestAmount:  parseFloat(interestRaw)  || 0,
         date: paymentDate,
-        daysAccrued: isOpen ? accruedDays : null,
-        schedulePeriodId: selectedPeriod?.id ?? null,
         notes,
-      });
-      Toast.show({ text: t.saved, type: 'success' });
+      };
+      if (isEditing) {
+        await editPayment(loan.id, existingPayment.id, existingPayment, newData);
+        Toast.show({ text: t.updated, type: 'success' });
+      } else {
+        await recordPayment(loan.id, {
+          ...newData,
+          daysAccrued: isOpen ? accruedDays : null,
+          schedulePeriodId: selectedPeriod?.id ?? null,
+        });
+        Toast.show({ text: t.saved, type: 'success' });
+      }
       navigation.goBack();
     } catch (err) {
-      Toast.show({ text: err.message || 'Failed to record payment', type: 'error' });
+      Toast.show({ text: err.message || 'Failed to save payment', type: 'error' });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      t.deletePayment,
+      t.confirmDelete,
+      [
+        { text: t.confirmCancel, style: 'cancel' },
+        {
+          text: t.confirmDeleteYes,
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await deletePayment(loan.id, existingPayment.id, existingPayment);
+              Toast.show({ text: t.deleted, type: 'success' });
+              navigation.goBack();
+            } catch (err) {
+              Toast.show({ text: err.message || 'Failed to delete payment', type: 'error' });
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const inputBg = isDark ? colors.surface : '#F2F4F8';
@@ -202,7 +263,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
               <Text style={[styles.headerBtnText, { color: colors.textMuted }]}>{t.cancel}</Text>
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>{t.title}</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>{isEditing ? t.editTitle : t.title}</Text>
             <View style={{ width: 64 }} />
           </View>
         </SafeAreaView>
@@ -235,7 +296,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
               >
                 <Text style={[styles.pickerText, { color: selectedPeriod ? colors.text : colors.textMuted }]}>
                   {selectedPeriod
-                    ? `Period ${selectedPeriod.periodNumber} — due ${selectedPeriod.dueDate} (${formatCurrency(selectedPeriod.totalDue - (selectedPeriod.paidAmount ?? 0), loan.currency)})`
+                    ? `${t.periodLabel} ${selectedPeriod.periodNumber} — ${selectedPeriod.dueDate} (${formatCurrency(selectedPeriod.totalDue - (selectedPeriod.paidAmount ?? 0), loan.currency)})`
                     : t.selectPeriod}
                 </Text>
                 <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
@@ -245,10 +306,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
 
           {/* Principal paid */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.principalPaid}</Text>
-          {isInterestOnly
-            ? <View style={[styles.readonlyRow, { backgroundColor: inputBg }]}><Text style={[styles.readonlyText, { color: colors.textMuted }]}>0 (Interest-only loan)</Text></View>
-            : numInput(principalRaw, setPrincipalRaw)
-          }
+          {numInput(principalRaw, setPrincipalRaw)}
 
           {/* Interest paid */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.interestPaid}</Text>
@@ -262,7 +320,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
             activeOpacity={0.7}
           >
             <Text style={{ color: paymentDate ? colors.text : colors.textMuted, fontSize: 15 }}>
-              {paymentDate || 'Select date'}
+              {paymentDate || t.selectDate}
             </Text>
           </TouchableOpacity>
           {errors.date ? <Text style={styles.errText}>{errors.date}</Text> : null}
@@ -297,8 +355,18 @@ const RecordPaymentScreen = ({ navigation, route }) => {
             disabled={loading}
             activeOpacity={0.82}
           >
-            {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveBtnText}>{t.save}</Text>}
+            {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveBtnText}>{isEditing ? t.update : t.save}</Text>}
           </TouchableOpacity>
+          {isEditing && (
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={handleDelete}
+              disabled={loading}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.deleteBtnText}>{t.deletePayment}</Text>
+            </TouchableOpacity>
+          )}
         </SafeAreaView>
       </View>
 
@@ -340,7 +408,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
                     activeOpacity={0.7}
                   >
                     <View style={styles.periodInfo}>
-                      <Text style={[styles.periodNum, { color: colors.text }]}>Period {item.periodNumber}</Text>
+                      <Text style={[styles.periodNum, { color: colors.text }]}>{t.periodLabel} {item.periodNumber}</Text>
                       <Text style={[styles.periodDate, { color: item.status === 'overdue' ? '#EF4444' : colors.textMuted }]}>
                         Due: {item.dueDate} {item.status === 'overdue' ? '⚠' : ''}
                       </Text>
@@ -388,12 +456,12 @@ const makeStyles = (ff) => StyleSheet.create({
   errText: { fontSize: 12, color: '#EF4444', marginTop: 4, marginLeft: 4 },
   pickerRow: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 14, paddingHorizontal: 16 },
   pickerText: { flex: 1, fontSize: 14, ...ff('400') },
-  readonlyRow: { height: 52, borderRadius: 14, paddingHorizontal: 16, justifyContent: 'center' },
-  readonlyText: { fontSize: 14 },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 16, marginTop: 8 },
   totalLabel: { fontSize: 14, ...ff('600') },
   totalValue: { fontSize: 18, ...ff('800') },
-  footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },
+  footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth, gap: 8 },
+  deleteBtn: { alignItems: 'center', paddingVertical: 10 },
+  deleteBtnText: { fontSize: 14, color: '#EF4444', ...ff('600') },
   saveBtn: {
     height: 56, borderRadius: 16, backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',

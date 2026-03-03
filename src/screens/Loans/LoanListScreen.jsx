@@ -24,7 +24,7 @@ import GlassCard from '../../components/GlassCard';
 import { Skeleton } from '../../components/Skeleton';
 
 const ACCENT = '#6366F1';
-const STATUS_COLORS = { active: '#10B981', overdue: '#EF4444', paid: '#9CA3AF' };
+const STATUS_COLORS = { active: '#10B981', overdue: '#EF4444', paid: '#9CA3AF', written_off: '#6B7280' };
 
 const T = {
   en: {
@@ -32,7 +32,7 @@ const T = {
     search: 'Search borrower...',
     empty: 'No loans yet',
     emptyHint: 'Create your first loan to get started',
-    status: { active: 'Active', overdue: 'Overdue', paid: 'Paid' },
+    status: { active: 'Active', overdue: 'Overdue', paid: 'Paid', written_off: 'Written Off' },
     interestOnly: 'I/O',
     principalInterest: 'P+I',
     accruing: 'Accruing',
@@ -40,13 +40,14 @@ const T = {
     filterActive: 'Active',
     filterOverdue: 'Overdue',
     filterPaid: 'Paid',
+    filterWrittenOff: 'Written Off',
   },
   km: {
     title: 'ប្រាក់កម្ចី',
     search: 'ស្វែងរកអ្នកខ្ចី...',
     empty: 'មិនទាន់មានប្រាក់កម្ចី',
     emptyHint: 'បង្កើតប្រាក់កម្ចីដំបូងរបស់អ្នក',
-    status: { active: 'ដំណើរការ', overdue: 'ហួសកំណត់', paid: 'បានបង់' },
+    status: { active: 'ដំណើរការ', overdue: 'ហួសកំណត់', paid: 'បានបង់', written_off: 'បោះបង់' },
     interestOnly: 'ការប្រាក់',
     principalInterest: 'ដើម+ការប្រាក់',
     accruing: 'បង្ហូរ',
@@ -54,6 +55,7 @@ const T = {
     filterActive: 'ដំណើរការ',
     filterOverdue: 'ហួសកំណត់',
     filterPaid: 'បានបង់',
+    filterWrittenOff: 'បោះបង់',
   },
 };
 
@@ -85,15 +87,16 @@ const LoanListScreen = ({ navigation }) => {
   }, [loans, search, statusFilter]);
 
   const FILTERS = [
-    { key: 'all',     label: t.filterAll,     color: ACCENT },
-    { key: 'active',  label: t.filterActive,  color: '#10B981' },
-    { key: 'overdue', label: t.filterOverdue, color: '#EF4444' },
-    { key: 'paid',    label: t.filterPaid,    color: '#9CA3AF' },
+    { key: 'all',          label: t.filterAll,          color: ACCENT },
+    { key: 'active',       label: t.filterActive,       color: '#10B981' },
+    { key: 'overdue',      label: t.filterOverdue,      color: '#EF4444' },
+    { key: 'paid',         label: t.filterPaid,         color: '#9CA3AF' },
+    { key: 'written_off',  label: t.filterWrittenOff,   color: '#6B7280' },
   ];
 
   const renderItem = ({ item: loan }) => {
     const statusColor = STATUS_COLORS[loan.status] ?? STATUS_COLORS.active;
-    const accrued = loan.scheduleMode === 'open' && loan.status !== 'paid'
+    const accrued = loan.scheduleMode === 'open' && loan.status !== 'paid' && loan.status !== 'written_off'
       ? calcAccruedInterest(loan)
       : null;
 
@@ -142,6 +145,13 @@ const LoanListScreen = ({ navigation }) => {
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>{t.title}</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('LoanCalculator')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="calculator-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
         <View style={[styles.searchWrap, { backgroundColor: isDark ? colors.surface : '#fff', borderColor: colors.border }]}>
           <Ionicons name="search-outline" size={18} color={colors.textMuted} />
@@ -227,7 +237,10 @@ const LoanListScreen = ({ navigation }) => {
 
 const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
   root: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4,
+  },
   title: { fontSize: fs(28), lineHeight: 34, ...ff('800'), letterSpacing: 0 },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
