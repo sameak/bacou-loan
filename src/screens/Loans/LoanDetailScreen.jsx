@@ -21,7 +21,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   listenLoan,
   listenSchedule,
@@ -72,6 +72,8 @@ const T = {
     confirmDeleteYes: 'Delete',
     deleted: 'Loan deleted',
     notes: 'NOTES',
+    addedBy: 'Added by',
+    editedBy: 'Edited by',
   },
   km: {
     edit: 'កែប្រែ',
@@ -102,15 +104,19 @@ const T = {
     confirmDeleteYes: 'លុប',
     deleted: 'បានលុបប្រាក់កម្ចី',
     notes: 'កំណត់ចំណាំ',
+    addedBy: 'បន្ថែមដោយ',
+    editedBy: 'កែដោយ',
   },
 };
 
 const LoanDetailScreen = ({ navigation, route }) => {
   const { loanId } = route.params;
   const { colors, isDark } = useTheme();
-  const { language, fs } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const { language, fs, ff } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs), [fs]);
+  const isKhmer = language === 'km';
+  const styles = useMemo(() => makeStyles(fs, ff, isKhmer), [fs, ff, isKhmer]);
 
   const [loan, setLoan] = useState(null);
   const [schedule, setSchedule] = useState([]);
@@ -325,6 +331,22 @@ const LoanDetailScreen = ({ navigation, route }) => {
                 <Text style={[styles.notesText, { color: colors.text }]}>{loan.notes}</Text>
               </View>
             )}
+
+            {/* Audit trail */}
+            {(loan.createdByName || loan.updatedByName) && (
+              <View style={[styles.auditSection, { borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                {loan.createdByName ? (
+                  <Text style={[styles.auditText, { color: colors.textMuted }]}>
+                    {t.addedBy}: {loan.createdByName}
+                  </Text>
+                ) : null}
+                {loan.updatedByName ? (
+                  <Text style={[styles.auditText, { color: colors.textMuted }]}>
+                    {t.editedBy}: {loan.updatedByName}
+                  </Text>
+                ) : null}
+              </View>
+            )}
           </View>
         </GlassCard>
 
@@ -467,7 +489,7 @@ const LoanDetailScreen = ({ navigation, route }) => {
       {/* FAB: Record Payment */}
       {!isPaid && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { bottom: insets.bottom + 100 }]}
           onPress={() => navigation.navigate('RecordPayment', { loan })}
           activeOpacity={0.85}
         >
@@ -478,84 +500,88 @@ const LoanDetailScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (fs) => StyleSheet.create({
+const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
   root: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontSize: fs(18), fontWeight: '700', textAlign: 'center', marginHorizontal: 8 },
+  headerTitle: { flex: 1, fontSize: fs(18), lineHeight: 23, ...ff('700'), textAlign: 'center', marginHorizontal: 8 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 90, justifyContent: 'flex-end' },
   editBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     borderWidth: 1.5, borderRadius: 8,
     paddingHorizontal: 10, paddingVertical: 5,
   },
-  editBtnText: { fontSize: fs(13), fontWeight: '600' },
-  topUpText: { fontSize: fs(15), fontWeight: '600' },
+  editBtnText: { fontSize: fs(13), lineHeight: 18, ...ff('600') },
+  topUpText: { fontSize: fs(15), lineHeight: 20, ...ff('600') },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 120 },
 
   // Summary card
   summaryCard: { padding: 20 },
   summaryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  statusText: { fontSize: fs(12), fontWeight: '700' },
-  currency: { fontSize: fs(13), fontWeight: '600' },
-  principalValue: { fontSize: fs(32), fontWeight: '800', marginBottom: 2 },
-  principalLabel: { fontSize: fs(13), marginBottom: 16 },
+  statusText: { fontSize: fs(12), lineHeight: 16, ...ff('700') },
+  currency: { fontSize: fs(13), lineHeight: 18, ...ff('600') },
+  principalValue: { fontSize: fs(32), lineHeight: 40, ...ff('800'), marginBottom: 2 },
+  principalLabel: { fontSize: fs(13), ...(isKhmer ? {} : { lineHeight: 18 }), ...ff('400'), marginBottom: 16 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  chipText: { fontSize: fs(12), fontWeight: '500' },
+  chipText: { fontSize: fs(12), lineHeight: 16, ...ff('500') },
   accrualBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, padding: 10, marginBottom: 12 },
-  accrualText: { fontSize: fs(12), color: '#F59E0B', fontWeight: '500', flex: 1 },
+  accrualText: { fontSize: fs(12), lineHeight: 16, color: '#F59E0B', ...ff('500'), flex: 1 },
   progressSection: { marginBottom: 16 },
   progressBg: { height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
   progressFill: { height: '100%', borderRadius: 3 },
-  progressLabel: { fontSize: fs(12) },
+  progressLabel: { fontSize: fs(12), lineHeight: 16, ...ff('400') },
   statsRow: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 14 },
   stat: { flex: 1, alignItems: 'center' },
   statBorder: { borderLeftWidth: StyleSheet.hairlineWidth, borderRightWidth: StyleSheet.hairlineWidth },
-  statValue: { fontSize: fs(14), fontWeight: '700', marginBottom: 2 },
-  statLabel: { fontSize: fs(11) },
+  statValue: { fontSize: fs(14), lineHeight: 19, ...ff('700'), marginBottom: 2 },
+  statLabel: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('400') },
 
   // Notes
   notesSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 14, marginTop: 4 },
-  notesLabel: { fontSize: fs(10), fontWeight: '700', letterSpacing: 0.8, marginBottom: 4 },
-  notesText: { fontSize: fs(14), lineHeight: 20 },
+  notesLabel: { fontSize: fs(10), ...(isKhmer ? {} : { lineHeight: 14 }), ...ff('700'), letterSpacing: 0, marginBottom: 4 },
+  notesText: { fontSize: fs(14), lineHeight: 20, ...ff('400') },
+
+  // Audit
+  auditSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, marginTop: 10, gap: 2 },
+  auditText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('400'), letterSpacing: 0 },
 
   // Tab bar
   tabBar: { flexDirection: 'row', borderRadius: 12, padding: 3, marginBottom: 10 },
   tab: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' },
-  tabLabel: { fontSize: fs(13), fontWeight: '600' },
+  tabLabel: { fontSize: fs(13), lineHeight: 18, ...ff('600') },
 
   // Schedule
   periodRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   periodNum: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  periodNumText: { fontSize: fs(12), fontWeight: '700' },
+  periodNumText: { fontSize: fs(12), lineHeight: 16, ...ff('700'), textAlign: 'center' },
   periodInfo: { flex: 1 },
-  periodDate: { fontSize: fs(14), fontWeight: '600', marginBottom: 2 },
-  periodMeta: { fontSize: fs(12) },
-  periodTotal: { fontSize: fs(14), fontWeight: '700', marginBottom: 4 },
+  periodDate: { fontSize: fs(14), lineHeight: 19, ...ff('600'), marginBottom: 2 },
+  periodMeta: { fontSize: fs(12), lineHeight: 16, ...ff('400') },
+  periodTotal: { fontSize: fs(14), lineHeight: 19, ...ff('700'), marginBottom: 4 },
   periodStatusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  periodStatusText: { fontSize: fs(10), fontWeight: '700' },
+  periodStatusText: { fontSize: fs(10), ...(isKhmer ? {} : { lineHeight: 14 }), ...ff('700') },
 
   // Payments
   payRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   payIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   payInfo: { flex: 1 },
-  payDate: { fontSize: fs(14), fontWeight: '600', marginBottom: 2 },
-  payMeta: { fontSize: fs(12) },
-  payNotes: { fontSize: fs(11), marginTop: 2 },
-  payTotal: { fontSize: fs(15), fontWeight: '700' },
+  payDate: { fontSize: fs(14), lineHeight: 19, ...ff('600'), marginBottom: 2 },
+  payMeta: { fontSize: fs(12), lineHeight: 16, ...ff('400') },
+  payNotes: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('400'), marginTop: 2 },
+  payTotal: { fontSize: fs(15), lineHeight: 20, ...ff('700') },
 
   // Mark paid
   markPaidBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginTop: 20, paddingVertical: 14, borderRadius: 14, borderWidth: 1,
   },
-  markPaidText: { fontSize: fs(14), fontWeight: '600' },
+  markPaidText: { fontSize: fs(14), lineHeight: 19, ...ff('600') },
 
   // FAB
   fab: {
-    position: 'absolute', bottom: 28, right: 24,
+    position: 'absolute', right: 24,
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center',
     ...Platform.select({

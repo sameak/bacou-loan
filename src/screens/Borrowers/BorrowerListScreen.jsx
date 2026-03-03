@@ -14,14 +14,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
+import { formatCurrency } from '../../services/loanService';
 import GlassCard from '../../components/GlassCard';
 import { Skeleton } from '../../components/Skeleton';
 
 const ACCENT = '#6366F1';
+
+// Palette of accent colors for avatars — cycles by first-letter charCode
+const AVATAR_COLORS = ['#6366F1','#8B5CF6','#EC4899','#F59E0B','#10B981','#3B82F6','#EF4444','#14B8A6'];
+function avatarColor(name) {
+  if (!name) return ACCENT;
+  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+}
 
 const T = {
   en: {
@@ -32,6 +40,7 @@ const T = {
     activeLoans: (n) => `${n} active loan${n !== 1 ? 's' : ''}`,
     noLoans: 'No active loans',
     outstanding: 'Outstanding',
+    borrowerCount: (n) => `${n} borrower${n !== 1 ? 's' : ''}`,
   },
   km: {
     title: 'អ្នកខ្ចី',
@@ -41,14 +50,17 @@ const T = {
     activeLoans: (n) => `${n} ប្រាក់កម្ចី`,
     noLoans: 'គ្មានប្រាក់កម្ចី',
     outstanding: 'នៅជំពាក់',
+    borrowerCount: (n) => `${n} នាក់`,
   },
 };
 
 const BorrowerListScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
-  const { language, fs } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs), [fs]);
+  const isKhmer = language === 'km';
+  const styles = useMemo(() => makeStyles(fs, ff, isKhmer), [fs, ff, isKhmer]);
 
   const { borrowers, loans, borrowersLoaded } = useData();
   const [search, setSearch] = useState('');
@@ -60,11 +72,12 @@ const BorrowerListScreen = ({ navigation }) => {
     const map = {};
     for (const loan of loans) {
       if (!map[loan.borrowerId]) {
-        map[loan.borrowerId] = { activeCount: 0, outstanding: 0 };
+        map[loan.borrowerId] = { activeCount: 0, outstanding: 0, currency: loan.currency ?? 'USD' };
       }
       if (loan.status !== 'paid') {
         map[loan.borrowerId].activeCount++;
         map[loan.borrowerId].outstanding += loan.currentPrincipal ?? 0;
+        map[loan.borrowerId].currency = loan.currency ?? map[loan.borrowerId].currency;
       }
     }
     return map;
@@ -84,7 +97,10 @@ const BorrowerListScreen = ({ navigation }) => {
   }, [borrowers, search]);
 
   const renderItem = ({ item }) => {
-    const stats = borrowerStats[item.id] ?? { activeCount: 0, outstanding: 0 };
+    const stats = borrowerStats[item.id] ?? { activeCount: 0, outstanding: 0, currency: 'USD' };
+    const aColor = avatarColor(item.name);
+    const hasActive = stats.activeCount > 0;
+
     return (
       <TouchableOpacity
         onPress={() => navigation.navigate('BorrowerDetail', { borrowerId: item.id })}
@@ -93,30 +109,40 @@ const BorrowerListScreen = ({ navigation }) => {
       >
         <GlassCard>
           <View style={styles.cardRow}>
-            <View style={[styles.avatar, { backgroundColor: ACCENT + '20' }]}>
-              <Text style={[styles.avatarText, { color: ACCENT }]}>
+            {/* Avatar */}
+            <View style={[styles.avatar, { backgroundColor: aColor + '22' }]}>
+              <Text style={[styles.avatarText, { color: aColor }]}>
                 {item.name.charAt(0).toUpperCase()}
               </Text>
             </View>
+
+            {/* Info */}
             <View style={styles.info}>
               <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
-              <Text style={[styles.phone, { color: colors.textMuted }]}>{item.phone}</Text>
+              {item.phone ? (
+                <Text style={[styles.phone, { color: colors.textMuted }]}>{item.phone}</Text>
+              ) : null}
             </View>
-            <View style={styles.stats}>
-              {stats.activeCount > 0 ? (
+
+            {/* Stats */}
+            <View style={styles.statsCol}>
+              {hasActive ? (
                 <>
-                  <Text style={[styles.statCount, { color: ACCENT }]}>{t.activeLoans(stats.activeCount)}</Text>
-                  {stats.outstanding > 0 && (
-                    <Text style={[styles.statAmount, { color: colors.textMuted }]}>
-                      {stats.outstanding.toLocaleString()}
+                  <Text style={[styles.outstandingAmt, { color: aColor }]}>
+                    {formatCurrency(stats.outstanding, stats.currency)}
+                  </Text>
+                  <View style={[styles.loanCountChip, { backgroundColor: aColor + '18' }]}>
+                    <Text style={[styles.loanCountText, { color: aColor }]}>
+                      {t.activeLoans(stats.activeCount)}
                     </Text>
-                  )}
+                  </View>
                 </>
               ) : (
-                <Text style={[styles.statCount, { color: colors.textMuted }]}>{t.noLoans}</Text>
+                <Text style={[styles.noLoansText, { color: colors.textMuted }]}>{t.noLoans}</Text>
               )}
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ marginLeft: 4 }} />
           </View>
         </GlassCard>
       </TouchableOpacity>
@@ -128,10 +154,14 @@ const BorrowerListScreen = ({ navigation }) => {
       {[1, 2, 3].map(i => (
         <GlassCard key={i}>
           <View style={[styles.cardRow, { paddingVertical: 16 }]}>
-            <Skeleton width={44} height={44} radius={22} isDark={isDark} />
+            <Skeleton width={48} height={48} radius={24} isDark={isDark} />
             <View style={{ flex: 1, marginLeft: 12, gap: 8 }}>
               <Skeleton width="50%" height={14} isDark={isDark} />
               <Skeleton width="35%" height={11} isDark={isDark} />
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 6 }}>
+              <Skeleton width={64} height={14} isDark={isDark} />
+              <Skeleton width={80} height={20} isDark={isDark} radius={10} />
             </View>
           </View>
         </GlassCard>
@@ -143,14 +173,21 @@ const BorrowerListScreen = ({ navigation }) => {
     <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>{t.title}</Text>
+          <View>
+            <Text style={[styles.title, { color: colors.text }]}>{t.title}</Text>
+            {!loading && borrowers.length > 0 && (
+              <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+                {t.borrowerCount(filtered.length)}
+              </Text>
+            )}
+          </View>
         </View>
 
         {/* Search */}
         <View style={[styles.searchWrap, { backgroundColor: isDark ? colors.surface : '#fff', borderColor: colors.border }]}>
           <Ionicons name="search-outline" size={18} color={colors.textMuted} />
           <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
+            style={[styles.searchInput, { color: colors.text }, fi()]}
             value={search}
             onChangeText={setSearch}
             placeholder={t.search}
@@ -172,10 +209,14 @@ const BorrowerListScreen = ({ navigation }) => {
           renderItem={renderItem}
           contentContainerStyle={[styles.list, filtered.length === 0 && styles.listEmpty]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT} colors={[ACCENT]} />}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Ionicons name="people-outline" size={52} color={colors.textMuted} />
+              <View style={[styles.emptyIconWrap, { backgroundColor: ACCENT + '15' }]}>
+                <Ionicons name="people-outline" size={36} color={ACCENT} />
+              </View>
               <Text style={[styles.emptyText, { color: colors.text }]}>{t.empty}</Text>
               <Text style={[styles.emptyHint, { color: colors.textMuted }]}>{t.emptyHint}</Text>
             </View>
@@ -185,7 +226,7 @@ const BorrowerListScreen = ({ navigation }) => {
 
       {/* FAB */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: insets.bottom + 100 }]}
         onPress={() => navigation.navigate('CreateBorrower')}
         activeOpacity={0.85}
       >
@@ -195,34 +236,38 @@ const BorrowerListScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (fs) => StyleSheet.create({
+const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
   root: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  title: { fontSize: fs(28), fontWeight: '800', letterSpacing: -0.5 },
+  title: { fontSize: fs(28), lineHeight: 34, ...ff('800'), letterSpacing: 0 },
+  subtitle: { fontSize: fs(13), lineHeight: 18, ...ff('500'), marginTop: 1 },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginTop: 8, marginBottom: 4,
     paddingHorizontal: 14, height: 44, borderRadius: 14,
     borderWidth: 1,
   },
-  searchInput: { flex: 1, fontSize: fs(15), fontWeight: '400' },
+  searchInput: { flex: 1, fontSize: fs(15), lineHeight: 20, ...ff('400') },
   list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100, gap: 8 },
   listEmpty: { flexGrow: 1, justifyContent: 'center' },
   cardWrap: {},
   cardRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: fs(18), fontWeight: '700' },
-  info: { flex: 1 },
-  name: { fontSize: fs(15), fontWeight: '600', marginBottom: 2 },
-  phone: { fontSize: fs(13), fontWeight: '400' },
-  stats: { alignItems: 'flex-end' },
-  statCount: { fontSize: fs(12), fontWeight: '600' },
-  statAmount: { fontSize: fs(12), fontWeight: '400' },
-  emptyWrap: { alignItems: 'center', gap: 10, paddingBottom: 80 },
-  emptyText: { fontSize: fs(17), fontWeight: '600' },
-  emptyHint: { fontSize: fs(14) },
+  avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  avatarText: { fontSize: fs(20), lineHeight: 26, ...ff('800'), textAlign: 'center' },
+  info: { flex: 1, minWidth: 0 },
+  name: { fontSize: fs(15), lineHeight: 20, ...ff('600'), marginBottom: 2 },
+  phone: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
+  statsCol: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
+  outstandingAmt: { fontSize: fs(14), lineHeight: 19, ...ff('700') },
+  loanCountChip: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  loanCountText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('700') },
+  noLoansText: { fontSize: fs(12), lineHeight: 16, ...ff('500') },
+  emptyWrap: { alignItems: 'center', gap: 12, paddingBottom: 80 },
+  emptyIconWrap: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  emptyText: { fontSize: fs(17), lineHeight: 22, ...ff('600') },
+  emptyHint: { fontSize: fs(14), lineHeight: 19, ...ff('400') },
   fab: {
-    position: 'absolute', bottom: 28, right: 24,
+    position: 'absolute', right: 24,
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',

@@ -12,19 +12,29 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.bacou.loan",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Bacou needs access to your photo library to attach loan documents and photos.",
+        "NSCameraUsageDescription": "Bacou needs camera access to capture loan contract photos.",
+        "NSMicrophoneUsageDescription": "Bacou needs microphone access to record video affirmations."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#312e81"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       },
       "package": "com.bacou.loan",
       "edgeToEdgeEnabled": true
     },
     "plugins": [
       "expo-dev-client",
+      "expo-image-picker",
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -38,6 +48,12 @@
         }
       ],
       "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Bacou to use Face ID to unlock the app."
+        }
+      ],
       [
         "expo-build-properties",
         {

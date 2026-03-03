@@ -6,7 +6,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -70,8 +70,11 @@ const T = {
 const EditLoanScreen = ({ navigation, route }) => {
   const { loan } = route.params;
   const { colors, isDark } = useTheme();
-  const { language } = useLanguage();
+  const { language, ff, fi } = useLanguage();
   const t = T[language] || T.en;
+
+  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const scrollRef = useRef(null);
 
   const isFixed = loan.scheduleMode === 'fixed';
 
@@ -143,6 +146,7 @@ const EditLoanScreen = ({ navigation, route }) => {
         </SafeAreaView>
 
         <ScrollView
+          ref={scrollRef}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
@@ -166,7 +170,7 @@ const EditLoanScreen = ({ navigation, route }) => {
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.rate}</Text>
           <View style={[styles.rateWrap, { backgroundColor: inputBg }, errors.rate && styles.inputError]}>
             <TextInput
-              style={[styles.rateInput, { color: colors.text }]}
+              style={[styles.rateInput, { color: colors.text }, fi()]}
               value={rate}
               onChangeText={v => { setRate(v); if (errors.rate) setErrors(e => ({ ...e, rate: null })); }}
               placeholder={t.ratePlaceholder}
@@ -182,7 +186,7 @@ const EditLoanScreen = ({ navigation, route }) => {
             <>
               <Text style={[styles.label, { color: colors.textMuted }]}>{t.periods}</Text>
               <TextInput
-                style={[inputStyle, errors.periods && styles.inputError]}
+                style={[inputStyle, errors.periods && styles.inputError, fi()]}
                 value={periods}
                 onChangeText={v => { setPeriods(v.replace(/\D/g, '')); if (errors.periods) setErrors(e => ({ ...e, periods: null })); }}
                 placeholder={t.periodsPlaceholder}
@@ -196,7 +200,7 @@ const EditLoanScreen = ({ navigation, route }) => {
           {/* Notes */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.notes}</Text>
           <TextInput
-            style={[inputStyle, styles.multiline, { backgroundColor: inputBg, color: colors.text }]}
+            style={[inputStyle, styles.multiline, { backgroundColor: inputBg, color: colors.text }, fi()]}
             value={notes}
             onChangeText={setNotes}
             placeholder={t.notesPlaceholder}
@@ -204,6 +208,7 @@ const EditLoanScreen = ({ navigation, route }) => {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250)}
           />
         </ScrollView>
 
@@ -228,27 +233,27 @@ const EditLoanScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (ff) => StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 64, paddingVertical: 4 },
-  headerBtnText: { fontSize: 15, fontWeight: '500' },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
-  content: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, gap: 4 },
-  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8, marginTop: 12 },
-  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15, fontWeight: '400' },
+  headerBtnText: { fontSize: 15, ...ff('500') },
+  headerTitle: { fontSize: 18, ...ff('700') },
+  content: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 80, gap: 4 },
+  label: { fontSize: 11, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 12 },
+  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15, ...ff('400') },
   multiline: { height: 90, paddingTop: 14, textAlignVertical: 'top' },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },
   errText: { fontSize: 12, color: '#EF4444', marginTop: 4, marginLeft: 4 },
   currencyRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
   currencyBtn: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: 13, fontWeight: '700' },
+  currencyText: { fontSize: 13, ...ff('700') },
   rateWrap: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 14, paddingHorizontal: 16 },
-  rateInput: { flex: 1, fontSize: 15, fontWeight: '400' },
-  rateSuffix: { fontSize: 16, fontWeight: '700', marginLeft: 8 },
+  rateInput: { flex: 1, fontSize: 15, ...ff('400') },
+  rateSuffix: { fontSize: 16, ...ff('700'), marginLeft: 8 },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },
   saveBtn: {
     height: 56, borderRadius: 16, backgroundColor: ACCENT,
@@ -258,7 +263,7 @@ const styles = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
 });
 
 export default EditLoanScreen;

@@ -3,7 +3,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -50,8 +50,8 @@ const T = {
     notesPlaceholder: 'ព័ត៌មានបន្ថែម...',
     save: 'រក្សាទុក',
     cancel: 'បោះបង់',
-    errName: 'ទាមទារឈ្មោះ',
-    errPhone: 'ទាមទារលេខទូរសព្ទ',
+    errName: 'ទាមតារឈ្មោះ',
+    errPhone: 'ទាមតារលេខទូរសព្ទ',
     saved: 'បានបន្ថែមអ្នកខ្ចីដោយជោគជ័យ',
   },
 };
@@ -60,8 +60,11 @@ const ACCENT = '#6366F1';
 
 const CreateBorrowerScreen = ({ navigation, route }) => {
   const { colors, isDark } = useTheme();
-  const { language } = useLanguage();
+  const { language, ff, fi } = useLanguage();
   const t = T[language] || T.en;
+
+  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const scrollRef = useRef(null);
 
   // Allow pre-filling from BorrowerDetail → "New Loan" flow
   const prefill = route?.params?.prefill ?? {};
@@ -118,6 +121,7 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
         </SafeAreaView>
 
         <ScrollView
+          ref={scrollRef}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
@@ -125,7 +129,7 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
           {/* Name */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.name.toUpperCase()}</Text>
           <TextInput
-            style={[inputStyle, errors.name && styles.inputError]}
+            style={[inputStyle, errors.name && styles.inputError, fi()]}
             value={name}
             onChangeText={v => { setName(v); if (errors.name) setErrors(e => ({ ...e, name: null })); }}
             placeholder={t.namePlaceholder}
@@ -137,7 +141,7 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
           {/* Phone */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.phone.toUpperCase()}</Text>
           <TextInput
-            style={[inputStyle, errors.phone && styles.inputError]}
+            style={[inputStyle, errors.phone && styles.inputError, fi()]}
             value={phone}
             onChangeText={v => { setPhone(v); if (errors.phone) setErrors(e => ({ ...e, phone: null })); }}
             placeholder={t.phonePlaceholder}
@@ -149,7 +153,7 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
           {/* Address */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.address.toUpperCase()}</Text>
           <TextInput
-            style={inputStyle}
+            style={[inputStyle, fi()]}
             value={address}
             onChangeText={setAddress}
             placeholder={t.addressPlaceholder}
@@ -159,7 +163,7 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
           {/* Notes */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.notes.toUpperCase()}</Text>
           <TextInput
-            style={multilineStyle}
+            style={[multilineStyle, fi()]}
             value={notes}
             onChangeText={setNotes}
             placeholder={t.notesPlaceholder}
@@ -167,6 +171,7 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250)}
           />
         </ScrollView>
 
@@ -189,18 +194,18 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (ff) => StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 64, paddingVertical: 4 },
-  headerBtnText: { fontSize: 15, fontWeight: '500' },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
-  content: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 16 },
-  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8, marginTop: 4 },
-  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15, fontWeight: '400', marginBottom: 4 },
+  headerBtnText: { fontSize: 15, ...ff('500') },
+  headerTitle: { fontSize: 18, ...ff('700') },
+  content: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 80 },
+  label: { fontSize: 11, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 4 },
+  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15, ...ff('400'), marginBottom: 4 },
   multiline: { height: 90, paddingTop: 14 },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },
   errText: { fontSize: 12, color: '#EF4444', marginBottom: 8, marginLeft: 4 },
@@ -213,7 +218,7 @@ const styles = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
 });
 
 export default CreateBorrowerScreen;

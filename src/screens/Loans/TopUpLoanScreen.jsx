@@ -3,7 +3,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -67,8 +67,11 @@ const T = {
 const TopUpLoanScreen = ({ navigation, route }) => {
   const { loan } = route.params;
   const { colors, isDark } = useTheme();
-  const { language } = useLanguage();
+  const { language, ff, fi } = useLanguage();
   const t = T[language] || T.en;
+
+  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const scrollRef = useRef(null);
 
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('merge');
@@ -113,7 +116,7 @@ const TopUpLoanScreen = ({ navigation, route }) => {
           </View>
         </SafeAreaView>
 
-        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           {/* Current balance */}
           <View style={[styles.balanceCard, { backgroundColor: ACCENT + '12', borderColor: ACCENT + '25' }]}>
             <View>
@@ -133,7 +136,7 @@ const TopUpLoanScreen = ({ navigation, route }) => {
           <View style={[styles.amountWrap, { backgroundColor: inputBg }, error && styles.inputError]}>
             <Text style={[styles.currencySymbol, { color: colors.textMuted }]}>{loan.currency}</Text>
             <TextInput
-              style={[styles.amountInput, { color: colors.text }]}
+              style={[styles.amountInput, { color: colors.text }, fi()]}
               value={amount ? parseInt(amount.replace(/,/g, ''), 10).toLocaleString() : ''}
               onChangeText={v => {
                 const raw = v.replace(/,/g, '');
@@ -183,7 +186,7 @@ const TopUpLoanScreen = ({ navigation, route }) => {
           {/* Notes */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.notes}</Text>
           <TextInput
-            style={[styles.notesInput, { backgroundColor: inputBg, color: colors.text }]}
+            style={[styles.notesInput, { backgroundColor: inputBg, color: colors.text }, fi()]}
             value={notes}
             onChangeText={setNotes}
             placeholder={t.notesPlaceholder}
@@ -191,6 +194,7 @@ const TopUpLoanScreen = ({ navigation, route }) => {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250)}
           />
         </ScrollView>
 
@@ -209,23 +213,23 @@ const TopUpLoanScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (ff) => StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 64 },
-  headerBtnText: { fontSize: 15, fontWeight: '500' },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
+  headerBtnText: { fontSize: 15, ...ff('500') },
+  headerTitle: { fontSize: 18, ...ff('700') },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 80 },
   balanceCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: 14, padding: 16, borderWidth: 1, marginBottom: 8 },
-  balanceLabel: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
-  balanceValue: { fontSize: 18, fontWeight: '800' },
-  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8, marginTop: 16 },
+  balanceLabel: { fontSize: 12, ...ff('600'), marginBottom: 4 },
+  balanceValue: { fontSize: 18, ...ff('800') },
+  label: { fontSize: 11, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 16 },
   amountWrap: { flexDirection: 'row', alignItems: 'center', height: 56, borderRadius: 14, paddingHorizontal: 16 },
-  currencySymbol: { fontSize: 15, fontWeight: '600', marginRight: 8 },
-  amountInput: { flex: 1, fontSize: 22, fontWeight: '700' },
+  currencySymbol: { fontSize: 15, ...ff('600'), marginRight: 8 },
+  amountInput: { flex: 1, fontSize: 22, ...ff('700') },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },
   errText: { fontSize: 12, color: '#EF4444', marginTop: 4, marginLeft: 4 },
   methodCard: {
@@ -236,7 +240,7 @@ const styles = StyleSheet.create({
   methodCardActive: { borderColor: ACCENT },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center' },
   radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
-  methodTitle: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
+  methodTitle: { fontSize: 14, ...ff('600'), marginBottom: 2 },
   methodDesc: { fontSize: 12 },
   notesInput: { borderRadius: 14, padding: 14, fontSize: 15, height: 80, textAlignVertical: 'top' },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },
@@ -248,7 +252,7 @@ const styles = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
 });
 
 export default TopUpLoanScreen;

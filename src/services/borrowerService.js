@@ -9,7 +9,6 @@ import {
   deleteDoc,
   doc,
   query,
-  where,
   getDocs,
   orderBy,
   serverTimestamp,
@@ -23,6 +22,14 @@ function getUid() {
   return auth.currentUser?.uid;
 }
 
+function getUserInfo() {
+  const user = auth.currentUser;
+  return {
+    uid: user?.uid ?? '',
+    name: user?.displayName || user?.email || 'Unknown',
+  };
+}
+
 /**
  * Create a new borrower.
  * Returns the new borrower document with id.
@@ -31,12 +38,16 @@ export async function createBorrower({ name, phone, address = '', notes = '' }) 
   const uid = getUid();
   if (!uid) throw new Error('Not authenticated');
 
+  const { name: userName } = getUserInfo();
+
   const ref = await addDoc(collection(db, COLL), {
     ownerId: uid,
     name: name.trim(),
     phone: phone.trim(),
     address: address.trim(),
     notes: notes.trim(),
+    createdBy: uid,
+    createdByName: userName,
     createdAt: serverTimestamp(),
   });
 
@@ -47,8 +58,14 @@ export async function createBorrower({ name, phone, address = '', notes = '' }) 
  * Update borrower fields.
  */
 export async function updateBorrower(borrowerId, fields) {
+  const { uid, name: userName } = getUserInfo();
   const ref = doc(db, COLL, borrowerId);
-  await updateDoc(ref, fields);
+  await updateDoc(ref, {
+    ...fields,
+    updatedBy: uid,
+    updatedByName: userName,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 /**
@@ -65,12 +82,7 @@ export async function getBorrowers() {
   const uid = getUid();
   if (!uid) return [];
 
-  const q = query(
-    collection(db, COLL),
-    where('ownerId', '==', uid),
-    orderBy('name', 'asc')
-  );
-
+  const q = query(collection(db, COLL), orderBy('name', 'asc'));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
@@ -83,10 +95,7 @@ export function listenBorrowers(callback) {
   const uid = getUid();
   if (!uid) return () => {};
 
-  const q = query(
-    collection(db, COLL),
-    where('ownerId', '==', uid)
-  );
+  const q = query(collection(db, COLL));
 
   return onSnapshot(q, snap => {
     const borrowers = snap.docs.map(d => ({ id: d.id, ...d.data() }));

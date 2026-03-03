@@ -30,6 +30,14 @@ function getUid() {
   return auth.currentUser?.uid;
 }
 
+function getUserInfo() {
+  const user = auth.currentUser;
+  return {
+    uid: user?.uid ?? '',
+    name: user?.displayName || user?.email || 'Unknown',
+  };
+}
+
 function round2(n) {
   return Math.round(n * 100) / 100;
 }
@@ -136,6 +144,8 @@ export async function createLoan(loanData) {
   const uid = getUid();
   if (!uid) throw new Error('Not authenticated');
 
+  const { name: userName } = getUserInfo();
+
   const loan = {
     ownerId: uid,
     borrowerId: loanData.borrowerId,
@@ -156,6 +166,8 @@ export async function createLoan(loanData) {
     totalInterestPaid: 0,
     notes: loanData.notes ?? '',
     parentLoanId: loanData.parentLoanId ?? null,
+    createdBy: uid,
+    createdByName: userName,
     createdAt: serverTimestamp(),
   };
 
@@ -189,7 +201,13 @@ export async function updateLoan(loanId, fields) {
  * the schedule from the first unpaid period onwards.
  */
 export async function editLoan(loanId, updates, originalLoan) {
-  await updateDoc(doc(db, 'loans', loanId), updates);
+  const { uid, name: userName } = getUserInfo();
+  await updateDoc(doc(db, 'loans', loanId), {
+    ...updates,
+    updatedBy: uid,
+    updatedByName: userName,
+    updatedAt: serverTimestamp(),
+  });
 
   const scheduleFieldChanged =
     originalLoan.scheduleMode === 'fixed' &&
@@ -236,7 +254,7 @@ export function listenLoans(callback) {
   const uid = getUid();
   if (!uid) return () => {};
 
-  const q = query(collection(db, 'loans'), where('ownerId', '==', uid));
+  const q = query(collection(db, 'loans'));
 
   return onSnapshot(q, snap => {
     const loans = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -270,7 +288,6 @@ export function listenLoansByBorrower(borrowerId, callback) {
   if (!uid) return () => {};
   const q = query(
     collection(db, 'loans'),
-    where('ownerId', '==', uid),
     where('borrowerId', '==', borrowerId)
   );
   return onSnapshot(q, snap => {
@@ -289,7 +306,6 @@ export async function getLoansByBorrower(borrowerId) {
 
   const q = query(
     collection(db, 'loans'),
-    where('ownerId', '==', uid),
     where('borrowerId', '==', borrowerId)
   );
   const snap = await getDocs(q);
@@ -406,6 +422,8 @@ export async function recordPayment(loanId, paymentData) {
 
   const batch = writeBatch(db);
 
+  const { uid: payUid, name: payName } = getUserInfo();
+
   // 1. Add payment record
   const paymentRef = doc(collection(db, 'loans', loanId, 'payments'));
   batch.set(paymentRef, {
@@ -416,6 +434,8 @@ export async function recordPayment(loanId, paymentData) {
     daysAccrued: daysAccrued ?? null,
     schedulePeriodId: schedulePeriodId ?? null,
     notes,
+    createdBy: payUid,
+    createdByName: payName,
     createdAt: serverTimestamp(),
   });
 
@@ -468,6 +488,31 @@ export async function getPayments(loanId) {
     return tb - ta;
   });
   return payments;
+}
+
+/**
+ * Fetch all payments for a list of loans, enriched with loan context.
+ * Used by BorrowerDetailScreen to show unified payment history.
+ */
+export async function getBorrowerPayments(loans) {
+  const allPayments = [];
+  for (const loan of loans) {
+    const snap = await getDocs(collection(db, 'loans', loan.id, 'payments'));
+    const payments = snap.docs.map(d => ({
+      id: d.id,
+      loanId: loan.id,
+      loanCurrency: loan.currency,
+      loanOriginalPrincipal: loan.originalPrincipal,
+      ...d.data(),
+    }));
+    allPayments.push(...payments);
+  }
+  allPayments.sort((a, b) => {
+    if (a.date > b.date) return -1;
+    if (a.date < b.date) return 1;
+    return (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0);
+  });
+  return allPayments;
 }
 
 /**

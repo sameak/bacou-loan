@@ -3,7 +3,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -26,12 +26,17 @@ import CalendarPopup from '../../components/CalendarPopup';
 
 const ACCENT = '#6366F1';
 const CURRENCIES = ['USD', 'KHR', 'KRW', 'Other'];
+const CURRENCY_LABELS = {
+  km: { USD: 'ប្រាក់ដុល្លា', KHR: 'ប្រាក់រៀល', KRW: 'ប្រាក់វ៉ុន', Other: 'ផ្សេងៗ' },
+};
 
 const T = {
   en: {
     title: 'New Loan',
     cancel: 'Cancel',
     save: 'Create Loan',
+    friendlyLoan: 'Friendly Loan',
+    friendlyLoanHint: '0% interest · Pay anytime',
     borrower: 'BORROWER',
     selectBorrower: 'Select borrower...',
     currency: 'CURRENCY',
@@ -53,14 +58,14 @@ const T = {
     open: 'Open-Ended',
     periods: 'NUMBER OF PERIODS',
     periodsPlaceholder: '12',
-    startDate: 'START DATE (YYYY-MM-DD)',
+    startDate: 'START DATE',
     notes: 'NOTES (optional)',
     notesPlaceholder: 'Any notes about this loan...',
     errBorrower: 'Select a borrower',
     errPrincipal: 'Enter principal amount',
     errRate: 'Enter interest rate',
     errPeriods: 'Enter number of periods',
-    errDate: 'Enter start date (YYYY-MM-DD)',
+    errDate: 'Enter start date',
     created: 'Loan created successfully',
     searchBorrower: 'Search borrowers...',
     addBorrower: '+ Add new borrower',
@@ -69,18 +74,20 @@ const T = {
     title: 'ប្រាក់កម្ចីថ្មី',
     cancel: 'បោះបង់',
     save: 'បង្កើតប្រាក់កម្ចី',
+    friendlyLoan: 'ប្រាក់កម្ចីអត់ការប្រាក់',
+    friendlyLoanHint: '0% · បង់ពេលណាក៏បាន',
     borrower: 'អ្នកខ្ចី',
     selectBorrower: 'ជ្រើសរើសអ្នកខ្ចី...',
     currency: 'រូបិយប័ណ្ណ',
     principal: 'ចំនួនទឹកប្រាក់',
     principalPlaceholder: '0',
     repaymentType: 'ប្រភេទការបង់',
-    interestOnly: 'តែការប្រាក់',
-    principalAndInterest: 'ដើម + ការប្រាក់',
+    interestOnly: 'បង់តែការប្រាក់',
+    principalAndInterest: 'បង់ប្រាក់ដើម និង ការប្រាក់',
     interestBasis: 'មូលដ្ឋានការប្រាក់',
-    flat: 'ថេរ',
-    reducing: 'ថយចុះ',
-    rate: 'អត្រាការប្រាក់ (% ក្នុងដំណាក់)',
+    flat: 'ការប្រាក់ថេរ',
+    reducing: 'ការប្រាក់ថយតាមប្រាក់ដើម',
+    rate: 'អត្រាការប្រាក់',
     ratePlaceholder: '3',
     frequency: 'ភាពញឹកញាប់',
     weekly: 'ប្រចាំសប្ដាហ៍',
@@ -90,7 +97,7 @@ const T = {
     open: 'បើក',
     periods: 'ចំនួនដំណាក់',
     periodsPlaceholder: '12',
-    startDate: 'កាលបរិច្ឆេទចាប់ផ្ដើម (YYYY-MM-DD)',
+    startDate: 'កាលបរិច្ឆេទចាប់ផ្ដើម',
     notes: 'កំណត់ចំណាំ (ស្រេចចិត្ត)',
     notesPlaceholder: 'កំណត់ចំណាំ...',
     errBorrower: 'ជ្រើសរើសអ្នកខ្ចី',
@@ -104,36 +111,36 @@ const T = {
   },
 };
 
-const ToggleGroup = ({ options, value, onChange, colors, isDark }) => (
-  <View style={[toggleStyles.wrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
-    {options.map(opt => {
-      const active = value === opt.value;
-      return (
-        <TouchableOpacity
-          key={opt.value}
-          style={[toggleStyles.btn, active && { backgroundColor: isDark ? '#fff' : '#1C1C1E' }]}
-          onPress={() => onChange(opt.value)}
-          activeOpacity={0.8}
-        >
-          <Text style={[toggleStyles.label, { color: active ? (isDark ? '#000' : '#fff') : colors.textMuted }]}>
-            {opt.label}
-          </Text>
-        </TouchableOpacity>
-      );
-    })}
-  </View>
-);
-
-const toggleStyles = StyleSheet.create({
-  wrap: { flexDirection: 'row', borderRadius: 12, padding: 3, marginBottom: 4 },
-  btn: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' },
-  label: { fontSize: 13, fontWeight: '600' },
-});
+const ToggleGroup = ({ options, value, onChange, colors, isDark }) => {
+  const { ff } = useLanguage();
+  return (
+    <View style={[{ flexDirection: 'row', borderRadius: 12, padding: 3, marginBottom: 4 }, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
+      {options.map(opt => {
+        const active = value === opt.value;
+        return (
+          <TouchableOpacity
+            key={opt.value}
+            style={[{ flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' }, active && { backgroundColor: isDark ? '#fff' : '#1C1C1E' }]}
+            onPress={() => onChange(opt.value)}
+            activeOpacity={0.8}
+          >
+            <Text style={[{ fontSize: 13, lineHeight: 18, ...ff('600') }, { color: active ? (isDark ? '#000' : '#fff') : colors.textMuted }]}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
 
 const CreateLoanScreen = ({ navigation, route }) => {
   const { colors, isDark } = useTheme();
-  const { language } = useLanguage();
+  const { language, ff, fi } = useLanguage();
   const t = T[language] || T.en;
+
+  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const scrollRef = useRef(null);
 
   // Pre-fill from BorrowerDetail or DashboardScreen FAB
   const prefillBorrowerId = route?.params?.prefillBorrowerId;
@@ -200,12 +207,19 @@ const CreateLoanScreen = ({ navigation, route }) => {
       Toast.show({ text: t.created, type: 'success' });
       navigation.goBack();
       // Navigate to the new loan detail
-      setTimeout(() => navigation.navigate('LoanDetail', { loanId }), 300);
+      setTimeout(() => navigation.navigate('Tabs', { screen: 'LoansTab', params: { screen: 'LoanDetail', params: { loanId } } }), 300);
     } catch (err) {
       Toast.show({ text: err.message || 'Failed to create loan', type: 'error' });
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyFriendlyLoan = () => {
+    setRate('0');
+    setScheduleMode('open');
+    setRepaymentType('principal_and_interest');
+    setErrors({});
   };
 
   const inputBg = isDark ? colors.surface : '#F2F4F8';
@@ -225,7 +239,21 @@ const CreateLoanScreen = ({ navigation, route }) => {
           </View>
         </SafeAreaView>
 
-        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+
+          {/* Friendly Loan preset */}
+          <TouchableOpacity
+            onPress={applyFriendlyLoan}
+            activeOpacity={0.8}
+            style={[styles.presetChip, { backgroundColor: '#10B98115', borderColor: '#10B98140' }]}
+          >
+            <Text style={styles.presetIcon}>🤝</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.presetTitle, { color: '#10B981' }]}>{t.friendlyLoan}</Text>
+              <Text style={[styles.presetHint, { color: '#10B981' }]}>{t.friendlyLoanHint}</Text>
+            </View>
+            <Ionicons name="flash" size={16} color="#10B981" />
+          </TouchableOpacity>
 
           {/* Borrower picker */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.borrower}</Text>
@@ -251,7 +279,7 @@ const CreateLoanScreen = ({ navigation, route }) => {
                 onPress={() => setCurrency(c)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.currencyText, { color: currency === c ? '#fff' : colors.text }]}>{c}</Text>
+                <Text style={[styles.currencyText, { color: currency === c ? '#fff' : colors.text }]}>{(CURRENCY_LABELS[language] || {})[c] || c}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -259,7 +287,7 @@ const CreateLoanScreen = ({ navigation, route }) => {
           {/* Principal */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.principal}</Text>
           <TextInput
-            style={[inputStyle, errors.principal && styles.inputError]}
+            style={[inputStyle, errors.principal && styles.inputError, fi()]}
             value={principal ? parseInt(principal.replace(/,/g, ''), 10).toLocaleString() : ''}
             onChangeText={v => {
               const raw = v.replace(/,/g, '');
@@ -298,7 +326,7 @@ const CreateLoanScreen = ({ navigation, route }) => {
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.rate}</Text>
           <View style={[styles.rateWrap, { backgroundColor: inputBg }, errors.rate && styles.inputError]}>
             <TextInput
-              style={[styles.rateInput, { color: colors.text }]}
+              style={[styles.rateInput, { color: colors.text }, fi()]}
               value={rate}
               onChangeText={v => { setRate(v); if (errors.rate) setErrors(e => ({ ...e, rate: null })); }}
               placeholder={t.ratePlaceholder}
@@ -334,7 +362,7 @@ const CreateLoanScreen = ({ navigation, route }) => {
             <>
               <Text style={[styles.label, { color: colors.textMuted }]}>{t.periods}</Text>
               <TextInput
-                style={[inputStyle, errors.periods && styles.inputError]}
+                style={[inputStyle, errors.periods && styles.inputError, fi()]}
                 value={periods}
                 onChangeText={v => { setPeriods(v.replace(/\D/g, '')); if (errors.periods) setErrors(e => ({ ...e, periods: null })); }}
                 placeholder={t.periodsPlaceholder}
@@ -353,7 +381,7 @@ const CreateLoanScreen = ({ navigation, route }) => {
             activeOpacity={0.7}
           >
             <Text style={{ color: startDate ? colors.text : colors.textMuted, fontSize: 15 }}>
-              {startDate || 'YYYY-MM-DD'}
+              {startDate || 'Select date'}
             </Text>
           </TouchableOpacity>
           {errors.startDate ? <Text style={styles.errText}>{errors.startDate}</Text> : null}
@@ -361,7 +389,7 @@ const CreateLoanScreen = ({ navigation, route }) => {
           {/* Notes */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.notes}</Text>
           <TextInput
-            style={[inputStyle, styles.multiline, { backgroundColor: inputBg, color: colors.text }]}
+            style={[inputStyle, styles.multiline, { backgroundColor: inputBg, color: colors.text }, fi()]}
             value={notes}
             onChangeText={setNotes}
             placeholder={t.notesPlaceholder}
@@ -369,6 +397,7 @@ const CreateLoanScreen = ({ navigation, route }) => {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250)}
           />
         </ScrollView>
 
@@ -403,13 +432,14 @@ const CreateLoanScreen = ({ navigation, route }) => {
 
       {/* Borrower picker modal */}
       <Modal visible={showBorrowerPicker} transparent animationType="slide">
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowBorrowerPicker(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowBorrowerPicker(false)} />
           <View style={[styles.pickerSheet, { backgroundColor: colors.surface }]}>
             <View style={[styles.pickerHandle, { backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)' }]} />
             <View style={[styles.pickerSearchWrap, { backgroundColor: isDark ? colors.background : '#F2F4F8', borderColor: colors.border }]}>
               <Ionicons name="search-outline" size={16} color={colors.textMuted} />
               <TextInput
-                style={[styles.pickerSearch, { color: colors.text }]}
+                style={[styles.pickerSearch, { color: colors.text }, fi()]}
                 value={borrowerSearch}
                 onChangeText={setBorrowerSearch}
                 placeholder={t.searchBorrower}
@@ -417,79 +447,90 @@ const CreateLoanScreen = ({ navigation, route }) => {
                 autoFocus
               />
             </View>
-            <TouchableOpacity
-              style={[styles.addBorrowerRow, { borderBottomColor: colors.border }]}
-              onPress={() => {
-                setShowBorrowerPicker(false);
-                navigation.navigate('CreateBorrower', {
-                  onCreated: (b) => {
-                    setBorrowers(prev => [...prev, b].sort((a, c) => a.name.localeCompare(c.name)));
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <TouchableOpacity
+                style={[styles.addBorrowerRow, { borderBottomColor: colors.border }]}
+                onPress={() => {
+                  setShowBorrowerPicker(false);
+                  navigation.navigate('CreateBorrower', {
+                    onCreated: (b) => {
+                      setBorrowers(prev => [...prev, b].sort((a, c) => a.name.localeCompare(c.name)));
+                      setSelectedBorrowerId(b.id);
+                      setSelectedBorrowerName(b.name);
+                    },
+                  });
+                }}
+              >
+                <Ionicons name="add-circle-outline" size={20} color={ACCENT} />
+                <Text style={[styles.addBorrowerText, { color: ACCENT }]}>{t.addBorrower}</Text>
+              </TouchableOpacity>
+              {filteredBorrowers.map((b, i) => (
+                <TouchableOpacity
+                  key={b.id}
+                  style={[
+                    styles.borrowerRow,
+                    i < filteredBorrowers.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                    b.id === selectedBorrowerId && { backgroundColor: ACCENT + '10' },
+                  ]}
+                  onPress={() => {
                     setSelectedBorrowerId(b.id);
                     setSelectedBorrowerName(b.name);
-                  },
-                });
-              }}
-            >
-              <Ionicons name="add-circle-outline" size={20} color={ACCENT} />
-              <Text style={[styles.addBorrowerText, { color: ACCENT }]}>{t.addBorrower}</Text>
-            </TouchableOpacity>
-            {filteredBorrowers.map((b, i) => (
-              <TouchableOpacity
-                key={b.id}
-                style={[
-                  styles.borrowerRow,
-                  i < filteredBorrowers.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                  b.id === selectedBorrowerId && { backgroundColor: ACCENT + '10' },
-                ]}
-                onPress={() => {
-                  setSelectedBorrowerId(b.id);
-                  setSelectedBorrowerName(b.name);
-                  setBorrowerSearch('');
-                  setShowBorrowerPicker(false);
-                  if (errors.borrower) setErrors(e => ({ ...e, borrower: null }));
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.borrowerAvatar, { backgroundColor: ACCENT + '20' }]}>
-                  <Text style={[styles.borrowerAvatarText, { color: ACCENT }]}>{b.name.charAt(0).toUpperCase()}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.borrowerName, { color: colors.text }]}>{b.name}</Text>
-                  <Text style={[styles.borrowerPhone, { color: colors.textMuted }]}>{b.phone}</Text>
-                </View>
-                {b.id === selectedBorrowerId && <Ionicons name="checkmark" size={18} color={ACCENT} />}
-              </TouchableOpacity>
-            ))}
+                    setBorrowerSearch('');
+                    setShowBorrowerPicker(false);
+                    if (errors.borrower) setErrors(e => ({ ...e, borrower: null }));
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.borrowerAvatar, { backgroundColor: ACCENT + '20' }]}>
+                    <Text style={[styles.borrowerAvatarText, { color: ACCENT }]}>{b.name.charAt(0).toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.borrowerName, { color: colors.text }]}>{b.name}</Text>
+                    <Text style={[styles.borrowerPhone, { color: colors.textMuted }]}>{b.phone}</Text>
+                  </View>
+                  {b.id === selectedBorrowerId && <Ionicons name="checkmark" size={18} color={ACCENT} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-        </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </KeyboardAvoidingView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (ff) => StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 64, paddingVertical: 4 },
-  headerBtnText: { fontSize: 15, fontWeight: '500' },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
-  content: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, gap: 4 },
-  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8, marginTop: 12 },
-  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15, fontWeight: '400' },
+  headerBtnText: { fontSize: 15, ...ff('500') },
+  headerTitle: { fontSize: 18, ...ff('700') },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 80, gap: 4 },
+  presetChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderWidth: 1, borderRadius: 14,
+    paddingHorizontal: 14, paddingVertical: 12,
+    marginBottom: 8,
+  },
+  presetIcon: { fontSize: 22 },
+  presetTitle: { fontSize: 14, fontWeight: '700', marginBottom: 1 },
+  presetHint: { fontSize: 12, opacity: 0.8 },
+  label: { fontSize: 11, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 12 },
+  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15, ...ff('400') },
   multiline: { height: 90, paddingTop: 14, textAlignVertical: 'top' },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },
   errText: { fontSize: 12, color: '#EF4444', marginTop: 4, marginLeft: 4 },
   currencyRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
   currencyBtn: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: 13, fontWeight: '700' },
+  currencyText: { fontSize: 13, ...ff('700') },
   rateWrap: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 14, paddingHorizontal: 16 },
-  rateInput: { flex: 1, fontSize: 15, fontWeight: '400' },
-  rateSuffix: { fontSize: 16, fontWeight: '700', marginLeft: 8 },
+  rateInput: { flex: 1, fontSize: 15, ...ff('400') },
+  rateSuffix: { fontSize: 16, ...ff('700'), marginLeft: 8 },
   pickerRow: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 14, paddingHorizontal: 16 },
-  pickerText: { flex: 1, fontSize: 15, fontWeight: '400' },
+  pickerText: { flex: 1, fontSize: 15, ...ff('400') },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },
   saveBtn: {
     height: 56, borderRadius: 16, backgroundColor: ACCENT,
@@ -499,7 +540,7 @@ const styles = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
   // Borrower picker modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   pickerSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%', paddingBottom: 24 },
@@ -515,11 +556,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  addBorrowerText: { fontSize: 15, fontWeight: '600' },
+  addBorrowerText: { fontSize: 15, ...ff('600') },
   borrowerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14 },
   borrowerAvatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  borrowerAvatarText: { fontSize: 16, fontWeight: '700' },
-  borrowerName: { fontSize: 15, fontWeight: '500', marginBottom: 1 },
+  borrowerAvatarText: { fontSize: 16, ...ff('700') },
+  borrowerName: { fontSize: 15, ...ff('500'), marginBottom: 1 },
   borrowerPhone: { fontSize: 13 },
 });
 

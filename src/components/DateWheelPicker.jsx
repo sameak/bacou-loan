@@ -91,9 +91,11 @@ const WheelItem = React.memo(function WheelItem({
       Extrapolation.CLAMP,
     );
     return {
-      fontSize:   fSize,
-      color:      isCenter ? accentColor : mutedColor,
-      fontWeight: isCenter ? '700' : '400',
+      fontSize: fSize,
+      color:    isCenter ? accentColor : mutedColor,
+      ...(isKhmer
+        ? { fontFamily: isCenter ? 'KohSantepheap_700Bold' : 'KohSantepheap_400Regular' }
+        : { fontWeight: isCenter ? '700' : '400' }),
     };
   });
 
@@ -403,6 +405,10 @@ export const DatePickerModal = function DatePickerModal({
     opacity: interpolate(slideAnim.value, [0, 1], [0, 0.5], Extrapolation.CLAMP),
   }));
 
+  const isKhmer = language === 'km';
+  const HEAVY = ['600', '700', '800', '900'];
+  const kf = (w) => isKhmer ? { fontFamily: HEAVY.includes(String(w)) ? 'KohSantepheap_700Bold' : 'KohSantepheap_400Regular' } : { fontWeight: w };
+
   const L = {
     done:   language === 'ko' ? '확인'  : language === 'km' ? 'បញ្ជាក់' : 'Done',
     cancel: language === 'ko' ? '취소'  : language === 'km' ? 'បោះបង់'  : 'Cancel',
@@ -435,11 +441,11 @@ export const DatePickerModal = function DatePickerModal({
                 activeOpacity={0.70}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text style={[styles.cancelText, { color: colors.textMuted }]}>{L.cancel}</Text>
+                <Text style={[styles.cancelText, kf('600'), { color: colors.textMuted }]}>{L.cancel}</Text>
               </TouchableOpacity>
 
               {!!title && (
-                <Text style={[styles.titleText, { color: colors.text }]}>{title}</Text>
+                <Text style={[styles.titleText, kf('700'), { color: colors.text }]}>{title}</Text>
               )}
 
               <TouchableOpacity
@@ -447,7 +453,7 @@ export const DatePickerModal = function DatePickerModal({
                 activeOpacity={0.75}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text style={[styles.doneText, { color: accentColor }]}>{L.done}</Text>
+                <Text style={[styles.doneText, kf('700'), { color: accentColor }]}>{L.done}</Text>
               </TouchableOpacity>
             </View>
 
@@ -464,7 +470,7 @@ export const DatePickerModal = function DatePickerModal({
             />
 
             {/* Date preview */}
-            <Text style={[styles.preview, { color: colors.textMuted }]}>{localValue}</Text>
+            <Text style={[styles.preview, kf('600'), { color: colors.textMuted }]}>{localValue}</Text>
           </View>
         </Animated.View>
       </View>
@@ -515,11 +521,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: spacing.xs,
   },
-  cancelText: { fontSize: 15, fontWeight: '600' },
-  titleText:  { fontSize: 16, fontWeight: '700' },
-  doneText:   { fontSize: 15, fontWeight: '700' },
+  cancelText: { fontSize: 15 },
+  titleText:  { fontSize: 16 },
+  doneText:   { fontSize: 15 },
   divider:    { height: StyleSheet.hairlineWidth, marginBottom: spacing.xs },
-  preview:    { textAlign: 'center', fontSize: 12, fontWeight: '600', marginTop: spacing.xs },
+  preview:    { textAlign: 'center', fontSize: 12, marginTop: spacing.xs },
 });
 
 export default DatePickerModal;

@@ -3,7 +3,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -41,11 +41,11 @@ const T = {
     selectPeriod: 'Select period (optional)',
     principalPaid: 'PRINCIPAL AMOUNT',
     interestPaid: 'INTEREST AMOUNT',
-    date: 'PAYMENT DATE (YYYY-MM-DD)',
+    date: 'PAYMENT DATE',
     notes: 'NOTES (optional)',
     notesPlaceholder: 'Payment notes...',
     accruedInfo: (days, amount, currency) => `Accrued over ${days} days: ${formatCurrency(amount, currency)}`,
-    errDate: 'Enter date (YYYY-MM-DD)',
+    errDate: 'Enter date',
     saved: 'Payment recorded',
     outstanding: 'Outstanding',
     dueThisPeriod: 'Due this period',
@@ -60,7 +60,7 @@ const T = {
     selectPeriod: 'ជ្រើសដំណាក់ (ស្រេចចិត្ត)',
     principalPaid: 'ប្រាក់ដើម',
     interestPaid: 'ការប្រាក់',
-    date: 'កាលបរិច្ឆេទ (YYYY-MM-DD)',
+    date: 'កាលបរិច្ឆេទ',
     notes: 'កំណត់ចំណាំ (ស្រេចចិត្ត)',
     notesPlaceholder: 'កំណត់ចំណាំ...',
     accruedInfo: (days, amount, currency) => `ប្រូងក្នុង ${days} ថ្ងៃ: ${formatCurrency(amount, currency)}`,
@@ -81,8 +81,11 @@ const formatNum = (raw) => {
 const RecordPaymentScreen = ({ navigation, route }) => {
   const { loan } = route.params;
   const { colors, isDark } = useTheme();
-  const { language } = useLanguage();
+  const { language, ff, fi } = useLanguage();
   const t = T[language] || T.en;
+
+  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const scrollRef = useRef(null);
 
   const isOpen = loan.scheduleMode === 'open';
   const isInterestOnly = loan.repaymentType === 'interest_only';
@@ -179,7 +182,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
 
   const numInput = (raw, setRaw, placeholder = '0') => (
     <TextInput
-      style={inputStyle}
+      style={[inputStyle, fi()]}
       value={raw ? parseInt(String(raw).replace(/,/g, ''), 10).toLocaleString() : ''}
       onChangeText={v => {
         const r = v.replace(/,/g, '');
@@ -204,7 +207,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
           </View>
         </SafeAreaView>
 
-        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           {/* Outstanding summary */}
           <View style={[styles.summaryCard, { backgroundColor: ACCENT + '12', borderColor: ACCENT + '25' }]}>
             <Text style={[styles.summaryLabel, { color: ACCENT }]}>{t.outstanding}</Text>
@@ -259,7 +262,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
             activeOpacity={0.7}
           >
             <Text style={{ color: paymentDate ? colors.text : colors.textMuted, fontSize: 15 }}>
-              {paymentDate || 'YYYY-MM-DD'}
+              {paymentDate || 'Select date'}
             </Text>
           </TouchableOpacity>
           {errors.date ? <Text style={styles.errText}>{errors.date}</Text> : null}
@@ -267,7 +270,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
           {/* Notes */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.notes}</Text>
           <TextInput
-            style={[inputStyle, styles.multiline, { backgroundColor: inputBg, color: colors.text }]}
+            style={[inputStyle, styles.multiline, { backgroundColor: inputBg, color: colors.text }, fi()]}
             value={notes}
             onChangeText={setNotes}
             placeholder={t.notesPlaceholder}
@@ -275,6 +278,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250)}
           />
 
           {/* Total */}
@@ -356,39 +360,39 @@ const RecordPaymentScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (ff) => StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 64 },
-  headerBtnText: { fontSize: 15, fontWeight: '500' },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, gap: 4 },
+  headerBtnText: { fontSize: 15, ...ff('500') },
+  headerTitle: { fontSize: 18, ...ff('700') },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 80, gap: 4 },
   summaryCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderRadius: 14, padding: 16, borderWidth: 1, marginBottom: 8,
   },
-  summaryLabel: { fontSize: 13, fontWeight: '600' },
-  summaryValue: { fontSize: 18, fontWeight: '800' },
+  summaryLabel: { fontSize: 13, ...ff('600') },
+  summaryValue: { fontSize: 18, ...ff('800') },
   accrualInfo: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: 12, padding: 12, marginBottom: 8,
   },
-  accrualText: { fontSize: 13, color: '#F59E0B', fontWeight: '500', flex: 1 },
-  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8, marginTop: 12 },
+  accrualText: { fontSize: 13, color: '#F59E0B', ...ff('500'), flex: 1 },
+  label: { fontSize: 11, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 12 },
   input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15 },
   multiline: { height: 80, paddingTop: 14 },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },
   errText: { fontSize: 12, color: '#EF4444', marginTop: 4, marginLeft: 4 },
   pickerRow: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 14, paddingHorizontal: 16 },
-  pickerText: { flex: 1, fontSize: 14, fontWeight: '400' },
+  pickerText: { flex: 1, fontSize: 14, ...ff('400') },
   readonlyRow: { height: 52, borderRadius: 14, paddingHorizontal: 16, justifyContent: 'center' },
   readonlyText: { fontSize: 14 },
   totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 16, marginTop: 8 },
-  totalLabel: { fontSize: 14, fontWeight: '600' },
-  totalValue: { fontSize: 18, fontWeight: '800' },
+  totalLabel: { fontSize: 14, ...ff('600') },
+  totalValue: { fontSize: 18, ...ff('800') },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },
   saveBtn: {
     height: 56, borderRadius: 16, backgroundColor: ACCENT,
@@ -398,17 +402,17 @@ const styles = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '60%', paddingBottom: 24 },
   pickerHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
-  modalTitle: { fontSize: 16, fontWeight: '700', paddingHorizontal: 20, paddingBottom: 8 },
+  modalTitle: { fontSize: 16, ...ff('700'), paddingHorizontal: 20, paddingBottom: 8 },
   emptyText: { fontSize: 14, textAlign: 'center', paddingVertical: 24 },
   periodRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 12 },
   periodInfo: { flex: 1 },
-  periodNum: { fontSize: 15, fontWeight: '600', marginBottom: 2 },
+  periodNum: { fontSize: 15, ...ff('600'), marginBottom: 2 },
   periodDate: { fontSize: 13 },
-  periodAmount: { fontSize: 15, fontWeight: '700' },
+  periodAmount: { fontSize: 15, ...ff('700') },
 });
 
 export default RecordPaymentScreen;

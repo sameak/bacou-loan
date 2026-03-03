@@ -9,11 +9,13 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLanguage } from '../context/LanguageContext';
 
 let _ref = null;
 
 const Toast = forwardRef((_, ref) => {
   const insets = useSafeAreaInsets();
+  const { ff } = useLanguage();
   const translateY = useSharedValue(-120);
   const opacity = useSharedValue(0);
   const config = useRef({ text: '', type: 'success' });
@@ -51,7 +53,7 @@ const Toast = forwardRef((_, ref) => {
     <Animated.View style={[styles.container, animStyle, { top: insets.top + 12 }]} pointerEvents="none">
       <View style={[styles.pill, { borderColor: color + '30' }]}>
         <Ionicons name={icon} size={18} color={color} />
-        <Text style={styles.text} numberOfLines={2}>{text}</Text>
+        <Text style={[styles.text, ff('600')]} numberOfLines={2}>{text}</Text>
       </View>
     </Animated.View>
   );
@@ -74,5 +76,5 @@ const styles = StyleSheet.create({
       android: { elevation: 10 },
     }),
   },
-  text: { flex: 1, fontSize: 14, fontWeight: '600', color: '#FFFFFF', lineHeight: 20 },
+  text: { flex: 1, fontSize: 14, color: '#FFFFFF', lineHeight: 20 },
 });

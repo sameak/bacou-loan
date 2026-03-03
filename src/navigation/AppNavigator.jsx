@@ -7,18 +7,25 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import {
-  LiquidGlassView,
-  LiquidGlassContainerView,
-  isLiquidGlassSupported,
-} from '@callstack/liquid-glass';
+let LiquidGlassView = null;
+let LiquidGlassContainerView = null;
+let isLiquidGlassSupported = false;
+try {
+  const lg = require('@callstack/liquid-glass');
+  LiquidGlassView = lg.LiquidGlassView;
+  LiquidGlassContainerView = lg.LiquidGlassContainerView;
+  isLiquidGlassSupported = lg.isLiquidGlassSupported ?? false;
+} catch (_) {
+  // Native module not linked — fall back to BlurView
+}
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { onAuthStateChanged } from 'firebase/auth';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   Platform,
   PlatformColor,
   StyleSheet,
@@ -26,6 +33,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import RAnimated, {
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth } from '../services/firebase';
 import { useTheme } from '../theme/ThemeContext';
@@ -49,6 +66,8 @@ import TopUpLoanScreen from '../screens/Loans/TopUpLoanScreen';
 import EditLoanScreen from '../screens/Loans/EditLoanScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
 import SessionsScreen from '../screens/Settings/SessionsScreen';
+import SetPINScreen   from '../screens/Settings/SetPINScreen';
+import AdminScreen    from '../screens/Settings/AdminScreen';
 import { recordSession } from '../services/sessionService';
 
 const AuthStack     = createNativeStackNavigator();
@@ -71,200 +90,218 @@ const TAB_CONFIGS = [
 ];
 
 const ACCENT           = '#6366F1';
-const TAB_BAR_HEIGHT   = 72;   // row padding + icon + gap + label
-const TAB_BOTTOM_GAP   = 16;   // gap between bar bottom and safe-area bottom
+const TAB_BAR_HEIGHT   = 88;   // row padding + icon + gap + label
+const TAB_BOTTOM_GAP   = 0;    // bar sits flush against the safe-area bottom
 
-// ─── Tab items (shared between native & fallback) ─────────────────────────────
+// ─── Tab item (animated, scale on focus) ──────────────────────────────────────
 
-function TabItems({ state, navigation, labels, isDark, useNativeColor }) {
+const TabItem = React.memo(function TabItem({
+  cfg, focused, activeColor, inactiveColor, label, language, ff,
+  onPress, onPressIn, onPressOut, showActivePill, isDark,
+}) {
+  const scale = useSharedValue(focused ? 1.0 : 0.88);
+  const prevFocused = useRef(focused);
+
+  useEffect(() => {
+    if (prevFocused.current === focused) return;
+    prevFocused.current = focused;
+    scale.value = withSpring(focused ? 1.0 : 0.88, { damping: 14, stiffness: 280, mass: 0.7 });
+  }, [focused]);
+
+  const iconStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const color = focused ? activeColor : inactiveColor;
+
   return (
-    <>
-      {state.routes.map((route, index) => {
-        const focused = state.index === index;
-        const cfg     = TAB_CONFIGS[index];
-
-        // On iOS 26+ with LiquidGlass, use PlatformColor so the system
-        // automatically picks the right contrast colour against the glass.
-        const iconColor = focused
-          ? ACCENT
-          : useNativeColor
-            ? PlatformColor('secondaryLabelColor')
-            : isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.38)';
-
-        const labelColor = focused
-          ? ACCENT
-          : useNativeColor
-            ? PlatformColor('secondaryLabelColor')
-            : isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.38)';
-
-        return (
-          <TouchableOpacity
-            key={route.key}
-            style={tabStyles.item}
-            activeOpacity={0.7}
-            onPress={() => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
-              if (!focused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-            }}
-            onLongPress={() =>
-              navigation.emit({ type: 'tabLongPress', target: route.key })
-            }
-          >
-            {/* Active pill — small glass-tinted capsule behind the icon */}
-            {focused && (
-              <View
-                pointerEvents="none"
-                style={[
-                  tabStyles.activePill,
-                  {
-                    backgroundColor: isDark
-                      ? 'rgba(99,102,241,0.22)'
-                      : 'rgba(99,102,241,0.13)',
-                    borderColor: isDark
-                      ? 'rgba(99,102,241,0.22)'
-                      : 'rgba(99,102,241,0.10)',
-                  },
-                ]}
-              />
-            )}
-
-            <Ionicons
-              name={focused ? cfg.icon : cfg.iconOutline}
-              size={22}
-              color={iconColor}
-            />
-            <Text style={[tabStyles.label, { color: labelColor }]}>
-              {labels[index]}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </>
+    <TouchableOpacity
+      style={tabStyles.item}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      activeOpacity={0.8}
+    >
+      {showActivePill && focused && (
+        <View
+          pointerEvents="none"
+          style={[tabStyles.activePill, {
+            backgroundColor: isDark ? 'rgba(99,102,241,0.22)' : 'rgba(99,102,241,0.13)',
+            borderColor:     isDark ? 'rgba(99,102,241,0.22)' : 'rgba(99,102,241,0.10)',
+          }]}
+        />
+      )}
+      <RAnimated.View style={iconStyle}>
+        <Ionicons name={focused ? cfg.icon : cfg.iconOutline} size={22} color={color} />
+      </RAnimated.View>
+      <Text style={[tabStyles.label, ff('600'), { letterSpacing: language === 'km' ? 0 : 0.1, color }]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
   );
-}
+});
 
 // ─── Liquid Glass Tab Bar ─────────────────────────────────────────────────────
 
 function LiquidGlassTabBar({ state, navigation }) {
-  const { colors, isDark } = useTheme();
-  const { language }       = useLanguage();
+  const { isDark }         = useTheme();
+  const { language, ff }   = useLanguage();
   const insets             = useSafeAreaInsets();
+  const { width: screenW } = Dimensions.get('window');
   const tl     = TAB_LABELS[language] || TAB_LABELS.en;
   const labels = [tl.dashboard, tl.borrowers, tl.loans, tl.settings];
-
   const bottom = insets.bottom + TAB_BOTTOM_GAP;
 
-  const tabItems = (
-    <TabItems
-      state={state}
-      navigation={navigation}
-      labels={labels}
-      isDark={isDark}
-      useNativeColor={isLiquidGlassSupported}
-    />
-  );
+  const tabCount = state.routes.length;
+  const tabW     = (screenW - 40) / tabCount; // 40 = left:20 + right:20
+
+  // ── Sliding pill (spring physics)
+  const pillX   = useSharedValue(state.index * tabW);
+  const shimmer = useSharedValue(0);
+  const bloom   = useSharedValue(0);
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    pillX.value = withSpring(state.index * tabW, { damping: 20, stiffness: 200, mass: 0.85 });
+    if (!isMounted.current) { isMounted.current = true; return; }
+    // Fast specular flash
+    shimmer.value = withSequence(
+      withTiming(1, { duration: 40 }),
+      withTiming(0, { duration: 260, easing: Easing.out(Easing.quad) }),
+    );
+    // Soft bloom
+    bloom.value = withSequence(
+      withTiming(1, { duration: 80 }),
+      withTiming(0, { duration: 620, easing: Easing.out(Easing.cubic) }),
+    );
+  }, [state.index, tabW]);
+
+  // ── Glass press bubble
+  const [pressedIndex, setPressedIndex] = useState(-1);
+  const bubbleScale  = useSharedValue(0);
+  const iridescence  = useSharedValue(0);
+
+  const handlePressIn = (index) => {
+    setPressedIndex(index);
+    bubbleScale.value = withSpring(1, { damping: 11, stiffness: 420, mass: 0.55 });
+    iridescence.value = 0;
+    iridescence.value = withRepeat(
+      withTiming(1, { duration: 1600, easing: Easing.linear }), -1, false,
+    );
+  };
+  const handlePressOut = () => {
+    bubbleScale.value = withSpring(0, { damping: 14, stiffness: 380, mass: 0.5 });
+    iridescence.value = withTiming(0, { duration: 250 });
+  };
+
+  const pillAnim   = useAnimatedStyle(() => ({ transform: [{ translateX: pillX.value + 6 }] }));
+  const shimmerStyle = useAnimatedStyle(() => ({ opacity: shimmer.value }));
+  const bloomAnim  = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: pillX.value + 6 },
+      { scaleX: 1 + bloom.value * 0.06 },
+      { scaleY: 1 + bloom.value * 0.10 },
+    ],
+    opacity: bloom.value * 0.50,
+  }));
+  const bubbleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: bubbleScale.value }],
+    opacity: bubbleScale.value,
+  }));
+  const iridStyle = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(
+      iridescence.value,
+      [0, 0.17, 0.33, 0.50, 0.67, 0.83, 1],
+      [
+        'rgba(210,170,255,0.85)',
+        'rgba(170,215,255,0.85)',
+        'rgba(170,255,230,0.85)',
+        'rgba(255,215,170,0.85)',
+        'rgba(255,170,200,0.85)',
+        'rgba(230,170,255,0.85)',
+        'rgba(210,170,255,0.85)',
+      ],
+    ),
+  }));
+
+  const activeColor   = isDark ? '#FFFFFF' : '#1C1C1E';
+  const inactiveColor = isDark ? 'rgba(255,255,255,0.42)' : 'rgba(0,0,0,0.35)';
+  const pillColor     = isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.07)';
+  const tintColor     = isDark ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.35)';
+
+  const makeTabItems = (showActivePill) => state.routes.map((route, index) => {
+    const focused = state.index === index;
+    return (
+      <TabItem
+        key={route.key}
+        cfg={TAB_CONFIGS[index]}
+        focused={focused}
+        activeColor={showActivePill ? (focused ? ACCENT : (isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.38)')) : activeColor}
+        inactiveColor={inactiveColor}
+        label={labels[index]}
+        language={language}
+        ff={ff}
+        isDark={isDark}
+        showActivePill={showActivePill}
+        onPress={() => {
+          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+        }}
+        onPressIn={() => handlePressIn(index)}
+        onPressOut={handlePressOut}
+      />
+    );
+  });
 
   // ── iOS 26+: real Apple Liquid Glass ────────────────────────────────────────
   if (isLiquidGlassSupported) {
     return (
       <View style={[tabStyles.wrap, { bottom }]} pointerEvents="box-none">
-        {/*
-          LiquidGlassContainerView lets the bar glass and the active-pill glass
-          "meld" together when close — the signature iOS 26 morphing behaviour.
-        */}
         <LiquidGlassContainerView spacing={24} style={tabStyles.nativeWrap}>
-          {/* Main bar */}
-          <LiquidGlassView
-            style={tabStyles.nativeBar}
-            effect="regular"
-            interactive={false}
-          >
-            <View style={tabStyles.row}>{tabItems}</View>
+          <LiquidGlassView style={tabStyles.nativeBar} effect="regular" interactive={false}>
+            <View style={tabStyles.row}>{makeTabItems(true)}</View>
           </LiquidGlassView>
         </LiquidGlassContainerView>
       </View>
     );
   }
 
-  // ── Fallback: layered BlurView approximation ─────────────────────────────────
-  //
-  // Layer order (bottom → top):
-  //   1. BlurView          – the frosted base (scatters background content)
-  //   2. Tint overlay      – thin semi-transparent wash (warms/cools the glass)
-  //   3. Specular strip    – bright 2 px line at the very top edge (simulates
-  //                          light catching the physical rim of curved glass —
-  //                          the most distinctive glass feature)
-  //   4. Specular fade     – 6 px gradient-like fade below the specular strip
-  //   5. Rim border        – 1 px white border around the whole pill
-  //   6. Tab content       – icons + labels (highest z-index)
+  // ── Fallback: layered BlurView + animated sliding pill + shimmer + press bubble
   return (
-    <View style={[tabStyles.wrap, { bottom }]}>
-      <BlurView
-        intensity={isDark ? 62 : 78}
-        tint={isDark ? 'dark' : 'light'}
-        style={tabStyles.blur}
-      >
+    <View style={[tabStyles.outerShell, { bottom, shadowOpacity: isDark ? 0.35 : 0.12 }]}>
+      <View style={tabStyles.innerShell}>
+        {/* 1. Glass blur */}
+        <BlurView
+          intensity={isDark ? 62 : 78}
+          tint={isDark ? 'dark' : 'light'}
+          style={StyleSheet.absoluteFillObject}
+        />
         {/* 2. Tint overlay */}
-        <View
-          pointerEvents="none"
-          style={[
-            tabStyles.overlay,
-            {
-              backgroundColor: isDark
-                ? 'rgba(12,12,24,0.44)'
-                : 'rgba(255,255,255,0.36)',
-            },
-          ]}
-        />
+        <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: tintColor }]} />
+        {/* 6. Bloom — soft expanding glow */}
+        <RAnimated.View style={[tabStyles.pill, {
+          width: tabW - 12,
+          backgroundColor: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.95)',
+        }, bloomAnim]} />
+        {/* 7. Sliding pill indicator */}
+        <RAnimated.View style={[tabStyles.pill, { width: tabW - 12, backgroundColor: pillColor }, pillAnim]} />
+        {/* 8. Shimmer flash */}
+        <RAnimated.View style={[tabStyles.pill, { width: tabW - 12, backgroundColor: '#FFFFFF' }, pillAnim, shimmerStyle]} />
+        {/* 9. Tab items */}
+        <View style={tabStyles.tabsRow}>{makeTabItems(false)}</View>
+      </View>
 
-        {/* 3. Specular strip — the bright glass rim at the top */}
-        <View
+      {/* Glass press bubble — iridescent ring + frosted interior */}
+      {pressedIndex >= 0 && (
+        <RAnimated.View
           pointerEvents="none"
-          style={[
-            tabStyles.specularStrip,
-            {
-              backgroundColor: isDark
-                ? 'rgba(255,255,255,0.28)'
-                : 'rgba(255,255,255,0.72)',
-            },
-          ]}
-        />
-
-        {/* 4. Specular fade — softer glow just below the strip */}
-        <View
-          pointerEvents="none"
-          style={[
-            tabStyles.specularFade,
-            {
-              backgroundColor: isDark
-                ? 'rgba(255,255,255,0.07)'
-                : 'rgba(255,255,255,0.22)',
-            },
-          ]}
-        />
-
-        {/* 5. Glass rim border */}
-        <View
-          pointerEvents="none"
-          style={[
-            tabStyles.rim,
-            {
-              borderColor: isDark
-                ? 'rgba(255,255,255,0.16)'
-                : 'rgba(255,255,255,0.82)',
-            },
-          ]}
-        />
-
-        {/* 6. Tab content */}
-        <View style={tabStyles.row}>{tabItems}</View>
-      </BlurView>
+          style={[tabStyles.glassBubble, { left: pressedIndex * tabW + 2, width: tabW - 4 }, bubbleStyle]}
+        >
+          <RAnimated.View style={[StyleSheet.absoluteFillObject, tabStyles.glassBubbleRing, iridStyle]} />
+          {Platform.OS === 'ios' ? (
+            <BlurView intensity={30} tint={isDark ? 'dark' : 'light'} style={[StyleSheet.absoluteFillObject, { borderRadius: 26 }]} />
+          ) : (
+            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.82)', borderRadius: 26 }]} />
+          )}
+        </RAnimated.View>
+      )}
     </View>
   );
 }
@@ -272,93 +309,97 @@ function LiquidGlassTabBar({ state, navigation }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const tabStyles = StyleSheet.create({
+  // ── Native glass path (iOS 26+)
   wrap: {
     position: 'absolute',
     left: 20,
     right: 20,
-    // Deep, soft shadow — gives the bar physical "lift"
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.22,
-        shadowRadius: 32,
-      },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.22, shadowRadius: 32 },
       android: { elevation: 24 },
     }),
   },
+  nativeWrap: {},
+  nativeBar: { borderRadius: 28, overflow: 'hidden' },
 
-  // ── Native glass (iOS 26+)
-  nativeWrap: {
-    // LiquidGlassContainerView needs to fill the bar area
-  },
-  nativeBar: {
-    borderRadius: 28,
-    overflow: 'hidden',
-  },
-
-  // ── Fallback layers
-  blur: {
-    borderRadius: 28,
-    overflow: 'hidden',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 28,
-    zIndex: 0,
-  },
-  specularStrip: {
+  // ── Fallback path (floating pill)
+  outerShell: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    zIndex: 2,
+    left: 20,
+    right: 20,
+    height: TAB_BAR_HEIGHT,
+    borderRadius: 28,
+    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 14,
+  },
+  innerShell: {
+    flex: 1,
+    borderRadius: 28,
+    overflow: 'hidden',
+  },
+
+  // ── Glass layers
+  specularStrip: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28, zIndex: 2,
   },
   specularFade: {
-    position: 'absolute',
-    top: 2,
-    left: 0,
-    right: 0,
-    height: 8,
-    zIndex: 2,
+    position: 'absolute', top: 2, left: 0, right: 0, height: 8, zIndex: 2,
   },
-  rim: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 28,
-    borderWidth: 1,
-    zIndex: 3,
+  borderRing: {
+    ...StyleSheet.absoluteFillObject, borderRadius: 28, borderWidth: 1, zIndex: 3,
   },
 
-  // ── Shared
-  row: {
+  // ── Animated pill
+  pill: {
+    position: 'absolute',
+    height: TAB_BAR_HEIGHT - 12, // 6px gap top + bottom
+    top: 6,
+    borderRadius: 22,
+  },
+
+  // ── Tab rows
+  row: {                          // native glass path
     flexDirection: 'row',
     paddingVertical: 10,
     paddingHorizontal: 8,
+    zIndex: 4,
+  },
+  tabsRow: {                      // fallback path
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     zIndex: 4,
   },
   item: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 14,
     gap: 4,
   },
-  activePill: {
+  activePill: {                   // used in native glass path only
     position: 'absolute',
-    top: 2,
-    bottom: 2,
-    left: 4,
-    right: 4,
-    borderRadius: 16,
-    borderWidth: 1,
+    top: 0, bottom: 0, left: 4, right: 4,
+    borderRadius: 20, borderWidth: 1,
   },
-  label: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.1,
+  label: { fontSize: 11.5 },
+
+  // ── Press bubble
+  glassBubble: {
+    position: 'absolute',
+    height: TAB_BAR_HEIGHT + 20,
+    top: -10,
+    borderRadius: 26,
+    overflow: 'hidden',
+  },
+  glassBubbleRing: { borderRadius: 26, borderWidth: 2 },
+  glassBubbleHighlight: {
+    position: 'absolute', top: 8, left: 14, right: 14, height: 16,
+    borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.72)',
   },
 });
 
@@ -387,19 +428,26 @@ function SettingsStackNav() {
     <SettingsStack.Navigator screenOptions={{ headerShown: false }}>
       <SettingsStack.Screen name="SettingsList" component={SettingsScreen} />
       <SettingsStack.Screen name="Sessions"     component={SessionsScreen} />
+      <SettingsStack.Screen name="SetPIN"       component={SetPINScreen} />
+      <SettingsStack.Screen name="Admin"        component={AdminScreen} />
     </SettingsStack.Navigator>
   );
 }
 
 function MainTabs() {
   const insets   = useSafeAreaInsets();
+  const { isDark } = useTheme();
   const bottomPad = TAB_BAR_HEIGHT + TAB_BOTTOM_GAP + insets.bottom;
 
   return (
     <Tab.Navigator
       tabBar={(props) => <LiquidGlassTabBar {...props} />}
-      sceneContainerStyle={{ paddingBottom: bottomPad }}
-      screenOptions={{ headerShown: false, animation: 'fade' }}
+      detachInactiveScreens={false}
+      sceneContainerStyle={{
+        paddingBottom: bottomPad,
+        backgroundColor: isDark ? '#000000' : '#EBEBEB',
+      }}
+      screenOptions={{ headerShown: false, lazy: false, animation: 'fade' }}
     >
       <Tab.Screen name="DashboardTab" component={DashboardScreen} />
       <Tab.Screen name="BorrowersTab" component={BorrowerStackNav} />
@@ -452,8 +500,12 @@ export default function AppNavigator() {
     );
   }
 
+  const navTheme = isDark
+    ? { ...DarkTheme,    colors: { ...DarkTheme.colors,    background: '#000000' } }
+    : { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: '#EBEBEB' } };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       {user ? (
         <DataProvider>
           <AppLockProvider>

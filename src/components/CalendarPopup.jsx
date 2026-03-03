@@ -120,7 +120,7 @@ const MONTHS = {
 const WEEKDAYS = {
   en: ['Su','Mo','Tu','We','Th','Fr','Sa'],
   ko: ['일','월','화','수','목','금','토'],
-  km: ['អា','ច','អ','ព','ព្រ','សុ','ស'],
+  km: ['អាទិត្យ','ចន្ទ','អង្គារ','ពុធ','ព្រហស្បតិ៍','សុក្រ','សៅរ៍'],
 };
 
 const LABELS = {
@@ -221,6 +221,8 @@ const CalendarPopup = ({
   const txtMain = colors?.text     || (isDark ? '#FFFFFF' : '#000000');
   const txtMute = colors?.textMuted|| (isDark ? '#666'    : '#AAA');
   const isKhmer = language === 'km';
+  const HEAVY = ['600', '700', '800', '900'];
+  const kf = (w) => isKhmer ? { fontFamily: HEAVY.includes(String(w)) ? 'KohSantepheap_700Bold' : 'KohSantepheap_400Regular' } : { fontWeight: w };
 
   if (!rendered) return null;
 
@@ -238,7 +240,7 @@ const CalendarPopup = ({
 
           {/* Title */}
           {!!title && (
-            <Text style={[s.title, { color: txtMain }]}>{title}</Text>
+            <Text style={[s.title, kf('700'), { color: txtMain }]}>{title}</Text>
           )}
 
           {/* Month / Year navigation */}
@@ -248,7 +250,7 @@ const CalendarPopup = ({
             </TouchableOpacity>
 
             <TouchableOpacity onPress={goToToday} activeOpacity={0.7}>
-              <Text style={[s.navTitle, { color: txtMain }]}>
+              <Text style={[s.navTitle, kf('700'), { color: txtMain }]}>
                 {mnms[viewMonth - 1]}{'  '}{viewYear}
               </Text>
             </TouchableOpacity>
@@ -265,8 +267,9 @@ const CalendarPopup = ({
                 key={i}
                 style={[
                   s.wdLabel,
+                  kf('700'),
                   { color: i === 0 ? '#EF4444' : txtMute },
-                  isKhmer && { fontSize: 10 },
+                  isKhmer && { fontSize: 11, textTransform: 'none' },
                 ]}
               >
                 {wd}
@@ -325,7 +328,7 @@ const CalendarPopup = ({
             activeOpacity={0.7}
           >
             <Ionicons name="today-outline" size={14} color={accentColor} />
-            <Text style={[s.todayText, { color: accentColor }]}>{L.today}</Text>
+            <Text style={[s.todayText, kf('700'), { letterSpacing: isKhmer ? 0 : 0.3, color: accentColor }]}>{L.today}</Text>
           </TouchableOpacity>
 
           {/* Hairline */}
@@ -334,14 +337,14 @@ const CalendarPopup = ({
           {/* Cancel / Done */}
           <View style={s.btnRow}>
             <TouchableOpacity style={[s.btn, s.cancelBtn, { borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)' }]} onPress={onClose} activeOpacity={0.7}>
-              <Text style={[s.btnText, { color: txtMute }]}>{L.cancel}</Text>
+              <Text style={[s.btnText, kf('700'), { color: txtMute }]}>{L.cancel}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.btn, s.doneBtn, { backgroundColor: accentColor }]}
               onPress={() => { onChange(selected); onClose(); }}
               activeOpacity={0.8}
             >
-              <Text style={[s.btnText, { color: '#fff' }]}>{L.done}</Text>
+              <Text style={[s.btnText, kf('700'), { color: '#fff' }]}>{L.done}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -381,7 +384,7 @@ const s = StyleSheet.create({
   },
 
   // Title
-  title: { fontSize: 17, fontWeight: '700', textAlign: 'center', marginBottom: 14 },
+  title: { fontSize: 17, textAlign: 'center', marginBottom: 14 },
 
   // Month nav
   navRow: {
@@ -391,7 +394,7 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   navBtn:   { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  navTitle: { fontSize: 16, fontWeight: '700' },
+  navTitle: { fontSize: 16 },
 
   // Weekday headers
   wdRow: { flexDirection: 'row', marginBottom: 8 },
@@ -399,7 +402,6 @@ const s = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 11,
-    fontWeight: '700',
     textTransform: 'uppercase',
   },
 
@@ -429,7 +431,6 @@ const s = StyleSheet.create({
   },
   dayText: {
     fontSize: 14,
-    fontWeight: '500',
   },
 
   // Today shortcut
@@ -445,7 +446,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     marginVertical: 8,
   },
-  todayText: { fontSize: 13, fontWeight: '700', letterSpacing: 0.3 },
+  todayText: { fontSize: 13 },
 
   // Buttons
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
@@ -455,7 +456,7 @@ const s = StyleSheet.create({
   },
   cancelBtn: { borderWidth: 1.5 },
   doneBtn:   {},
-  btnText:   { fontSize: 15, fontWeight: '700' },
+  btnText:   { fontSize: 15 },
 });
 
 export default CalendarPopup;

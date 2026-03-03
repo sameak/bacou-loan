@@ -25,13 +25,29 @@ export function LanguageProvider({ children, initialLanguage }) {
     await storage.set(STORAGE_KEYS.LANGUAGE, lang);
   }, []);
 
-  /** fs(size) — returns size+2 for Khmer, otherwise size */
-  const fs = useCallback((size) => language === 'km' ? size + 2 : size, [language]);
+  /** fs(size) — +10% in Khmer mode for better readability */
+  const fs = useCallback((size) => language === 'km' ? size * 1.1 : size, [language]);
+
+  /**
+   * ff(weight) — always uses Koh Santepheap (supports both Latin + Khmer),
+   * so Khmer text renders correctly in all screens regardless of app language.
+   * Heavy weights (600+) → Bold variant; others → Regular.
+   */
+  const ff = useCallback((weight) => {
+    const heavy = ['600', '700', '800', '900'];
+    return { fontFamily: heavy.includes(String(weight)) ? 'KohSantepheap_700Bold' : 'KohSantepheap_400Regular' };
+  }, []);
+
+  /**
+   * fi() — font for TextInput fields. Always uses Koh Santepheap so user-typed
+   * Khmer text renders correctly regardless of the app's display language.
+   */
+  const fi = useCallback(() => ({ fontFamily: 'KohSantepheap_400Regular' }), []);
 
   if (!loaded) return null;
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, fs }}>
+    <LanguageContext.Provider value={{ language, setLanguage, fs, ff, fi }}>
       {children}
     </LanguageContext.Provider>
   );

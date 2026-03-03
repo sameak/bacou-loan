@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatCurrency, calcAccruedInterest, today } from '../../services/loanService';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -59,9 +59,11 @@ const T = {
 
 const LoanListScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
-  const { language, fs } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs), [fs]);
+  const isKhmer = language === 'km';
+  const styles = useMemo(() => makeStyles(fs, ff, isKhmer), [fs, ff, isKhmer]);
 
   const { loans, loansLoaded } = useData();
   const [search, setSearch] = useState('');
@@ -144,7 +146,7 @@ const LoanListScreen = ({ navigation }) => {
         <View style={[styles.searchWrap, { backgroundColor: isDark ? colors.surface : '#fff', borderColor: colors.border }]}>
           <Ionicons name="search-outline" size={18} color={colors.textMuted} />
           <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
+            style={[styles.searchInput, { color: colors.text }, fi()]}
             value={search}
             onChangeText={setSearch}
             placeholder={t.search}
@@ -198,6 +200,8 @@ const LoanListScreen = ({ navigation }) => {
           renderItem={renderItem}
           contentContainerStyle={[styles.list, filtered.length === 0 && styles.listEmpty]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT} colors={[ACCENT]} />}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
@@ -211,7 +215,7 @@ const LoanListScreen = ({ navigation }) => {
 
       {/* FAB */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: insets.bottom + 100 }]}
         onPress={() => navigation.navigate('CreateLoan')}
         activeOpacity={0.85}
       >
@@ -221,37 +225,37 @@ const LoanListScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (fs) => StyleSheet.create({
+const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
   root: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  title: { fontSize: fs(28), fontWeight: '800', letterSpacing: -0.5 },
+  title: { fontSize: fs(28), lineHeight: 34, ...ff('800'), letterSpacing: 0 },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginTop: 8, marginBottom: 4,
     paddingHorizontal: 14, height: 44, borderRadius: 14, borderWidth: 1,
   },
-  searchInput: { flex: 1, fontSize: fs(15) },
+  searchInput: { flex: 1, fontSize: fs(15), lineHeight: 20, ...ff('400') },
   filterRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
-  filterChipText: { fontSize: fs(13), fontWeight: '700' },
+  filterChipText: { fontSize: fs(13), lineHeight: 18, ...ff('700') },
   list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100, gap: 8 },
   listEmpty: { flexGrow: 1, justifyContent: 'center' },
   cardWrap: {},
   loanRow: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
   loanMain: { flex: 1 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
-  borrowerName: { flex: 1, fontSize: fs(15), fontWeight: '600' },
+  borrowerName: { flex: 1, fontSize: fs(15), lineHeight: 20, ...ff('600') },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  statusText: { fontSize: fs(11), fontWeight: '700' },
-  principal: { fontSize: fs(20), fontWeight: '800', marginBottom: 4 },
+  statusText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('700') },
+  principal: { fontSize: fs(20), lineHeight: 26, ...ff('800'), marginBottom: 4 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  meta: { fontSize: fs(13) },
-  accruingText: { fontSize: fs(12), color: '#F59E0B', fontWeight: '600' },
+  meta: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
+  accruingText: { fontSize: fs(12), lineHeight: 16, color: '#F59E0B', ...ff('600') },
   emptyWrap: { alignItems: 'center', gap: 10, paddingBottom: 80 },
-  emptyText: { fontSize: fs(17), fontWeight: '600' },
-  emptyHint: { fontSize: fs(14) },
+  emptyText: { fontSize: fs(17), lineHeight: 22, ...ff('600') },
+  emptyHint: { fontSize: fs(14), lineHeight: 19, ...ff('400') },
   fab: {
-    position: 'absolute', bottom: 28, right: 24,
+    position: 'absolute', right: 24,
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center',
     ...Platform.select({

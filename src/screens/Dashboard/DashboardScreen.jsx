@@ -19,7 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calcAccruedInterest, formatCurrency, today } from '../../services/loanService';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -72,25 +72,25 @@ function addDays(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
-const SummaryCard = ({ label, value, color, colors, isDark }) => (
-  <GlassCard style={{ flex: 1 }}>
-    <View style={summaryStyles.card}>
-      <Text style={[summaryStyles.value, { color }]}>{value}</Text>
-      <Text style={[summaryStyles.label, { color: colors.textMuted }]}>{label}</Text>
-    </View>
-  </GlassCard>
-);
-
-const summaryStyles = StyleSheet.create({
-  card: { padding: 14, alignItems: 'center' },
-  value: { fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  label: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
-});
+const SummaryCard = ({ label, value, color, colors }) => {
+  const { language, ff } = useLanguage();
+  const isKhmer = language === 'km';
+  return (
+    <GlassCard style={{ flex: 1 }}>
+      <View style={{ padding: 14, alignItems: 'center' }}>
+        <Text style={[{ fontSize: 18, lineHeight: 23, marginBottom: 4, ...ff('800') }, { color }]}>{value}</Text>
+        <Text style={[{ fontSize: 11, ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('600'), textAlign: 'center' }, { color: colors.textMuted }]}>{label}</Text>
+      </View>
+    </GlassCard>
+  );
+};
 
 const DashboardScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
-  const { language } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const { language, ff } = useLanguage();
   const t = T[language] || T.en;
+  const styles = useMemo(() => makeStyles(ff), [ff]);
 
   const { loans, loansLoaded: loaded } = useData();
   const loading = !loaded;
@@ -122,7 +122,7 @@ const DashboardScreen = ({ navigation }) => {
     <TouchableOpacity
       key={loan.id}
       style={styles.loanRow}
-      onPress={() => navigation.navigate('LoanDetail', { loanId: loan.id })}
+      onPress={() => navigation.navigate('LoansTab', { screen: 'LoanDetail', params: { loanId: loan.id } })}
       activeOpacity={0.8}
     >
       <View style={[styles.rowDot, { backgroundColor: color + '30' }]}>
@@ -208,7 +208,7 @@ const DashboardScreen = ({ navigation }) => {
                           styles.loanRow,
                           i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' },
                         ]}
-                        onPress={() => navigation.navigate('LoanDetail', { loanId: loan.id })}
+                        onPress={() => navigation.navigate('LoansTab', { screen: 'LoanDetail', params: { loanId: loan.id } })}
                         activeOpacity={0.8}
                       >
                         <View style={[styles.rowDot, { backgroundColor: '#F59E0B30' }]}>
@@ -240,7 +240,7 @@ const DashboardScreen = ({ navigation }) => {
 
       {/* FAB */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: insets.bottom + 100 }]}
         onPress={() => navigation.navigate('CreateLoan')}
         activeOpacity={0.85}
       >
@@ -250,26 +250,26 @@ const DashboardScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (ff) => StyleSheet.create({
   root: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  greeting: { fontSize: 13, fontWeight: '500', marginBottom: 2 },
-  title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+  greeting: { fontSize: 13, lineHeight: 18, ...ff('500'), marginBottom: 2 },
+  title: { fontSize: 28, lineHeight: 34, ...ff('800'), letterSpacing: 0 },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 100 },
   summaryRow: { flexDirection: 'row', gap: 8, marginBottom: 20 },
-  sectionTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5, marginBottom: 8, marginTop: 4 },
+  sectionTitle: { fontSize: 13, lineHeight: 18, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 4 },
   emptySection: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16 },
-  emptyText: { fontSize: 14 },
+  emptyText: { fontSize: 14, lineHeight: 19, ...ff('400') },
   loanRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   rowDot: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   rowDotInner: { width: 10, height: 10, borderRadius: 5 },
   rowInfo: { flex: 1 },
-  rowName: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
-  rowMeta: { fontSize: 12 },
+  rowName: { fontSize: 14, lineHeight: 19, ...ff('600'), marginBottom: 2 },
+  rowMeta: { fontSize: 12, lineHeight: 16, ...ff('400') },
   emptyAll: { alignItems: 'center', gap: 10, paddingTop: 40 },
-  emptyAllText: { fontSize: 14 },
+  emptyAllText: { fontSize: 14, lineHeight: 19, ...ff('400') },
   fab: {
-    position: 'absolute', bottom: 28, right: 24,
+    position: 'absolute', right: 24,
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center',
     ...Platform.select({

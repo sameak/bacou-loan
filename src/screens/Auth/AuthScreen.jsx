@@ -5,6 +5,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useRef, useState } from 'react';
+import LogoMark from '../../components/LogoMark';
 import {
   ActivityIndicator,
   FlatList,
@@ -32,7 +33,7 @@ const ALLOWED_PHONES = [
   '+821079274494',  // Korea
   '+85512514608',   // Cambodia
   '+85589496505',   // Cambodia
-  // '+855XXXXXXXXX', // Cambodia (add when ready)
+  '+85512980915',   // Cambodia
 ];
 
 const COUNTRY_CODES = [
@@ -135,9 +136,11 @@ const T = {
 
 const AuthScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, ff } = useLanguage();
   const insets = useSafeAreaInsets();
   const t = T[language] || T.en;
+
+  const styles = useMemo(() => makeStyles(ff), [ff]);
 
   const [phone, setPhone] = useState('');
   const [countryCodeIdx, setCountryCodeIdx] = useState(0);
@@ -273,9 +276,7 @@ const AuthScreen = ({ navigation }) => {
         >
           {/* Hero */}
           <View style={styles.hero}>
-            <View style={styles.logoWrap}>
-              <Text style={styles.logoText}>₿</Text>
-            </View>
+            <LogoMark size={96} />
             <Text style={styles.heading}>{t.heading}</Text>
             <Text style={styles.sub}>{t.sub}</Text>
           </View>
@@ -350,7 +351,7 @@ const AuthScreen = ({ navigation }) => {
                 activeOpacity={0.7}
               >
                 <Text style={styles.menuItemFlag}>{opt.flag}</Text>
-                <Text style={[styles.menuItemLabel, { color: colors.text }, language === opt.code && { fontWeight: '700' }]}>{opt.label}</Text>
+                <Text style={[styles.menuItemLabel, { color: colors.text }, language === opt.code && ff('700')]}>{opt.label}</Text>
                 {language === opt.code && <Ionicons name="checkmark" size={16} color={colors.text} />}
               </TouchableOpacity>
             ))}
@@ -391,7 +392,7 @@ const AuthScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (ff) => StyleSheet.create({
   root: { flex: 1 },
   hiddenWebView: { position: 'absolute', left: -350, top: 0, width: 300, height: 300 },
   topSafe: { backgroundColor: 'transparent' },
@@ -400,14 +401,8 @@ const styles = StyleSheet.create({
   langPillFlag: { fontSize: 18 },
   kav: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  hero: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 120, paddingBottom: 140 },
-  logoWrap: {
-    width: 72, height: 72, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
-  },
-  logoText: { fontSize: 36, color: '#fff' },
-  heading: { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: -0.5, marginBottom: 8, textAlign: 'center' },
+  hero: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 100, paddingBottom: 140 },
+  heading: { fontSize: 28, ...ff('800'), color: '#fff', letterSpacing: 0, marginTop: 24, marginBottom: 8, textAlign: 'center' },
   sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 20 },
   card: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32 },
   cardInner: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 8 },
@@ -418,15 +413,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12, paddingHorizontal: 14, marginBottom: 16,
     borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)',
   },
-  errorText: { flex: 1, fontSize: 13, color: '#EF4444', fontWeight: '500', lineHeight: 18 },
-  phoneLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8 },
+  errorText: { flex: 1, fontSize: 13, color: '#EF4444', ...ff('500'), lineHeight: 18 },
+  phoneLabel: { fontSize: 11, ...ff('700'), letterSpacing: 0, marginBottom: 8 },
   phoneBox: { flexDirection: 'row', alignItems: 'center', height: 58, borderRadius: 16, borderWidth: 2, borderColor: 'transparent', marginBottom: 12, overflow: 'hidden' },
   phoneBoxFocused: { borderColor: 'rgba(99,102,241,0.35)' },
   countryBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, height: '100%' },
   countryFlag: { fontSize: 20 },
-  countryCode: { fontSize: 14, fontWeight: '700' },
+  countryCode: { fontSize: 14, ...ff('700') },
   phoneSep: { width: 1, height: 22 },
-  phoneInput: { flex: 1, height: '100%', paddingHorizontal: 14, fontSize: 16, fontWeight: '500' },
+  phoneInput: { flex: 1, height: '100%', paddingHorizontal: 14, fontSize: 16, ...ff('500') },
   sendBtn: {
     height: 58, borderRadius: 16, backgroundColor: DARK_INDIGO,
     alignItems: 'center', justifyContent: 'center',
@@ -436,20 +431,20 @@ const styles = StyleSheet.create({
     }),
   },
   sendBtnOff: { opacity: 0.35, shadowOpacity: 0, elevation: 0 },
-  sendBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  sendBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
   terms: { fontSize: 11, textAlign: 'center', lineHeight: 16, marginTop: 20 },
   menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' },
   menuCard: { position: 'absolute', right: 16, borderRadius: 16, overflow: 'hidden', minWidth: 170, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.18, shadowRadius: 28 }, android: { elevation: 10 } }) },
   menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
   menuItemFlag: { fontSize: 20 },
-  menuItemLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
+  menuItemLabel: { flex: 1, fontSize: 15, ...ff('500') },
   pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   pickerSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '60%', paddingBottom: 24 },
   pickerHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
   pickerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14 },
   pickerFlag: { fontSize: 26 },
-  pickerName: { flex: 1, fontSize: 15, fontWeight: '500' },
-  pickerDialCode: { fontSize: 14, fontWeight: '700' },
+  pickerName: { flex: 1, fontSize: 15, ...ff('500') },
+  pickerDialCode: { fontSize: 14, ...ff('700') },
 });
 
 export default AuthScreen;
