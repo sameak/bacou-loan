@@ -25,6 +25,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth } from '../../services/firebase';
+import { saveCapital, listenCapital } from '../../services/capitalService';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAppLock } from '../../context/AppLockContext';
@@ -74,6 +75,14 @@ const T = {
     cancel: 'Cancel',
     save: 'Save',
     version: 'Bacou Loan v1.0.0',
+    // Capital
+    capital: 'CAPITAL',
+    myCapital: 'My Capital',
+    capitalDesc: 'Set your total lending capital',
+    capitalUSD: 'Capital (USD $)',
+    capitalKHR: 'Capital (KHR ៛)',
+    capitalSaved: 'Capital saved',
+    capitalHint: 'Enter 0 to hide a currency',
   },
   km: {
     title: 'ការកំណត់',
@@ -108,6 +117,13 @@ const T = {
     cancel: 'បោះបង់',
     save: 'រក្សាទុក',
     version: 'Bacou Loan v1.0.0',
+    capital: 'ដើមទុន',
+    myCapital: 'ដើមទុនខ្ញុំ',
+    capitalDesc: 'កំណត់ដើមទុនសរុបរបស់អ្នក',
+    capitalUSD: 'ដើមទុន (USD $)',
+    capitalKHR: 'ដើមទុន (KHR ៛)',
+    capitalSaved: 'បានរក្សាទុកដើមទុន',
+    capitalHint: 'បញ្ចូល 0 ដើម្បីលាក់រូបិយប័ណ្ណ',
   },
 };
 
@@ -152,6 +168,19 @@ const SettingsScreen = ({ navigation }) => {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
+
+  // Capital
+  const [editingCapital, setEditingCapital] = useState(false);
+  const [capitalUSD, setCapitalUSD] = useState('');
+  const [capitalKHR, setCapitalKHR] = useState('');
+  const [savingCapital, setSavingCapital] = useState(false);
+  const [currentCapital, setCurrentCapital] = useState({ capitalUSD: 0, capitalKHR: 0 });
+
+  useEffect(() => {
+    return listenCapital(c => {
+      setCurrentCapital(c);
+    });
+  }, []);
 
   // Auto-submit PIN verify when 4 digits entered
   useEffect(() => {
@@ -210,6 +239,27 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
+
+  const handleOpenCapital = () => {
+    setCapitalUSD(currentCapital.capitalUSD > 0 ? String(currentCapital.capitalUSD) : '');
+    setCapitalKHR(currentCapital.capitalKHR > 0 ? String(currentCapital.capitalKHR) : '');
+    setEditingCapital(true);
+  };
+
+  const handleSaveCapital = async () => {
+    setSavingCapital(true);
+    try {
+      const usd = parseFloat(capitalUSD.replace(/,/g, '')) || 0;
+      const khr = parseFloat(capitalKHR.replace(/,/g, '')) || 0;
+      await saveCapital({ capitalUSD: usd, capitalKHR: khr });
+      Toast.show({ text: t.capitalSaved, type: 'success' });
+      setEditingCapital(false);
+    } catch (err) {
+      Toast.show({ text: err.message, type: 'error' });
+    } finally {
+      setSavingCapital(false);
+    }
+  };
 
   const handleSignOut = () => {
     Alert.alert(t.signOut, t.signOutConfirm, [
@@ -315,6 +365,39 @@ const SettingsScreen = ({ navigation }) => {
               pinEnabled
                 ? <Text style={[styles.pinStatus, { color: ACCENT }]}>{t.pinSet}</Text>
                 : <Text style={[styles.pinStatus, { color: colors.textMuted }]}>{t.pinNotSet}</Text>
+            }
+          />
+        </GlassCard>
+
+        {/* Capital */}
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t.capital}</Text>
+        <GlassCard style={{ marginBottom: 20 }}>
+          <Row
+            label={t.myCapital}
+            colors={colors}
+            isDark={isDark}
+            onPress={handleOpenCapital}
+            last
+            right={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {(currentCapital.capitalUSD > 0 || currentCapital.capitalKHR > 0) ? (
+                  <View style={{ alignItems: 'flex-end', gap: 1 }}>
+                    {currentCapital.capitalUSD > 0 && (
+                      <Text style={[styles.capitalValue, { color: ACCENT }]}>
+                        ${Math.round(currentCapital.capitalUSD).toLocaleString()}
+                      </Text>
+                    )}
+                    {currentCapital.capitalKHR > 0 && (
+                      <Text style={[styles.capitalValue, { color: ACCENT }]}>
+                        ៛{Math.round(currentCapital.capitalKHR).toLocaleString()}
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={[styles.pinStatus, { color: colors.textMuted }]}>{t.capitalDesc}</Text>
+                )}
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </View>
             }
           />
         </GlassCard>
@@ -451,6 +534,56 @@ const SettingsScreen = ({ navigation }) => {
         </View>
       </Modal>
 
+      {/* Capital Edit Modal */}
+      <Modal visible={editingCapital} transparent animationType="slide">
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.surface : '#fff' }]}>
+            <View style={[styles.modalHandle, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)' }]} />
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <TouchableOpacity onPress={() => setEditingCapital(false)} style={styles.modalSideBtn}>
+                <Text style={[styles.modalCancel, { color: colors.textMuted }]}>{t.cancel}</Text>
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t.myCapital}</Text>
+              <TouchableOpacity onPress={handleSaveCapital} disabled={savingCapital} style={styles.modalSideBtn}>
+                {savingCapital
+                  ? <ActivityIndicator color={ACCENT} size="small" />
+                  : <Text style={[styles.modalSave, { color: ACCENT }]}>{t.save}</Text>
+                }
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 20, gap: 12 }}>
+              <View style={[styles.inputWrap, { backgroundColor: isDark ? colors.surface : '#F2F4F8' }]}>
+                <TextInput
+                  style={[styles.nameInput, { color: colors.text }, fi()]}
+                  value={capitalUSD}
+                  onChangeText={setCapitalUSD}
+                  placeholder={t.capitalUSD}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numeric"
+                  returnKeyType="next"
+                />
+              </View>
+              <View style={[styles.inputWrap, { backgroundColor: isDark ? colors.surface : '#F2F4F8' }]}>
+                <TextInput
+                  style={[styles.nameInput, { color: colors.text }, fi()]}
+                  value={capitalKHR}
+                  onChangeText={setCapitalKHR}
+                  placeholder={t.capitalKHR}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numeric"
+                  returnKeyType="done"
+                  onSubmitEditing={handleSaveCapital}
+                />
+              </View>
+              <Text style={[styles.capitalHint, { color: colors.textMuted }]}>{t.capitalHint}</Text>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Display Name Edit Modal */}
       <Modal visible={editingName} transparent animationType="slide">
         <KeyboardAvoidingView
@@ -518,6 +651,8 @@ const makeStyles = (ff) => StyleSheet.create({
   pinKeyBtn: { width: 72, height: 72, borderRadius: 36, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   pinKeyText: { fontSize: 26 },
 
+  capitalValue: { fontSize: 13, lineHeight: 18, ...ff('600') },
+  capitalHint: { fontSize: 12, lineHeight: 16, ...ff('400'), textAlign: 'center' },
   nameRight: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 },
   nameValue: { fontSize: 13, lineHeight: 18, ...ff('400') },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
