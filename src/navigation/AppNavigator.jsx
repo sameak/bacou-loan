@@ -66,6 +66,7 @@ import TopUpLoanScreen from '../screens/Loans/TopUpLoanScreen';
 import EditLoanScreen from '../screens/Loans/EditLoanScreen';
 import LoanCalculatorScreen from '../screens/Loans/LoanCalculatorScreen';
 import ReportsScreen from '../screens/Reports/ReportsScreen';
+import ExchangeRatesScreen from '../screens/Rates/ExchangeRatesScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
 import SessionsScreen from '../screens/Settings/SessionsScreen';
 import SetPINScreen   from '../screens/Settings/SetPINScreen';
@@ -470,6 +471,7 @@ function MainStackNav() {
       <MainStack.Screen name="EditLoan"         component={EditLoanScreen} />
       <MainStack.Screen name="LoanCalculator" component={LoanCalculatorScreen} />
       <MainStack.Screen name="Reports"        component={ReportsScreen} />
+      <MainStack.Screen name="ExchangeRates" component={ExchangeRatesScreen} />
     </MainStack.Navigator>
   );
 }

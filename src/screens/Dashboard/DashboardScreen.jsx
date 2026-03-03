@@ -244,13 +244,22 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={[styles.greeting, { color: colors.textMuted }, ff('400')]}>{t[greetKey]}{userName ? `, ${userName}` : ''}</Text>
             <Text style={[styles.appTitle, { color: colors.text }, ff('800')]}>Bacou</Text>
           </View>
-          <TouchableOpacity
-            style={[styles.headerIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
-            onPress={() => navigation.navigate('Reports')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="bar-chart-outline" size={20} color={colors.text} />
-          </TouchableOpacity>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity
+              style={[styles.headerIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
+              onPress={() => navigation.navigate('ExchangeRates')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="swap-horizontal-outline" size={20} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.headerIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
+              onPress={() => navigation.navigate('Reports')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="bar-chart-outline" size={20} color={colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
 
@@ -595,7 +604,8 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   header:  { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' },
   greeting:{ fontSize: fs(13), lineHeight: 18 },
   appTitle:{ fontSize: fs(28), lineHeight: 34 },
-  headerIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  headerIcons: { flexDirection: 'row', gap: 8 },
+  headerIcon:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
 
   // Generic
