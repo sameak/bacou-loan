@@ -23,7 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { updateBorrower, deleteBorrower, listenBorrowers } from '../../services/borrowerService';
 import { listenLoansByBorrower, getLoansByBorrower, deleteLoan, formatCurrency, calcAccruedInterest, getBorrowerPayments } from '../../services/loanService';
 import { uploadBorrowerFile, listenBorrowerFiles, deleteBorrowerFile } from '../../services/borrowerFilesService';
@@ -122,6 +122,7 @@ const T = {
 
 const BorrowerDetailScreen = ({ navigation, route }) => {
   const { borrowerId } = route.params;
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
@@ -647,7 +648,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
         </View>
       </SafeAreaView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
 
         {/* Hero card */}
         <GlassCard style={{ marginBottom: 16 }}>
@@ -817,7 +818,7 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
   editBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7 },
   editBtnText: { fontSize: fs(13), lineHeight: 18, ...ff('600') },
 
-  content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
+  content: { paddingHorizontal: 16, paddingTop: 4 },
 
   /* Hero */
   heroCard: { alignItems: 'center', paddingTop: 28, paddingBottom: 20, paddingHorizontal: 20 },
