@@ -1,17 +1,21 @@
 /**
- * DASHBOARD SCREEN
- * - Capital card: KHR + USD capital vs lent vs remaining
- * - 3 summary GlassCards: Total Lent | Outstanding | Overdue
- * - Overdue loans section (red)
- * - Due This Week section (amber)
- * - Open loans accruing section
- * - FAB → CreateLoanScreen
+ * DASHBOARD SCREEN — Dynamic homepage v2
+ *
+ * Sections:
+ *   1. Header: time-based greeting + health score
+ *   2. This Month: interest earned + principal collected, % change vs last month
+ *   3. 6-Month Interest Bar Chart
+ *   4. Capital Utilization (progress bars)
+ *   5. Quick Stats Row: active count, outstanding, on-track %
+ *   6. Overdue Alert Banner
+ *   7. Portfolio: top active/overdue loans
+ *   8. Recent Activity: last 6 payments
+ *   9. FAB → CreateLoan
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
   Platform,
   ScrollView,
   StyleSheet,
@@ -20,7 +24,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { calcAccruedInterest, formatCurrency, today } from '../../services/loanService';
+import { auth } from '../../services/firebase';
+import { getBorrowerPayments, formatCurrency, today } from '../../services/loanService';
 import { listenCapital } from '../../services/capitalService';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -29,213 +34,219 @@ import GlassCard from '../../components/GlassCard';
 import { Skeleton } from '../../components/Skeleton';
 
 const ACCENT = '#6366F1';
+const GREEN  = '#10B981';
+const AMBER  = '#F59E0B';
+const RED    = '#EF4444';
+
+/** Return 'YYYY-MM' for (today + offset months) */
+function monthKey(offset = 0) {
+  const d = new Date();
+  const s = new Date(d.getFullYear(), d.getMonth() + offset, 1);
+  return `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, '0')}`;
+}
 
 const T = {
   en: {
-    greeting: 'Good day',
-    totalLent: 'Total Lent',
-    outstanding: 'Outstanding',
-    overdue: 'Overdue',
-    overdueSection: 'Overdue Loans',
-    dueThisWeek: 'Due This Week',
-    openAccruing: 'Open Loans Accruing',
-    recentPayments: 'Recent Payments',
-    noOverdue: 'No overdue loans',
-    noDue: 'All caught up',
-    noOpen: 'No open loans',
-    noPayments: 'No payments yet',
-    noLoans: 'No loans yet — tap + to add',
-    period: 'Period',
-    accruing: 'Accruing',
+    morning: 'Good morning',
+    afternoon: 'Good afternoon',
+    evening: 'Good evening',
+    // Health
+    portfolioHealth: 'Portfolio Health',
+    great: 'Great', good: 'Good', fair: 'Fair', poor: 'Poor',
+    // Income
+    thisMonth: 'This Month',
+    interest: 'Interest',
+    principal: 'Collected',
+    vsLastMonth: 'vs last month',
+    newEarning: 'First earnings',
+    // Chart
+    chart6m: '6-Month Interest',
+    khrNote: '+ KHR interest in Reports',
     // Capital
-    myCapital: 'My Capital',
+    myCapital: 'MY CAPITAL',
     capitalSet: 'Set Capital',
-    lent: 'Lent',
-    remaining: 'Remaining',
+    utilized: 'utilized',
+    available: 'free',
     noCapital: 'Tap Settings → My Capital to set your capital',
+    lent: 'Lent',
     total: 'Total',
-    left: 'Left',
+    // Stats
+    active: 'Active',
+    onTrack: 'On Track',
+    outstanding: 'Outstanding',
+    // Alerts
+    overdueAlert: (n, amt) => `${n} overdue · ${amt} at risk`,
+    // Portfolio
+    portfolio: 'PORTFOLIO',
+    overdue: 'Overdue',
+    // Activity
+    recentActivity: 'RECENT ACTIVITY',
+    noActivity: 'No payments recorded yet',
+    // Status
+    statusActive: 'Active',
+    statusOverdue: 'Overdue',
+    // Chart months (single char)
+    chartMonths: ['J','F','M','A','M','J','J','A','S','O','N','D'],
   },
   km: {
-    greeting: 'ថ្ងៃល្អ',
-    totalLent: 'ផ្ដល់ទាំងអស់',
-    outstanding: 'នៅជំពាក់',
-    overdue: 'ហួសកំណត់',
-    overdueSection: 'ប្រាក់កម្ចីហួសកំណត់',
-    dueThisWeek: 'ត្រូវបង់សប្ដាហ៍នេះ',
-    openAccruing: 'ប្រាក់កម្ចីបើក',
-    recentPayments: 'ការបង់ថ្មីៗ',
-    noOverdue: 'គ្មានប្រាក់កម្ចីហួសកំណត់',
-    noDue: 'ល្អទាំងអស់',
-    noOpen: 'គ្មានប្រាក់កម្ចីបើក',
-    noPayments: 'មិនទាន់មានការបង់',
-    noLoans: 'មិនទាន់មានប្រាក់កម្ចី — ចុច + ដើម្បីបន្ថែម',
-    period: 'ដំណាក់',
-    accruing: 'បង្ហូរ',
+    morning: 'អរុណសួស្ដី',
+    afternoon: 'ទិវាសួស្ដី',
+    evening: 'សាយ័ណ្ហសួស្ដី',
+    portfolioHealth: 'សុខភាពផតហ្វូលីយ៉ូ',
+    great: 'ល្អខ្លាំង', good: 'ល្អ', fair: 'មធ្យម', poor: 'ខ្សោយ',
+    thisMonth: 'ខែនេះ',
+    interest: 'ការប្រាក់',
+    principal: 'ដើមទុន',
+    vsLastMonth: 'ធៀបខែមុន',
+    newEarning: 'ដំបូង',
+    chart6m: 'ការប្រាក់ ៦ ខែ',
+    khrNote: '+ ការប្រាក់រៀលក្នុងរបាយការណ៍',
     myCapital: 'ដើមទុនខ្ញុំ',
     capitalSet: 'កំណត់ដើមទុន',
-    lent: 'បានផ្ដល់',
-    remaining: 'នៅសល់',
+    utilized: 'បានប្រើ',
+    available: 'នៅសល់',
     noCapital: 'ទៅការកំណត់ → ដើមទុនខ្ញុំ ដើម្បីកំណត់',
+    lent: 'បានផ្ដល់',
     total: 'សរុប',
-    left: 'នៅសល់',
+    active: 'ដំណើរការ',
+    onTrack: 'ទៀងទាត់',
+    outstanding: 'នៅជំពាក់',
+    overdueAlert: (n, amt) => `${n} ហួសកំណត់ · ${amt} ប្រយ័ត្ន`,
+    portfolio: 'ផតហ្វូលីយ៉ូ',
+    overdue: 'ហួសកំណត់',
+    recentActivity: 'សកម្មភាពថ្មីៗ',
+    noActivity: 'មិនទាន់មានការបង់',
+    statusActive: 'ដំណើរការ',
+    statusOverdue: 'ហួសកំណត់',
+    chartMonths: ['១','២','៣','៤','៥','៦','៧','៨','៩','១០','១១','១២'],
   },
 };
 
-function addDays(dateStr, n) {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-
-const SummaryCard = ({ label, usdValue, khrValue, color, colors }) => {
-  const { language, ff } = useLanguage();
-  const isKhmer = language === 'km';
-  const hasAny = usdValue || khrValue;
-  return (
-    <GlassCard style={{ flex: 1 }}>
-      <View style={{ padding: 12, alignItems: 'center', gap: 1 }}>
-        {hasAny ? (
-          <>
-            {usdValue ? (
-              <Text style={[{ fontSize: 15, lineHeight: 20, ...ff('800') }, { color }]}>{usdValue}</Text>
-            ) : null}
-            {khrValue ? (
-              <Text style={[{ fontSize: 12, lineHeight: 17, ...ff('700') }, { color: usdValue ? color + 'BB' : color }]}>{khrValue}</Text>
-            ) : null}
-          </>
-        ) : (
-          <Text style={[{ fontSize: 18, lineHeight: 23, ...ff('800') }, { color }]}>—</Text>
-        )}
-        <Text style={[{ fontSize: 10, ...(isKhmer ? {} : { lineHeight: 14 }), ...ff('600'), textAlign: 'center', marginTop: 3 }, { color: colors.textMuted }]}>{label}</Text>
-      </View>
-    </GlassCard>
-  );
-};
-
-// One row in the capital card: Currency | Total | Lent | Remaining
-const CapitalRow = ({ currency, total, lent, remaining, colors, ff, fs, isKhmer, tl }) => {
-  const remColor = remaining >= 0 ? '#10B981' : '#EF4444';
-  return (
-    <View style={capStyles.row}>
-      {/* Currency badge */}
-      <View style={[capStyles.badge, { backgroundColor: ACCENT + '18' }]}>
-        <Text style={[capStyles.badgeText, { color: ACCENT }, ff('700')]}>{currency}</Text>
-      </View>
-
-      {/* Stats */}
-      <View style={capStyles.stats}>
-        <View style={capStyles.statCol}>
-          <Text style={[capStyles.statVal, { color: colors.text }, ff('700')]}>{total}</Text>
-          <Text style={[capStyles.statLbl, { color: colors.textMuted }, ff('500')]}>{tl.total}</Text>
-        </View>
-        <View style={[capStyles.divider, { backgroundColor: colors.border }]} />
-        <View style={capStyles.statCol}>
-          <Text style={[capStyles.statVal, { color: '#F59E0B' }, ff('700')]}>{lent}</Text>
-          <Text style={[capStyles.statLbl, { color: colors.textMuted }, ff('500')]}>{tl.lent}</Text>
-        </View>
-        <View style={[capStyles.divider, { backgroundColor: colors.border }]} />
-        <View style={capStyles.statCol}>
-          <Text style={[capStyles.statVal, { color: remColor }, ff('700')]}>{remaining >= 0 ? remaining : '−' + Math.abs(remaining)}</Text>
-          <Text style={[capStyles.statLbl, { color: colors.textMuted }, ff('500')]}>{tl.left}</Text>
-        </View>
-      </View>
-    </View>
-  );
-};
-
-const capStyles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
-  badge: { width: 44, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 13, lineHeight: 18 },
-  stats: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  statCol: { flex: 1, alignItems: 'center', gap: 2 },
-  statVal: { fontSize: 14, lineHeight: 19 },
-  statLbl: { fontSize: 10.5, lineHeight: 14 },
-  divider: { width: StyleSheet.hairlineWidth, height: 28, marginHorizontal: 4 },
-});
+// ── Screen ────────────────────────────────────────────────────────────────────
 
 const DashboardScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { language, ff, fs } = useLanguage();
-  const isKhmer = language === 'km';
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const styles = useMemo(() => makeStyles(ff, fs), [ff, fs]);
 
-  const { loans, loansLoaded: loaded } = useData();
-  const loading = !loaded;
+  const { loans, loansLoaded } = useData();
+  const [capital, setCapital]         = useState({ capitalUSD: 0, capitalKHR: 0 });
+  const [payments, setPayments]       = useState([]);
+  const [paymentsLoading, setLoading] = useState(true);
 
-  const [capital, setCapital] = useState({ capitalUSD: 0, capitalKHR: 0 });
+  useEffect(() => listenCapital(setCapital), []);
 
   useEffect(() => {
-    return listenCapital(setCapital);
-  }, []);
+    if (!loansLoaded) return;
+    getBorrowerPayments(loans)
+      .then(p => { setPayments(p); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [loansLoaded]);
 
-  const todayStr = today();
+  const fmtUSD = n => '$' + Math.round(n).toLocaleString('en-US');
+  const fmtKHR = n => '៛' + Math.round(n).toLocaleString();
 
-  const stats = useMemo(() => {
-    const active = loans.filter(l => l.status !== 'paid');
-    const usdAll = loans.filter(l => l.currency === 'USD');
-    const khrAll = loans.filter(l => l.currency === 'KHR');
-    const usdActive = active.filter(l => l.currency === 'USD');
-    const khrActive = active.filter(l => l.currency === 'KHR');
+  const navLoan     = id => navigation.navigate('Tabs', { screen: 'LoansTab', params: { screen: 'LoanDetail', params: { loanId: id } } });
+  const navLoanList = f  => navigation.navigate('Tabs', { screen: 'LoansTab', params: { screen: 'LoanList',   params: { initialFilter: f } } });
+
+  // ── Loan stats (instant, no payment loading needed) ───────────────────────
+  const loanStats = useMemo(() => {
+    const open       = loans.filter(l => l.status !== 'paid' && l.status !== 'written_off');
+    const active     = loans.filter(l => l.status === 'active');
+    const overdue    = loans.filter(l => l.status === 'overdue');
+    const writtenOff = loans.filter(l => l.status === 'written_off');
+
     const sum = (arr, key) => arr.reduce((s, l) => s + (l[key] ?? 0), 0);
-    return {
-      usd: {
-        totalLent:   sum(usdAll,    'originalPrincipal'),
-        outstanding: sum(usdActive, 'currentPrincipal'),
-        overdue:     sum(usdActive.filter(l => l.status === 'overdue'), 'currentPrincipal'),
-      },
-      khr: {
-        totalLent:   sum(khrAll,    'originalPrincipal'),
-        outstanding: sum(khrActive, 'currentPrincipal'),
-        overdue:     sum(khrActive.filter(l => l.status === 'overdue'), 'currentPrincipal'),
-      },
-    };
+
+    const outUSD = sum(open.filter(l => l.currency === 'USD'),     'currentPrincipal');
+    const outKHR = sum(open.filter(l => l.currency === 'KHR'),     'currentPrincipal');
+    const ovdUSD = sum(overdue.filter(l => l.currency === 'USD'),  'currentPrincipal');
+    const ovdKHR = sum(overdue.filter(l => l.currency === 'KHR'),  'currentPrincipal');
+
+    const totalOpen   = active.length + overdue.length;
+    const onTrackPct  = totalOpen > 0 ? Math.round((active.length / totalOpen) * 100) : 100;
+    const overduePct  = totalOpen > 0 ? overdue.length / totalOpen : 0;
+    const health      = Math.max(0, Math.min(100, Math.round(100 - overduePct * 60 - (writtenOff.length > 0 ? 5 : 0))));
+
+    return { activeCount: active.length, overdueCount: overdue.length, totalOpen, outUSD, outKHR, ovdUSD, ovdKHR, onTrackPct, health };
   }, [loans]);
 
-  const hasCapital = capital.capitalUSD > 0 || capital.capitalKHR > 0;
+  // ── Income this month vs last month (needs payments) ──────────────────────
+  const incomeData = useMemo(() => {
+    const thisM = monthKey(0);
+    const lastM = monthKey(-1);
+    let tiUSD = 0, tiKHR = 0, tpUSD = 0, tpKHR = 0, liUSD = 0;
+    for (const p of payments) {
+      const m    = p.date?.slice(0, 7);
+      const isKHR = (p.loanCurrency ?? p.currency) === 'KHR';
+      if (m === thisM) {
+        if (isKHR) { tiKHR += p.interestAmount ?? 0; tpKHR += p.principalAmount ?? 0; }
+        else        { tiUSD += p.interestAmount ?? 0; tpUSD += p.principalAmount ?? 0; }
+      } else if (m === lastM && !isKHR) {
+        liUSD += p.interestAmount ?? 0;
+      }
+    }
+    const changeUSD = liUSD > 0 ? Math.round(((tiUSD - liUSD) / liUSD) * 100) : null;
+    return { tiUSD, tiKHR, tpUSD, tpKHR, changeUSD };
+  }, [payments]);
 
-  const overdueLoans = useMemo(() => loans.filter(l => l.status === 'overdue'), [loans]);
-  const dueSoonLoans = useMemo(() => loans.filter(l => l.status === 'active' && l.scheduleMode === 'fixed'), [loans]);
-  const openLoans = useMemo(() => loans.filter(l => l.scheduleMode === 'open' && l.status !== 'paid'), [loans]);
+  // ── 6-month chart (USD interest per month) ────────────────────────────────
+  const chartData = useMemo(() => {
+    const keys  = Array.from({ length: 6 }, (_, i) => monthKey(i - 5));
+    const data  = keys.map(mk => {
+      const ps   = payments.filter(p => p.date?.slice(0, 7) === mk);
+      const usd  = ps.filter(p => (p.loanCurrency ?? p.currency) !== 'KHR').reduce((s, p) => s + (p.interestAmount ?? 0), 0);
+      const khr  = ps.filter(p => (p.loanCurrency ?? p.currency) === 'KHR').reduce((s, p) => s + (p.interestAmount ?? 0), 0);
+      const [, m] = mk.split('-').map(Number);
+      return { key: mk, usd, khr, mIdx: m - 1 };
+    });
+    const maxUSD = Math.max(...data.map(d => d.usd), 1);
+    const hasKHR = data.some(d => d.khr > 0);
+    return { data, maxUSD, hasKHR };
+  }, [payments]);
 
-  const renderLoanRow = (loan, nav, color = colors.text) => (
-    <TouchableOpacity
-      key={loan.id}
-      style={styles.loanRow}
-      onPress={() => nav.navigate('Tabs', { screen: 'LoansTab', params: { screen: 'LoanDetail', params: { loanId: loan.id } } })}
-      activeOpacity={0.8}
-    >
-      <View style={[styles.rowDot, { backgroundColor: color + '30' }]}>
-        <View style={[styles.rowDotInner, { backgroundColor: color }]} />
-      </View>
-      <View style={styles.rowInfo}>
-        <Text style={[styles.rowName, { color: colors.text }]} numberOfLines={1}>{loan.borrowerName}</Text>
-        <Text style={[styles.rowMeta, { color: colors.textMuted }]}>
-          {formatCurrency(loan.currentPrincipal, loan.currency)} · {loan.interestRate}%
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-    </TouchableOpacity>
+  // ── Capital utilization ───────────────────────────────────────────────────
+  const capitalUtil = useMemo(() => ({
+    usdPct: capital.capitalUSD > 0 ? Math.min(100, Math.round((loanStats.outUSD / capital.capitalUSD) * 100)) : 0,
+    khrPct: capital.capitalKHR > 0 ? Math.min(100, Math.round((loanStats.outKHR / capital.capitalKHR) * 100)) : 0,
+  }), [capital, loanStats]);
+
+  // ── Top active/overdue loans for portfolio section ────────────────────────
+  const portfolioLoans = useMemo(() =>
+    loans.filter(l => l.status === 'active' || l.status === 'overdue')
+         .sort((a, b) => (b.currentPrincipal ?? 0) - (a.currentPrincipal ?? 0))
+         .slice(0, 5),
+    [loans]
   );
 
-  // Format helpers (no decimals for KHR, 2dp for USD)
-  const fmtUSD = (n) => '$' + Math.round(n).toLocaleString('en-US');
-  const fmtKHR = (n) => '៛' + Math.round(n).toLocaleString();
+  // ── Recent activity (last 6 payments) ─────────────────────────────────────
+  const recentPayments = useMemo(() => payments.slice(0, 6), [payments]);
+
+  // ── Derived display values ────────────────────────────────────────────────
+  const hasCapital     = capital.capitalUSD > 0 || capital.capitalKHR > 0;
+  const { health, onTrackPct, overdueCount, activeCount } = loanStats;
+  const healthColor    = health >= 80 ? GREEN : health >= 60 ? AMBER : health >= 40 ? '#F97316' : RED;
+  const healthLabel    = health >= 80 ? t.great : health >= 60 ? t.good : health >= 40 ? t.fair : t.poor;
+  const hour           = new Date().getHours();
+  const greetKey       = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+  const userName       = auth.currentUser?.displayName?.split(' ')[0] ?? '';
+  const thisMonthKey   = monthKey(0);
 
   return (
     <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
+
+      {/* ── Header ── */}
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
         <View style={styles.header}>
-          <View>
-            <Text style={[styles.greeting, { color: colors.textMuted }]}>{t.greeting}</Text>
-            <Text style={[styles.title, { color: colors.text }]}>Bacou</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.greeting, { color: colors.textMuted }, ff('400')]}>{t[greetKey]}{userName ? `, ${userName}` : ''}</Text>
+            <Text style={[styles.appTitle, { color: colors.text }, ff('800')]}>Bacou</Text>
           </View>
           <TouchableOpacity
+            style={[styles.headerIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
             onPress={() => navigation.navigate('Reports')}
-            style={[styles.reportBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
             activeOpacity={0.7}
           >
             <Ionicons name="bar-chart-outline" size={20} color={colors.text} />
@@ -244,156 +255,325 @@ const DashboardScreen = ({ navigation }) => {
       </SafeAreaView>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        {loading ? (
-          <View style={{ gap: 12 }}>
-            <View style={styles.summaryRow}>
-              {[1, 2, 3].map(i => (
-                <GlassCard key={i} style={{ flex: 1 }}>
-                  <View style={{ padding: 14, alignItems: 'center', gap: 8 }}>
-                    <Skeleton width="70%" height={18} isDark={isDark} />
-                    <Skeleton width="50%" height={11} isDark={isDark} />
-                  </View>
-                </GlassCard>
-              ))}
-            </View>
-          </View>
-        ) : (
-          <>
-            {/* ── Capital Card ── */}
-            <View style={styles.capitalHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.textMuted, marginBottom: 0 }]}>{t.myCapital}</Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('SettingsTab')}
-                style={[styles.capitalSetBtn, { backgroundColor: ACCENT + '15' }]}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="settings-outline" size={13} color={ACCENT} />
-                <Text style={[styles.capitalSetText, { color: ACCENT }, ff('600')]}>{t.capitalSet}</Text>
-              </TouchableOpacity>
+
+        {/* ── 1. Portfolio Health ── */}
+        <GlassCard style={styles.card}>
+          <View style={styles.cardInner}>
+            <View style={styles.healthTop}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.sectionLabel, { color: colors.textMuted }, ff('600')]}>{t.portfolioHealth}</Text>
+                <View style={styles.healthScoreRow}>
+                  <Text style={[styles.healthNum, { color: healthColor }, ff('800')]}>{health}</Text>
+                  <Text style={[styles.healthDenom, { color: colors.textMuted }, ff('400')]}>/100</Text>
+                </View>
+              </View>
+              <View style={[styles.healthBadge, { backgroundColor: healthColor + '20' }]}>
+                <Text style={[styles.healthBadgeText, { color: healthColor }, ff('700')]}>{healthLabel}</Text>
+              </View>
             </View>
 
-            <GlassCard style={{ marginBottom: 20 }}>
-              {!hasCapital ? (
-                <View style={styles.emptySection}>
-                  <Ionicons name="wallet-outline" size={20} color={colors.textMuted} />
-                  <Text style={[styles.emptyText, { color: colors.textMuted, flex: 1 }]}>{t.noCapital}</Text>
+            {/* Progress bar */}
+            <View style={[styles.track, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}>
+              <View style={[styles.trackFill, { width: `${health}%`, backgroundColor: healthColor }]} />
+            </View>
+
+            {/* Loan breakdown dots */}
+            <View style={styles.healthDots}>
+              <View style={styles.healthDot}>
+                <View style={[styles.dot, { backgroundColor: GREEN }]} />
+                <Text style={[styles.healthDotText, { color: colors.textMuted }, ff('500')]}>{activeCount} {t.active}</Text>
+              </View>
+              <View style={styles.healthDot}>
+                <View style={[styles.dot, { backgroundColor: RED }]} />
+                <Text style={[styles.healthDotText, { color: colors.textMuted }, ff('500')]}>{overdueCount} {t.overdue}</Text>
+              </View>
+              <View style={styles.healthDot}>
+                <View style={[styles.dot, { backgroundColor: ACCENT }]} />
+                <Text style={[styles.healthDotText, { color: colors.textMuted }, ff('500')]}>{onTrackPct}% {t.onTrack}</Text>
+              </View>
+            </View>
+          </View>
+        </GlassCard>
+
+        {/* ── 2. This Month Income ── */}
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('700')]}>{t.thisMonth.toUpperCase()}</Text>
+        <View style={styles.twoCol}>
+
+          {/* Interest card */}
+          <GlassCard style={{ flex: 1 }}>
+            <View style={styles.incomeInner}>
+              <View style={[styles.incomeTag, { backgroundColor: ACCENT + '18' }]}>
+                <Ionicons name="trending-up-outline" size={11} color={ACCENT} />
+                <Text style={[styles.incomeTagText, { color: ACCENT }, ff('600')]}>{t.interest}</Text>
+              </View>
+              {paymentsLoading ? (
+                <View style={{ gap: 6, marginVertical: 4 }}>
+                  <Skeleton width="75%" height={26} isDark={isDark} />
+                  <Skeleton width="50%" height={14} isDark={isDark} />
                 </View>
               ) : (
                 <>
-                  {capital.capitalUSD > 0 && (
-                    <CapitalRow
-                      currency="USD"
-                      total={fmtUSD(capital.capitalUSD)}
-                      lent={fmtUSD(stats.usd.outstanding)}
-                      remaining={fmtUSD(capital.capitalUSD - stats.usd.outstanding)}
-                      colors={colors} ff={ff} fs={fs} isKhmer={isKhmer} tl={t}
-                    />
-                  )}
-                  {capital.capitalUSD > 0 && capital.capitalKHR > 0 && (
-                    <View style={[styles.capDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)' }]} />
-                  )}
-                  {capital.capitalKHR > 0 && (
-                    <CapitalRow
-                      currency="KHR"
-                      total={fmtKHR(capital.capitalKHR)}
-                      lent={fmtKHR(stats.khr.outstanding)}
-                      remaining={fmtKHR(capital.capitalKHR - stats.khr.outstanding)}
-                      colors={colors} ff={ff} fs={fs} isKhmer={isKhmer} tl={t}
-                    />
+                  <Text style={[styles.incomeMain, { color: ACCENT }, ff('800')]}>{fmtUSD(incomeData.tiUSD)}</Text>
+                  {incomeData.tiKHR > 0 && <Text style={[styles.incomeSub, { color: ACCENT + 'BB' }, ff('600')]}>{fmtKHR(incomeData.tiKHR)}</Text>}
+                  {incomeData.changeUSD !== null ? (
+                    <View style={styles.changeRow}>
+                      <Ionicons name={incomeData.changeUSD >= 0 ? 'arrow-up' : 'arrow-down'} size={10} color={incomeData.changeUSD >= 0 ? GREEN : RED} />
+                      <Text style={[styles.changeText, { color: incomeData.changeUSD >= 0 ? GREEN : RED }, ff('600')]}>
+                        {Math.abs(incomeData.changeUSD)}% {t.vsLastMonth}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.changeText, { color: colors.textMuted }, ff('400')]}>{t.newEarning}</Text>
                   )}
                 </>
               )}
-            </GlassCard>
-
-            {/* Summary row */}
-            <View style={styles.summaryRow}>
-              <SummaryCard
-                label={t.totalLent}
-                usdValue={stats.usd.totalLent > 0 ? fmtUSD(stats.usd.totalLent) : null}
-                khrValue={stats.khr.totalLent > 0 ? fmtKHR(stats.khr.totalLent) : null}
-                color={ACCENT}
-                colors={colors}
-              />
-              <SummaryCard
-                label={t.outstanding}
-                usdValue={stats.usd.outstanding > 0 ? fmtUSD(stats.usd.outstanding) : null}
-                khrValue={stats.khr.outstanding > 0 ? fmtKHR(stats.khr.outstanding) : null}
-                color='#F59E0B'
-                colors={colors}
-              />
-              <SummaryCard
-                label={t.overdue}
-                usdValue={stats.usd.overdue > 0 ? fmtUSD(stats.usd.overdue) : null}
-                khrValue={stats.khr.overdue > 0 ? fmtKHR(stats.khr.overdue) : null}
-                color={(stats.usd.overdue > 0 || stats.khr.overdue > 0) ? '#EF4444' : colors.textMuted}
-                colors={colors}
-              />
             </View>
+          </GlassCard>
 
-            {/* Overdue section */}
-            <Text style={[styles.sectionTitle, { color: '#EF4444' }]}>{t.overdueSection}</Text>
-            <GlassCard style={{ marginBottom: 16 }}>
-              {overdueLoans.length === 0 ? (
-                <View style={styles.emptySection}>
-                  <Ionicons name="checkmark-circle-outline" size={20} color='#10B981' />
-                  <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t.noOverdue}</Text>
+          {/* Principal collected card */}
+          <GlassCard style={{ flex: 1 }}>
+            <View style={styles.incomeInner}>
+              <View style={[styles.incomeTag, { backgroundColor: GREEN + '18' }]}>
+                <Ionicons name="cash-outline" size={11} color={GREEN} />
+                <Text style={[styles.incomeTagText, { color: GREEN }, ff('600')]}>{t.principal}</Text>
+              </View>
+              {paymentsLoading ? (
+                <View style={{ gap: 6, marginVertical: 4 }}>
+                  <Skeleton width="75%" height={26} isDark={isDark} />
+                  <Skeleton width="50%" height={14} isDark={isDark} />
                 </View>
-              ) : overdueLoans.slice(0, 5).map(l => renderLoanRow(l, navigation, '#EF4444'))}
-            </GlassCard>
+              ) : (
+                <>
+                  <Text style={[styles.incomeMain, { color: GREEN }, ff('800')]}>{fmtUSD(incomeData.tpUSD)}</Text>
+                  {incomeData.tpKHR > 0 && <Text style={[styles.incomeSub, { color: GREEN + 'BB' }, ff('600')]}>{fmtKHR(incomeData.tpKHR)}</Text>}
+                  <Text style={[styles.changeText, { color: colors.textMuted }, ff('400')]}>{t.thisMonth}</Text>
+                </>
+              )}
+            </View>
+          </GlassCard>
+        </View>
 
-            {/* Due this week */}
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t.dueThisWeek}</Text>
-            <GlassCard style={{ marginBottom: 16 }}>
-              {dueSoonLoans.length === 0 ? (
-                <View style={styles.emptySection}>
-                  <Ionicons name="checkmark-circle-outline" size={20} color={colors.textMuted} />
-                  <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t.noDue}</Text>
-                </View>
-              ) : dueSoonLoans.slice(0, 5).map(l => renderLoanRow(l, navigation, '#F59E0B'))}
-            </GlassCard>
-
-            {/* Open loans accruing */}
-            {openLoans.length > 0 && (
+        {/* ── 3. 6-Month Bar Chart ── */}
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('700')]}>{t.chart6m.toUpperCase()}</Text>
+        <GlassCard style={styles.card}>
+          <View style={styles.chartInner}>
+            {paymentsLoading ? (
+              <View style={styles.chartSkeleton}>
+                {[60, 40, 80, 55, 70, 90].map((h, i) => (
+                  <View key={i} style={styles.chartSkeletonBarWrap}>
+                    <Skeleton width="70%" height={h} isDark={isDark} />
+                  </View>
+                ))}
+              </View>
+            ) : (
               <>
-                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t.openAccruing}</Text>
-                <GlassCard style={{ marginBottom: 16 }}>
-                  {openLoans.map((loan, i) => {
-                    const accrued = calcAccruedInterest(loan);
+                <View style={styles.barsArea}>
+                  {chartData.data.map((d) => {
+                    const pct         = Math.max(4, Math.round((d.usd / chartData.maxUSD) * 100));
+                    const isCurrent   = d.key === thisMonthKey;
+                    const barColor    = isCurrent ? ACCENT : ACCENT + '50';
+                    const labelColor  = isCurrent ? colors.text : colors.textMuted;
                     return (
-                      <TouchableOpacity
-                        key={loan.id}
-                        style={[
-                          styles.loanRow,
-                          i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' },
-                        ]}
-                        onPress={() => navigation.navigate('Tabs', { screen: 'LoansTab', params: { screen: 'LoanDetail', params: { loanId: loan.id } } })}
-                        activeOpacity={0.8}
-                      >
-                        <View style={[styles.rowDot, { backgroundColor: '#F59E0B30' }]}>
-                          <View style={[styles.rowDotInner, { backgroundColor: '#F59E0B' }]} />
+                      <View key={d.key} style={styles.barGroup}>
+                        {/* Amount above current month bar */}
+                        {isCurrent && d.usd > 0 && (
+                          <Text style={[styles.barCurLabel, { color: ACCENT }, ff('700')]}>{fmtUSD(d.usd)}</Text>
+                        )}
+                        <View style={styles.barTrack}>
+                          <View style={[styles.barFill, { height: `${pct}%`, backgroundColor: barColor, borderRadius: isCurrent ? 6 : 4 }]} />
                         </View>
-                        <View style={styles.rowInfo}>
-                          <Text style={[styles.rowName, { color: colors.text }]} numberOfLines={1}>{loan.borrowerName}</Text>
-                          <Text style={[styles.rowMeta, { color: '#F59E0B' }]}>
-                            {t.accruing}: {formatCurrency(accrued, loan.currency)}
-                          </Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                      </TouchableOpacity>
+                        <Text style={[styles.barMonthLabel, { color: labelColor }, ff(isCurrent ? '700' : '400')]}>
+                          {t.chartMonths[d.mIdx]}
+                        </Text>
+                      </View>
                     );
                   })}
-                </GlassCard>
+                </View>
+                {chartData.hasKHR && (
+                  <Text style={[styles.chartNote, { color: colors.textMuted }, ff('400')]}>{t.khrNote}</Text>
+                )}
               </>
             )}
+          </View>
+        </GlassCard>
 
-            {loans.length === 0 && (
-              <View style={styles.emptyAll}>
-                <Ionicons name="document-text-outline" size={52} color={colors.textMuted} />
-                <Text style={[styles.emptyAllText, { color: colors.textMuted }]}>{t.noLoans}</Text>
+        {/* ── 4. Capital Utilization ── */}
+        {hasCapital && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('700')]}>{t.myCapital}</Text>
+            <GlassCard style={styles.card}>
+              <View style={styles.capitalInner}>
+                {capital.capitalUSD > 0 && (
+                  <View style={styles.capitalItem}>
+                    <View style={styles.capitalTopRow}>
+                      <View style={[styles.cBadge, { backgroundColor: ACCENT + '18' }]}>
+                        <Text style={[styles.cBadgeText, { color: ACCENT }, ff('700')]}>🇺🇸 USD</Text>
+                      </View>
+                      <Text style={[styles.cPct, { color: colors.text }, ff('700')]}>{capitalUtil.usdPct}%</Text>
+                      <Text style={[styles.cAvail, { color: colors.textMuted }, ff('400')]}>
+                        {fmtUSD(capital.capitalUSD - loanStats.outUSD)} {t.available}
+                      </Text>
+                    </View>
+                    <View style={[styles.utilTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}>
+                      <View style={[styles.utilFill, { width: `${capitalUtil.usdPct}%`, backgroundColor: capitalUtil.usdPct > 90 ? RED : capitalUtil.usdPct > 70 ? AMBER : ACCENT }]} />
+                    </View>
+                    <View style={styles.capitalSubRow}>
+                      <Text style={[styles.capitalSub, { color: colors.textMuted }, ff('400')]}>{t.lent} {fmtUSD(loanStats.outUSD)}</Text>
+                      <Text style={[styles.capitalSub, { color: colors.textMuted }, ff('400')]}>{t.total} {fmtUSD(capital.capitalUSD)}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {capital.capitalUSD > 0 && capital.capitalKHR > 0 && (
+                  <View style={[styles.capDivider, { backgroundColor: colors.border }]} />
+                )}
+
+                {capital.capitalKHR > 0 && (
+                  <View style={styles.capitalItem}>
+                    <View style={styles.capitalTopRow}>
+                      <View style={[styles.cBadge, { backgroundColor: AMBER + '18' }]}>
+                        <Text style={[styles.cBadgeText, { color: AMBER }, ff('700')]}>🇰🇭 KHR</Text>
+                      </View>
+                      <Text style={[styles.cPct, { color: colors.text }, ff('700')]}>{capitalUtil.khrPct}%</Text>
+                      <Text style={[styles.cAvail, { color: colors.textMuted }, ff('400')]}>
+                        {fmtKHR(capital.capitalKHR - loanStats.outKHR)} {t.available}
+                      </Text>
+                    </View>
+                    <View style={[styles.utilTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}>
+                      <View style={[styles.utilFill, { width: `${capitalUtil.khrPct}%`, backgroundColor: capitalUtil.khrPct > 90 ? RED : capitalUtil.khrPct > 70 ? AMBER : GREEN }]} />
+                    </View>
+                    <View style={styles.capitalSubRow}>
+                      <Text style={[styles.capitalSub, { color: colors.textMuted }, ff('400')]}>{t.lent} {fmtKHR(loanStats.outKHR)}</Text>
+                      <Text style={[styles.capitalSub, { color: colors.textMuted }, ff('400')]}>{t.total} {fmtKHR(capital.capitalKHR)}</Text>
+                    </View>
+                  </View>
+                )}
               </View>
-            )}
+            </GlassCard>
           </>
         )}
+
+        {/* ── 5. Quick Stats ── */}
+        <View style={styles.statsRow}>
+          <GlassCard style={{ flex: 1 }}>
+            <View style={styles.statInner}>
+              <Text style={[styles.statMain, { color: ACCENT }, ff('800')]}>{activeCount + overdueCount}</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }, ff('600')]}>{t.active}</Text>
+            </View>
+          </GlassCard>
+
+          <GlassCard style={{ flex: 1.5 }}>
+            <View style={styles.statInner}>
+              {loanStats.outUSD > 0
+                ? <Text style={[styles.statMain, { color: AMBER }, ff('800')]}>{fmtUSD(loanStats.outUSD)}</Text>
+                : <Text style={[styles.statMain, { color: AMBER }, ff('800')]}>—</Text>
+              }
+              {loanStats.outKHR > 0 && <Text style={[styles.statSub, { color: AMBER + 'BB' }, ff('600')]}>{fmtKHR(loanStats.outKHR)}</Text>}
+              <Text style={[styles.statLabel, { color: colors.textMuted }, ff('600')]}>{t.outstanding}</Text>
+            </View>
+          </GlassCard>
+
+          <GlassCard style={{ flex: 1 }}>
+            <View style={styles.statInner}>
+              <Text style={[styles.statMain, { color: onTrackPct >= 80 ? GREEN : onTrackPct >= 60 ? AMBER : RED }, ff('800')]}>{onTrackPct}%</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }, ff('600')]}>{t.onTrack}</Text>
+            </View>
+          </GlassCard>
+        </View>
+
+        {/* ── 6. Overdue Alert ── */}
+        {overdueCount > 0 && (
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navLoanList('overdue')}>
+            <View style={[styles.alertBanner, { backgroundColor: RED + '12', borderColor: RED + '30' }]}>
+              <View style={[styles.alertPulse, { backgroundColor: RED }]} />
+              <Text style={[styles.alertText, { color: RED }, ff('600')]}>
+                {t.overdueAlert(overdueCount, loanStats.outUSD > 0 ? fmtUSD(loanStats.ovdUSD) : fmtKHR(loanStats.ovdKHR))}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={RED} />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* ── 7. Portfolio ── */}
+        {portfolioLoans.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('700')]}>{t.portfolio}</Text>
+            <GlassCard style={styles.card}>
+              {portfolioLoans.map((loan, i) => {
+                const isOvd = loan.status === 'overdue';
+                const dotColor = isOvd ? RED : ACCENT;
+                return (
+                  <TouchableOpacity
+                    key={loan.id}
+                    style={[styles.loanRow, i < portfolioLoans.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+                    onPress={() => navLoan(loan.id)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.loanAvatar, { backgroundColor: dotColor + '20' }]}>
+                      <Text style={[styles.loanAvatarText, { color: dotColor }, ff('700')]}>
+                        {(loan.borrowerName ?? '?')[0].toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.loanName, { color: colors.text }, ff('600')]} numberOfLines={1}>{loan.borrowerName}</Text>
+                      <Text style={[styles.loanMeta, { color: colors.textMuted }, ff('400')]}>{formatCurrency(loan.currentPrincipal, loan.currency)} · {loan.interestRate}%</Text>
+                    </View>
+                    <View style={[styles.statusPill, { backgroundColor: dotColor + '18' }]}>
+                      <Text style={[styles.statusPillText, { color: dotColor }, ff('600')]}>{isOvd ? t.statusOverdue : t.statusActive}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </GlassCard>
+          </>
+        )}
+
+        {/* ── 8. Recent Activity ── */}
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('700')]}>{t.recentActivity}</Text>
+        <GlassCard style={styles.card}>
+          {paymentsLoading ? (
+            <View style={{ paddingVertical: 8 }}>
+              {[1, 2, 3].map(i => (
+                <View key={i} style={[styles.actRow, i > 1 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}>
+                  <Skeleton width={34} height={34} radius={17} isDark={isDark} />
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <Skeleton width="55%" height={13} isDark={isDark} />
+                    <Skeleton width="35%" height={11} isDark={isDark} />
+                  </View>
+                  <Skeleton width={55} height={13} isDark={isDark} />
+                </View>
+              ))}
+            </View>
+          ) : recentPayments.length === 0 ? (
+            <View style={styles.emptyRow}>
+              <Ionicons name="time-outline" size={20} color={colors.textMuted} />
+              <Text style={[styles.emptyText, { color: colors.textMuted }, ff('400')]}>{t.noActivity}</Text>
+            </View>
+          ) : (
+            recentPayments.map((pay, i) => {
+              const total = (pay.interestAmount ?? 0) + (pay.principalAmount ?? 0);
+              return (
+                <TouchableOpacity
+                  key={pay.id}
+                  style={[styles.actRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+                  onPress={() => navLoan(pay.loanId)}
+                  activeOpacity={0.75}
+                >
+                  <View style={[styles.actIcon, { backgroundColor: GREEN + '18' }]}>
+                    <Ionicons name="checkmark" size={15} color={GREEN} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.actName, { color: colors.text }, ff('600')]} numberOfLines={1}>{pay.borrowerName ?? '—'}</Text>
+                    <Text style={[styles.actDate, { color: colors.textMuted }, ff('400')]}>{pay.date ?? ''}</Text>
+                  </View>
+                  <Text style={[styles.actAmount, { color: GREEN }, ff('700')]}>+{formatCurrency(total, pay.loanCurrency ?? pay.currency)}</Text>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </GlassCard>
+
+        <View style={{ height: insets.bottom + 120 }} />
       </ScrollView>
 
       {/* FAB */}
@@ -408,36 +588,110 @@ const DashboardScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (ff) => StyleSheet.create({
-  root: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  reportBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  greeting: { fontSize: 13, lineHeight: 18, ...ff('500'), marginBottom: 2 },
-  title: { fontSize: 28, lineHeight: 34, ...ff('800'), letterSpacing: 0 },
-  content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 100 },
-  summaryRow: { flexDirection: 'row', gap: 8, marginBottom: 20 },
-  capitalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, marginTop: 4 },
-  capitalSetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
-  capitalSetText: { fontSize: 12, lineHeight: 16 },
-  capDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 16 },
-  sectionTitle: { fontSize: 13, lineHeight: 18, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 4 },
-  emptySection: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16 },
-  emptyText: { fontSize: 14, lineHeight: 19, ...ff('400') },
-  loanRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
-  rowDot: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  rowDotInner: { width: 10, height: 10, borderRadius: 5 },
-  rowInfo: { flex: 1 },
-  rowName: { fontSize: 14, lineHeight: 19, ...ff('600'), marginBottom: 2 },
-  rowMeta: { fontSize: 12, lineHeight: 16, ...ff('400') },
-  emptyAll: { alignItems: 'center', gap: 10, paddingTop: 40 },
-  emptyAllText: { fontSize: 14, lineHeight: 19, ...ff('400') },
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+const makeStyles = (ff, fs) => StyleSheet.create({
+  root:    { flex: 1 },
+  header:  { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' },
+  greeting:{ fontSize: fs(13), lineHeight: 18 },
+  appTitle:{ fontSize: fs(28), lineHeight: 34 },
+  headerIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
+
+  // Generic
+  card:        { marginBottom: 4 },
+  cardInner:   { padding: 16 },
+  sectionTitle:{ fontSize: fs(11), lineHeight: 15, marginTop: 20, marginBottom: 10, marginLeft: 2, letterSpacing: 0 },
+  sectionLabel:{ fontSize: fs(12), lineHeight: 17, marginBottom: 4, letterSpacing: 0 },
+  twoCol:      { flexDirection: 'row', gap: 12, marginBottom: 4 },
+
+  // ── Health ────────────────────────────────────────────────────────────────
+  healthTop:      { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
+  healthScoreRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
+  healthNum:      { fontSize: fs(40), lineHeight: 46 },
+  healthDenom:    { fontSize: fs(16), lineHeight: 22 },
+  healthBadge:    { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, marginTop: 4 },
+  healthBadgeText:{ fontSize: fs(13), lineHeight: 18 },
+  track:     { height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 14 },
+  trackFill: { height: '100%', borderRadius: 4 },
+  healthDots:    { flexDirection: 'row', gap: 14 },
+  healthDot:     { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dot:           { width: 7, height: 7, borderRadius: 3.5 },
+  healthDotText: { fontSize: fs(12), lineHeight: 17 },
+
+  // ── Income cards ──────────────────────────────────────────────────────────
+  incomeInner:  { padding: 14, gap: 2 },
+  incomeTag:    { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, marginBottom: 6 },
+  incomeTagText:{ fontSize: fs(10), lineHeight: 14 },
+  incomeMain:   { fontSize: fs(22), lineHeight: 28 },
+  incomeSub:    { fontSize: fs(13), lineHeight: 18, marginTop: 1 },
+  changeRow:    { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 6 },
+  changeText:   { fontSize: fs(11), lineHeight: 15 },
+
+  // ── Chart ─────────────────────────────────────────────────────────────────
+  chartInner:       { paddingHorizontal: 12, paddingTop: 14, paddingBottom: 12 },
+  chartSkeleton:    { flexDirection: 'row', alignItems: 'flex-end', height: 110, gap: 6 },
+  chartSkeletonBarWrap: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  barsArea:         { flexDirection: 'row', alignItems: 'flex-end', height: 130, gap: 4 },
+  barGroup:         { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  barCurLabel:      { fontSize: fs(9), lineHeight: 13, textAlign: 'center', marginBottom: 4 },
+  barTrack:         { width: '100%', flex: 1, justifyContent: 'flex-end' },
+  barFill:          { width: '80%', alignSelf: 'center', minHeight: 4 },
+  barMonthLabel:    { fontSize: fs(11), lineHeight: 15, marginTop: 6, textAlign: 'center' },
+  chartNote:        { fontSize: fs(11), lineHeight: 15, textAlign: 'center', marginTop: 10 },
+
+  // ── Capital ───────────────────────────────────────────────────────────────
+  capitalInner:   { paddingHorizontal: 16, paddingVertical: 14, gap: 0 },
+  capitalItem:    { gap: 8 },
+  capitalTopRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cBadge:         { borderRadius: 7, paddingHorizontal: 8, paddingVertical: 3 },
+  cBadgeText:     { fontSize: fs(12), lineHeight: 17 },
+  cPct:           { fontSize: fs(14), lineHeight: 19 },
+  cAvail:         { fontSize: fs(12), lineHeight: 17, marginLeft: 'auto' },
+  utilTrack:      { height: 8, borderRadius: 4, overflow: 'hidden' },
+  utilFill:       { height: '100%', borderRadius: 4 },
+  capitalSubRow:  { flexDirection: 'row', justifyContent: 'space-between' },
+  capitalSub:     { fontSize: fs(11), lineHeight: 15 },
+  capDivider:     { height: StyleSheet.hairlineWidth, marginVertical: 14 },
+
+  // ── Stats row ─────────────────────────────────────────────────────────────
+  statsRow:   { flexDirection: 'row', gap: 10, marginBottom: 4 },
+  statInner:  { padding: 14, alignItems: 'center', justifyContent: 'center', minHeight: 72, gap: 4 },
+  statMain:   { fontSize: fs(20), lineHeight: 26 },
+  statSub:    { fontSize: fs(13), lineHeight: 18 },
+  statLabel:  { fontSize: fs(11), lineHeight: 15, textAlign: 'center' },
+
+  // ── Alert banner ──────────────────────────────────────────────────────────
+  alertBanner:{ flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 14, borderWidth: 1, gap: 10, marginBottom: 4 },
+  alertPulse: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  alertText:  { flex: 1, fontSize: fs(13), lineHeight: 18 },
+
+  // ── Portfolio ─────────────────────────────────────────────────────────────
+  loanRow:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, gap: 12 },
+  loanAvatar:     { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  loanAvatarText: { fontSize: fs(15), lineHeight: 20 },
+  loanName:       { fontSize: fs(14), lineHeight: 19, marginBottom: 2 },
+  loanMeta:       { fontSize: fs(12), lineHeight: 17 },
+  statusPill:     { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  statusPillText: { fontSize: fs(11), lineHeight: 15 },
+
+  // ── Recent activity ───────────────────────────────────────────────────────
+  actRow:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, gap: 12 },
+  actIcon:   { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  actName:   { fontSize: fs(14), lineHeight: 19, marginBottom: 2 },
+  actDate:   { fontSize: fs(12), lineHeight: 17 },
+  actAmount: { fontSize: fs(14), lineHeight: 19 },
+  emptyRow:  { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 20, justifyContent: 'center' },
+  emptyText: { fontSize: fs(13), lineHeight: 18 },
+
+  // ── FAB ───────────────────────────────────────────────────────────────────
   fab: {
-    position: 'absolute', right: 24,
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center',
+    position: 'absolute', right: 20, width: 56, height: 56,
+    borderRadius: 28, backgroundColor: ACCENT,
+    alignItems: 'center', justifyContent: 'center',
     ...Platform.select({
-      ios: { shadowColor: ACCENT, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 },
-      android: { elevation: 10 },
+      ios:     { shadowColor: ACCENT, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.45, shadowRadius: 16 },
+      android: { elevation: 12 },
     }),
   },
 });

@@ -83,7 +83,6 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
   const validate = () => {
     const e = {};
     if (!name.trim()) e.name = t.errName;
-    if (!phone.trim()) e.phone = t.errPhone;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
