@@ -317,7 +317,7 @@ const BorrowerListScreen = ({ navigation }) => {
           data={filtered}
           keyExtractor={item => item.id}
           renderItem={renderItem}
-          contentContainerStyle={[styles.list, filtered.length === 0 && styles.listEmpty]}
+          contentContainerStyle={[styles.list, filtered.length === 0 && styles.listEmpty, { paddingBottom: insets.bottom + 120 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
