@@ -25,8 +25,8 @@ export function LanguageProvider({ children, initialLanguage }) {
     await storage.set(STORAGE_KEYS.LANGUAGE, lang);
   }, []);
 
-  /** fs(size) — +10% in Khmer for better readability */
-  const fs = useCallback((size) => language === 'km' ? Math.round(size * 1.1) : size, [language]);
+  /** fs(size) — same size for all languages; lineHeight ratios stay consistent so Khmer diacritics don't clip */
+  const fs = useCallback((size) => size, []);
 
   /**
    * ff(weight) — system font for English, Koh Santepheap for Khmer.
