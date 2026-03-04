@@ -31,7 +31,7 @@ const GOLD_C  = '#F59E0B';
 const TROY_OZ = 31.1035;   // grams per troy ounce
 const CHI_G   = 3.75;      // grams per chi (Cambodian/Vietnamese unit)
 
-const FX_CACHE   = 'exchange_rates_v1';
+const FX_CACHE   = 'exchange_rates_v2';   // v2: uses {data,time} format
 const GOLD_CACHE = 'gold_rates_v1';
 
 // ─── Exchange-rate sources ────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ async function loadCached(cacheKey, forceRefresh, fetchFn) {
       const raw = await AsyncStorage.getItem(cacheKey);
       if (raw) {
         const cached = JSON.parse(raw);
-        if (cached?.date === todayStr()) return { data: cached.data, time: cached.time };
+        if (cached?.date === todayStr() && Array.isArray(cached.data)) return { data: cached.data, time: cached.time };
       }
     } catch {}
   }
@@ -494,9 +494,9 @@ const ExchangeRatesScreen = ({ navigation }) => {
   const activeLoading = activeTab === 'exchange' ? fxLoading : goldLoading;
 
   const renderLegend = () => (
-    !activeLoading && activeSources.length > 0 ? (
+    !activeLoading && (activeSources?.length ?? 0) > 0 ? (
       <View style={styles.legend}>
-        {activeSources.map(src => (
+        {(activeSources ?? []).map(src => (
           <View key={src.id} style={[styles.legendItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
             <View style={[styles.legendDot, { backgroundColor: src.badgeColor }]} />
             <Text style={[styles.legendText, { color: colors.textMuted }, ff('500')]}>{src.name}</Text>
