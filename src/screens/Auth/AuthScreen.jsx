@@ -9,6 +9,7 @@ import LogoMark from '../../components/LogoMark';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -20,6 +21,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+const NAVBAR_LOGO = require('../../../assets/images/navbar-logo.png');
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { firebaseConfig } from '../../services/firebase';
@@ -276,9 +279,11 @@ const AuthScreen = ({ navigation }) => {
         >
           {/* Hero */}
           <View style={styles.hero}>
-            <LogoMark size={96} />
-            <Text style={styles.heading}>{t.heading}</Text>
-            <Text style={styles.sub}>{t.sub}</Text>
+            <LogoMark size={88} />
+            <View style={[styles.authLogoPill, { marginTop: 24 }]}>
+              <Image source={NAVBAR_LOGO} style={styles.authLogo} resizeMode="contain" />
+            </View>
+            <Text style={[styles.sub, { marginTop: 12 }]}>{t.sub}</Text>
           </View>
 
           {/* Card */}
@@ -401,8 +406,9 @@ const makeStyles = (ff) => StyleSheet.create({
   langPillFlag: { fontSize: 18 },
   kav: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  hero: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 100, paddingBottom: 140 },
-  heading: { fontSize: 28, ...ff('800'), color: '#fff', letterSpacing: 0, marginTop: 24, marginBottom: 8, textAlign: 'center' },
+  hero: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 80, paddingBottom: 140 },
+  authLogoPill: { backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 16, marginBottom: 20, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 }, android: { elevation: 8 } }) },
+  authLogo: { height: 52, width: Math.round(52 * 256 / 144) },
   sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 20 },
   card: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32 },
   cardInner: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 8 },

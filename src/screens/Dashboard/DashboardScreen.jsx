@@ -16,6 +16,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -23,8 +24,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+const NAVBAR_LOGO = require('../../../assets/images/navbar-logo.png');
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { auth } from '../../services/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { auth, db } from '../../services/firebase';
 import { getBorrowerPayments, formatCurrency, today } from '../../services/loanService';
 import { listenCapital } from '../../services/capitalService';
 import { useTheme } from '../../theme/ThemeContext';
@@ -85,6 +89,12 @@ const T = {
     // Status
     statusActive: 'Active',
     statusOverdue: 'Overdue',
+    // Upcoming payments
+    upcomingPayments: 'UPCOMING PAYMENTS',
+    allOnTrack: 'All payments on track',
+    today: 'Today',
+    inDays: n => `in ${n} day${n === 1 ? '' : 's'}`,
+    overdueDays: n => `${n} day${n === 1 ? '' : 's'} overdue`,
     // Chart months (single char)
     chartMonths: ['J','F','M','A','M','J','J','A','S','O','N','D'],
   },
@@ -118,6 +128,11 @@ const T = {
     noActivity: 'មិនទាន់មានការបង់',
     statusActive: 'ដំណើរការ',
     statusOverdue: 'ហួសកំណត់',
+    upcomingPayments: 'ការទូទាត់ខាងមុខ',
+    allOnTrack: 'ការទូទាត់ទាំងអស់ទន្ទ្រាន',
+    today: 'ថ្ងៃនេះ',
+    inDays: n => `${n} ថ្ងៃទៀត`,
+    overdueDays: n => `ហួស ${n} ថ្ងៃ`,
     chartMonths: ['១','២','៣','៤','៥','៦','៧','៨','៩','១០','១១','១២'],
   },
 };
@@ -135,6 +150,7 @@ const DashboardScreen = ({ navigation }) => {
   const [capital, setCapital]         = useState({ capitalUSD: 0, capitalKHR: 0 });
   const [payments, setPayments]       = useState([]);
   const [paymentsLoading, setLoading] = useState(true);
+  const [upcoming, setUpcoming]       = useState([]);
 
   useEffect(() => listenCapital(setCapital), []);
 
@@ -143,6 +159,28 @@ const DashboardScreen = ({ navigation }) => {
     getBorrowerPayments(loans)
       .then(p => { setPayments(p); setLoading(false); })
       .catch(() => setLoading(false));
+
+    // Fetch upcoming payments from fixed-mode active/overdue loans
+    const fixedActive = loans.filter(
+      l => l.scheduleMode === 'fixed' && (l.status === 'active' || l.status === 'overdue'),
+    );
+    const rows = [];
+    Promise.all(
+      fixedActive.map(async loan => {
+        try {
+          const snap = await getDocs(collection(db, 'loans', loan.id, 'schedule'));
+          const next = snap.docs
+            .map(d => d.data())
+            .filter(p => p.status !== 'paid')
+            .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''))[0];
+          if (next) rows.push({ ...next, loanId: loan.id, borrowerName: loan.borrowerName, currency: loan.currency });
+        } catch (_) {}
+      }),
+    ).then(() => {
+      setUpcoming(
+        rows.sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? '')).slice(0, 5),
+      );
+    });
   }, [loansLoaded]);
 
   const fmtUSD = n => '$' + Math.round(n).toLocaleString('en-US');
@@ -243,7 +281,9 @@ const DashboardScreen = ({ navigation }) => {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { color: colors.textMuted }, ff('400')]}>{t[greetKey]}{userName ? `, ${userName}` : ''}</Text>
-            <Text style={[styles.appTitle, { color: colors.text }, ff('600')]}>Bacou</Text>
+            <View style={[styles.navLogoWrap, isDark && styles.navLogoWrapDark]}>
+              <Image source={NAVBAR_LOGO} style={styles.navLogo} resizeMode="contain" />
+            </View>
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity
@@ -405,6 +445,59 @@ const DashboardScreen = ({ navigation }) => {
               </>
             )}
           </View>
+        </GlassCard>
+
+        {/* ── 3b. Upcoming Payments ── */}
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('600')]}>{sectionUp(t.upcomingPayments)}</Text>
+        <GlassCard style={styles.card}>
+          {upcoming.length === 0 ? (
+            <View style={styles.emptyRow}>
+              <Ionicons name="checkmark-circle-outline" size={20} color={GREEN} />
+              <Text style={[styles.emptyText, { color: colors.textMuted }, ff('400')]}>{t.allOnTrack}</Text>
+            </View>
+          ) : (
+            upcoming.map((item, i) => {
+              const todayStr = new Date().toISOString().slice(0, 10);
+              const diffMs   = new Date(item.dueDate) - new Date(todayStr);
+              const diffDays = Math.round(diffMs / 86400000);
+              const isOverdue = diffDays < 0;
+              const isToday   = diffDays === 0;
+              const rowColor  = isOverdue ? RED : isToday ? AMBER : GREEN;
+              const chipLabel = isOverdue
+                ? t.overdueDays(Math.abs(diffDays))
+                : isToday
+                ? t.today
+                : t.inDays(diffDays);
+              const fmtAmt = item.currency === 'KHR'
+                ? fmtKHR(item.totalDue ?? 0)
+                : fmtUSD(item.totalDue ?? 0);
+              return (
+                <TouchableOpacity
+                  key={`${item.loanId}-${item.dueDate}-${i}`}
+                  style={[
+                    styles.upRow,
+                    i < upcoming.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                  ]}
+                  onPress={() => navLoan(item.loanId)}
+                  activeOpacity={0.75}
+                >
+                  <View style={[styles.upDot, { backgroundColor: rowColor + '22' }]}>
+                    <View style={[styles.upDotInner, { backgroundColor: rowColor }]} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.upName, { color: colors.text }, ff('400')]} numberOfLines={1}>{item.borrowerName}</Text>
+                    <Text style={[styles.upDate, { color: colors.textMuted }, ff('400')]}>{item.dueDate}</Text>
+                  </View>
+                  <View style={styles.upRight}>
+                    <Text style={[styles.upAmount, { color: rowColor }, ff('600')]}>{fmtAmt}</Text>
+                    <View style={[styles.upChip, { backgroundColor: rowColor + '18' }]}>
+                      <Text style={[styles.upChipText, { color: rowColor }, ff('600')]}>{chipLabel}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
         </GlassCard>
 
         {/* ── 4. Capital Utilization ── */}
@@ -604,7 +697,9 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   root:    { flex: 1 },
   header:  { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' },
   greeting:{ fontSize: fs(13), lineHeight: 18 },
-  appTitle:{ fontSize: fs(28), lineHeight: 34 },
+  navLogoWrap: { marginTop: 2 },
+  navLogoWrapDark: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
+  navLogo: { height: 38, width: Math.round(38 * 256 / 144) },
   headerIcons: { flexDirection: 'row', gap: 8 },
   headerIcon:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
@@ -686,6 +781,17 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   statusPill:     { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, flexShrink: 0 },
   statusPillText: { fontSize: fs(11), lineHeight: 15 },
 
+  // ── Upcoming payments ─────────────────────────────────────────────────────
+  upRow:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+  upDot:      { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  upDotInner: { width: 9, height: 9, borderRadius: 4.5 },
+  upName:     { fontSize: fs(14), lineHeight: 19, marginBottom: 2 },
+  upDate:     { fontSize: fs(12), lineHeight: 17 },
+  upRight:    { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
+  upAmount:   { fontSize: fs(14), lineHeight: 19 },
+  upChip:     { borderRadius: 7, paddingHorizontal: 7, paddingVertical: 2 },
+  upChipText: { fontSize: fs(10), lineHeight: 14 },
+
   // ── Recent activity ───────────────────────────────────────────────────────
   actRow:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, gap: 12 },
   actIcon:   { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
@@ -700,10 +806,6 @@ const makeStyles = (ff, fs) => StyleSheet.create({
     position: 'absolute', right: 20, width: 56, height: 56,
     borderRadius: 28, backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
-    ...Platform.select({
-      ios:     { shadowColor: ACCENT, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.45, shadowRadius: 16 },
-      android: { elevation: 12 },
-    }),
   },
 });
 

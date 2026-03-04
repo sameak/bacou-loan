@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -23,6 +24,8 @@ import {
   Vibration,
   View,
 } from 'react-native';
+
+const NAVBAR_LOGO = require('../../../assets/images/navbar-logo.png');
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth } from '../../services/firebase';
 import { useTheme } from '../../theme/ThemeContext';
@@ -48,6 +51,7 @@ const T = {
     toolRates: 'Rates',
     toolReports: 'Reports',
     toolCapital: 'Capital',
+    toolReminders: 'Reminders',
     appearance: 'APPEARANCE',
     appearanceRow: 'Appearance',
     themeAuto: 'Auto',
@@ -98,6 +102,7 @@ const T = {
     toolRates: 'ហាងឆេងប្តូរប្រាក់',
     toolReports: 'របាយការណ៍',
     toolCapital: 'ដើមទុន',
+    toolReminders: 'រំលឹក',
     appearance: 'រូបរាង',
     appearanceRow: 'រូបរាង',
     themeAuto: 'ស្វ័យប្រវត្ត',
@@ -279,7 +284,8 @@ const SettingsScreen = ({ navigation }) => {
             { icon: 'wallet-outline',          label: t.toolAssets,   color: '#00C2B2', screen: 'Assets'        },
             { icon: 'swap-horizontal-outline', label: t.toolRates,    color: '#F59E0B', screen: 'ExchangeRates' },
             { icon: 'bar-chart-outline',       label: t.toolReports,  color: '#10B981', screen: 'Reports'       },
-            { icon: 'cash-outline',            label: t.toolCapital,  color: '#EC4899', screen: 'Capital'       },
+            { icon: 'cash-outline',            label: t.toolCapital,   color: '#EC4899', screen: 'Capital'    },
+            { icon: 'notifications-outline',   label: t.toolReminders, color: '#8B5CF6', screen: 'Reminders'  },
           ].map(item => (
             <TouchableOpacity
               key={item.screen}
@@ -439,7 +445,10 @@ const SettingsScreen = ({ navigation }) => {
           />
         </GlassCard>
 
-        <Text style={[styles.version, { color: colors.textMuted }]}>{t.version}</Text>
+        <View style={styles.versionRow}>
+          <Image source={NAVBAR_LOGO} style={styles.versionLogo} resizeMode="contain" />
+          <Text style={[styles.versionText, { color: colors.textMuted }]}>v1.0.0</Text>
+        </View>
       </ScrollView>
 
       {/* PIN Verify Before Remove Modal */}
@@ -573,7 +582,9 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   rowLabel: { fontSize: fs(15), lineHeight: 20, ...ff('400'), flex: 1 },
   sessionText: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
   pinStatus:   { fontSize: fs(13), lineHeight: 18, ...ff('400') },
-  version: { fontSize: fs(12), lineHeight: 16, ...ff('400'), textAlign: 'center', marginTop: 8 },
+  versionRow: { alignItems: 'center', marginTop: 12, gap: 4 },
+  versionLogo: { height: 28, width: Math.round(28 * 256 / 144), opacity: 0.55 },
+  versionText: { fontSize: fs(11), lineHeight: 15, ...ff('400') },
   // PIN verify modal
   pinModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
   pinModalSheet: { width: '88%', borderRadius: 28, paddingBottom: 32, overflow: 'hidden' },
