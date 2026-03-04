@@ -32,7 +32,7 @@ const TROY_OZ = 31.1035;   // grams per troy ounce
 const CHI_G   = 3.75;      // grams per chi (Cambodian/Vietnamese unit)
 
 const FX_CACHE   = 'exchange_rates_v2';   // v2: uses {data,time} format
-const GOLD_CACHE = 'gold_rates_v1';
+const GOLD_CACHE = 'gold_rates_v2';
 
 // ─── Exchange-rate sources ────────────────────────────────────────────────────
 
@@ -90,19 +90,13 @@ const GOLD_SOURCES = [
     }),
   },
   {
-    id: 'metals_live',
-    name: 'Metals.live',
-    badge: 'Spot',
-    badgeColor: GOLD_C,
-    url: 'https://metals.live/api/spot',
-    parse: d => {
-      // metals.live returns an array of single-key objects or a flat object
-      if (Array.isArray(d)) {
-        const entry = d.find(x => x.XAU !== undefined);
-        return { usdPerOz: entry?.XAU };
-      }
-      return { usdPerOz: d?.XAU };
-    },
+    id: 'open_er_xau',
+    name: 'Open ER-API',
+    badge: 'ECB',
+    badgeColor: '#0EA5E9',
+    url: 'https://open.er-api.com/v6/latest/XAU',
+    // rates.USD = how many USD per 1 XAU (troy oz)
+    parse: d => ({ usdPerOz: d?.rates?.USD }),
   },
 ];
 
