@@ -25,7 +25,8 @@ import {
   View,
 } from 'react-native';
 
-const NAVBAR_LOGO = require('../../../assets/images/navbar-logo.png');
+const NAVBAR_LOGO      = require('../../../assets/images/navbar-logo.png');
+const NAVBAR_LOGO_DARK = require('../../../assets/images/navbar-logo-dark.png');
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
@@ -281,7 +282,7 @@ const DashboardScreen = ({ navigation }) => {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { color: colors.textMuted }, ff('400')]}>{t[greetKey]}{userName ? `, ${userName}` : ''}</Text>
-            <Image source={NAVBAR_LOGO} style={styles.navLogo} resizeMode="contain" />
+            <Image source={isDark ? NAVBAR_LOGO_DARK : NAVBAR_LOGO} style={styles.navLogo} resizeMode="contain" />
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity
@@ -799,7 +800,7 @@ const makeStyles = (ff, fs) => StyleSheet.create({
 
   // ── FAB ───────────────────────────────────────────────────────────────────
   fab: {
-    position: 'absolute', right: 20, width: 56, height: 56,
+    position: 'absolute', right: 24, width: 56, height: 56,
     borderRadius: 28, backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },

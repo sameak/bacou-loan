@@ -134,7 +134,7 @@ const T = {
     socialSection: 'ទំនាក់ទំនងបន្ថែម',
     tabLoans: 'កម្ចី', tabPayments: 'ការទូទាត់', tabFiles: 'ឯកសារ',
     noPayments: 'មិនទាន់មានការទូទាត់', noPaymentsHint: 'ការទូទាត់នឹងបង្ហាញនៅទីនេះ',
-    principal: 'ដើម', interest: 'ការប្រាក់', total: 'សរុប',
+    principal: 'ប្រាក់ដើម', interest: 'ការប្រាក់', total: 'សរុប',
     noFiles: 'មិនមានឯកសារ', noFilesHint: 'បង្ហោះកិច្ចសន្យា រូបភាព ឬវីដេអូ',
     uploadFile: 'បង្ហោះឯកសារ', camera: 'កាមេរ៉ា', photoLibrary: 'រូបភាព',
     document: 'ឯកសារ',
@@ -590,7 +590,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
     <>
       {/* New Loan button */}
       <TouchableOpacity
-        style={[styles.newLoanBtn, { shadowColor: ACCENT }]}
+        style={styles.newLoanBtn}
         onPress={() => navigation.navigate('CreateLoan', { prefillBorrowerId: borrower.id, prefillBorrowerName: borrower.name })}
         activeOpacity={0.82}
       >
@@ -1116,10 +1116,6 @@ const makeStyles = (fs, ff, isDark = false) => StyleSheet.create({
   /* New Loan button */
   newLoanBtn: {
     borderRadius: 14, backgroundColor: ACCENT, marginBottom: 16,
-    ...Platform.select({
-      ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10 },
-      android: { elevation: 8 },
-    }),
   },
   newLoanInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52 },
   newLoanBtnText: { color: '#fff', lineHeight: 20, ...ff('600') },

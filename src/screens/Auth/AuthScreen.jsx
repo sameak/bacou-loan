@@ -22,7 +22,7 @@ import {
   View,
 } from 'react-native';
 
-const NAVBAR_LOGO = require('../../../assets/images/navbar-logo.png');
+const NAVBAR_LOGO = require('../../../assets/images/navbar-logo-dark.png'); // auth bg is always dark
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { firebaseConfig } from '../../services/firebase';

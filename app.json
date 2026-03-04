@@ -62,7 +62,15 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#00C2B2",
+          "sounds": []
+        }
+      ]
     ],
     "extra": {
       "eas": {

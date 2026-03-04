@@ -247,10 +247,6 @@ const makeStyles = (ff) => StyleSheet.create({
   saveBtn: {
     height: 56, borderRadius: 16, backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
-    ...Platform.select({
-      ios: { shadowColor: ACCENT, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 },
-      android: { elevation: 8 },
-    }),
   },
   saveBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
 });

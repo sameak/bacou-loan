@@ -400,10 +400,6 @@ const makeStyles = (fs, ff) => StyleSheet.create({
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
-    ...Platform.select({
-      ios: { shadowColor: ACCENT, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 },
-      android: { elevation: 10 },
-    }),
   },
 });
 

@@ -74,7 +74,10 @@ import SetPINScreen   from '../screens/Settings/SetPINScreen';
 import AdminScreen    from '../screens/Settings/AdminScreen';
 import CapitalScreen    from '../screens/Settings/CapitalScreen';
 import AppearanceScreen from '../screens/Settings/AppearanceScreen';
+import RemindersScreen  from '../screens/Settings/RemindersScreen';
 import { recordSession } from '../services/sessionService';
+import { schedulePaymentReminders } from '../services/notificationService';
+import { useData } from '../context/DataContext';
 
 const AuthStack     = createNativeStackNavigator();
 const MainStack     = createNativeStackNavigator();
@@ -451,6 +454,7 @@ function SettingsStackNav() {
       <SettingsStack.Screen name="Admin"        component={AdminScreen} />
       <SettingsStack.Screen name="Capital"    component={CapitalScreen} />
       <SettingsStack.Screen name="Appearance" component={AppearanceScreen} />
+      <SettingsStack.Screen name="Reminders"  component={RemindersScreen} />
     </SettingsStack.Navigator>
   );
 }
@@ -459,6 +463,13 @@ function MainTabs() {
   const insets   = useSafeAreaInsets();
   const { isDark } = useTheme();
   const bottomPad = TAB_BAR_HEIGHT + TAB_BOTTOM_GAP + insets.bottom;
+  const { loans, loansLoaded } = useData();
+
+  // Schedule payment reminders once loans are loaded (keeps notifications current each app open)
+  useEffect(() => {
+    if (!loansLoaded) return;
+    schedulePaymentReminders(loans).catch(() => {});
+  }, [loansLoaded]);
 
   return (
     <Tab.Navigator

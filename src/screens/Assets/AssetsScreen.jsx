@@ -670,9 +670,6 @@ const makeStyles = (fs, ff) => StyleSheet.create({
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: ACCENT,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4, shadowRadius: 8, elevation: 8,
   },
 
   // Modal / sheet

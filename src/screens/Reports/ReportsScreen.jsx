@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getBorrowerPayments } from '../../services/loanService';
 import { useData } from '../../context/DataContext';
@@ -31,6 +34,11 @@ const T = {
   en: {
     title: 'Reports',
     allTime: 'All time',
+    export: 'Export PDF',
+    exportError: 'Export failed',
+    exportTitle: 'Loan Report',
+    generated: 'Generated',
+    period: 'Period',
     outstanding: 'Outstanding Capital',
     activeLoans: 'Active Loans',
     overdue: 'overdue',
@@ -51,6 +59,11 @@ const T = {
   km: {
     title: 'របាយការណ៍',
     allTime: 'ទាំងអស់',
+    export: 'នាំចេញ PDF',
+    exportError: 'បរាជ័យក្នុងការនាំចេញ',
+    exportTitle: 'របាយការណ៍ប្រាក់កម្ចី',
+    generated: 'បង្កើតនៅ',
+    period: 'រយៈពេល',
     outstanding: 'កម្ចីដែលបានផ្តល់',
     activeLoans: 'អតិថិជនសរុប',
     overdue: 'ហួសកាល',
@@ -69,6 +82,124 @@ const T = {
     months: ['មករា','កុម្ភៈ','មីនា','មេសា','ឧសភា','មិថុនា','កក្កដា','សីហា','កញ្ញា','តុលា','វិច្ឆិកា','ធ្នូ'],
   },
 };
+
+// ---------------------------------------------------------------------------
+// buildReportHtml — generates PDF-ready HTML from report data
+// ---------------------------------------------------------------------------
+function buildReportHtml({ portfolioStats, overviewTotals, filteredGroups, periodLabel, monthLabel }, t) {
+  const fmtUSD = n => '$' + Math.round(n).toLocaleString('en-US');
+  const fmtKHR = n => '៛' + Math.round(n).toLocaleString();
+  const fmtNet = n => (n >= 0 ? fmtUSD(n) : '−' + fmtUSD(Math.abs(n)));
+  const fmtNetK = n => (n >= 0 ? fmtKHR(n) : '−' + fmtKHR(Math.abs(n)));
+
+  const now = new Date();
+  const generatedStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const { outstandingUSD, outstandingKHR, activeCount, overdueCount } = portfolioStats;
+  const { interestUSD, interestKHR, receivedUSD, receivedKHR } = overviewTotals;
+
+  // Overview table rows
+  const overviewRows = [];
+  if (outstandingUSD > 0 || outstandingKHR > 0) {
+    const val = [outstandingUSD > 0 ? fmtUSD(outstandingUSD) : null, outstandingKHR > 0 ? fmtKHR(outstandingKHR) : null]
+      .filter(Boolean).join('<br/><span class="sub">') + (outstandingUSD > 0 && outstandingKHR > 0 ? '</span>' : '');
+    overviewRows.push(`<tr><td>${t.outstanding}</td><td>${val}</td></tr>`);
+  }
+  overviewRows.push(`<tr><td>${t.activeLoans}</td><td>${activeCount + overdueCount}${overdueCount > 0 ? ` <span class="sub">(${overdueCount} ${t.overdue})</span>` : ''}</td></tr>`);
+  if (interestUSD > 0 || interestKHR > 0) {
+    const val = [interestUSD > 0 ? fmtUSD(interestUSD) : null, interestKHR > 0 ? fmtKHR(interestKHR) : null]
+      .filter(Boolean).join('<br/><span class="sub">') + (interestUSD > 0 && interestKHR > 0 ? '</span>' : '');
+    overviewRows.push(`<tr><td>${t.interestEarned}</td><td>${val}</td></tr>`);
+  }
+  if (receivedUSD > 0 || receivedKHR > 0) {
+    const val = [receivedUSD > 0 ? fmtUSD(receivedUSD) : null, receivedKHR > 0 ? fmtKHR(receivedKHR) : null]
+      .filter(Boolean).join('<br/><span class="sub">') + (receivedUSD > 0 && receivedKHR > 0 ? '</span>' : '');
+    overviewRows.push(`<tr><td>${t.totalReceived}</td><td>${val}</td></tr>`);
+  }
+
+  // Monthly breakdown rows
+  const monthRows = filteredGroups.map(g => {
+    const payCount = g.usdCount + g.khrCount;
+    const totalRecUSD = g.usdInterest + g.usdPrincipal;
+    const totalRecKHR = g.khrInterest + g.khrPrincipal;
+    const netUSD = totalRecUSD - g.usdDeployed;
+    const netKHR = totalRecKHR - g.khrDeployed;
+    const hasUSD = g.usdCount > 0 || g.usdDeployed > 0;
+    const hasKHR = g.khrCount > 0 || g.khrDeployed > 0;
+
+    const cell = (usdVal, khrVal) => {
+      const parts = [];
+      if (usdVal != null) parts.push(usdVal);
+      if (khrVal != null) parts.push(`<span class="sub">${khrVal}</span>`);
+      return parts.join('<br/>') || '—';
+    };
+
+    const netUSDStr = hasUSD ? fmtNet(netUSD) : null;
+    const netKHRStr = hasKHR ? fmtNetK(netKHR) : null;
+    const primaryNet = hasUSD ? netUSD : netKHR;
+    const netClass = primaryNet >= 0 ? 'pos' : 'neg';
+
+    return `<tr>
+      <td>${monthLabel(g.key)}</td>
+      <td>${payCount > 0 ? payCount : '—'}</td>
+      <td>${g.newLoanCount > 0 ? g.newLoanCount : '—'}</td>
+      <td>${cell(g.usdCount > 0 ? fmtUSD(g.usdInterest) : null, g.khrCount > 0 ? fmtKHR(g.khrInterest) : null)}</td>
+      <td>${cell(g.usdCount > 0 ? fmtUSD(g.usdPrincipal) : null, g.khrCount > 0 ? fmtKHR(g.khrPrincipal) : null)}</td>
+      <td>${cell(g.usdCount > 0 ? fmtUSD(totalRecUSD) : null, g.khrCount > 0 ? fmtKHR(totalRecKHR) : null)}</td>
+      <td>${cell(g.usdDeployed > 0 ? fmtUSD(g.usdDeployed) : null, g.khrDeployed > 0 ? fmtKHR(g.khrDeployed) : null)}</td>
+      <td class="${netClass}">${cell(netUSDStr, netKHRStr)}</td>
+    </tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, Arial, sans-serif; font-size: 13px; color: #111; padding: 32px; background: #fff; }
+  h1 { font-size: 22px; font-weight: 700; color: #00C2B2; margin-bottom: 4px; }
+  .meta { font-size: 11px; color: #888; margin-bottom: 24px; }
+  h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #555; margin: 20px 0 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  th { background: #00C2B2; color: #fff; font-size: 11px; font-weight: 600; text-align: left; padding: 7px 10px; }
+  td { padding: 7px 10px; border-bottom: 1px solid #eee; font-size: 12px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7fafa; }
+  .sub { font-size: 10px; color: #888; }
+  .pos { color: #10B981; font-weight: 600; }
+  .neg { color: #EF4444; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>${t.exportTitle}</h1>
+<div class="meta">${t.generated}: ${generatedStr} &nbsp;|&nbsp; ${t.period}: ${periodLabel}</div>
+
+<h2>${t.outstanding} &amp; ${t.activeLoans}</h2>
+<table>
+  <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+  <tbody>${overviewRows.join('')}</tbody>
+</table>
+
+<h2>Monthly Breakdown</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Month</th>
+      <th>${t.payments}</th>
+      <th>${t.newLoans}</th>
+      <th>${t.interest}</th>
+      <th>${t.principalIn}</th>
+      <th>${t.totalReceived}</th>
+      <th>${t.capitalOut}</th>
+      <th>${t.netFlow}</th>
+    </tr>
+  </thead>
+  <tbody>${monthRows}</tbody>
+</table>
+</body>
+</html>`;
+}
 
 // ---------------------------------------------------------------------------
 // MetricRow — dot + label + right-aligned USD / KHR values
@@ -106,6 +237,7 @@ const ReportsScreen = ({ navigation }) => {
   const [payments, setPayments]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [selectedYear, setSelectedYear] = useState(null); // null = all time
+  const [exporting, setExporting]   = useState(false);
 
   useEffect(() => {
     if (!loansLoaded) return;
@@ -209,6 +341,27 @@ const ReportsScreen = ({ navigation }) => {
   }, [filteredGroups]);
 
   const periodLabel = selectedYear ?? t.allTime;
+
+  const handleExport = async () => {
+    if (exporting || filteredGroups.length === 0) return;
+    setExporting(true);
+    try {
+      const html = buildReportHtml(
+        { portfolioStats, overviewTotals, filteredGroups, periodLabel, monthLabel },
+        t,
+      );
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        UTI: 'com.adobe.pdf',
+        dialogTitle: t.exportTitle,
+      });
+    } catch (e) {
+      Alert.alert(t.exportError, e.message || '');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // --- Month card ---
   const renderMonth = ({ item: g }) => {
@@ -419,7 +572,17 @@ const ReportsScreen = ({ navigation }) => {
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }, ff('700')]}>{t.title}</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity
+            onPress={handleExport}
+            disabled={exporting || filteredGroups.length === 0}
+            style={{ opacity: filteredGroups.length === 0 ? 0.3 : 1, width: 40, alignItems: 'center' }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
+          >
+            {exporting
+              ? <ActivityIndicator size="small" color={ACCENT} />
+              : <Ionicons name="share-outline" size={22} color={ACCENT} />}
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
