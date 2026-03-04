@@ -31,7 +31,7 @@ const GOLD_C  = '#F59E0B';
 const TROY_OZ = 31.1035;   // grams per troy ounce
 const CHI_G   = 3.75;      // grams per chi (Cambodian/Vietnamese unit)
 
-const FX_CACHE   = 'exchange_rates_v4';   // v4: fix NBC regex
+const FX_CACHE   = 'exchange_rates_v5';   // v5: NBC timeout + regex fix
 const GOLD_CACHE = 'gold_rates_v3';
 
 // ─── Exchange-rate sources ────────────────────────────────────────────────────
@@ -67,22 +67,17 @@ const FX_SOURCES = [
     badge: 'NBC',
     badgeColor: '#DC2626',
     type: 'html',
+    timeout: 15000,   // government site is slow — give it more time
     url: 'https://www.nbc.gov.kh/english/economic_research/exchange_rate.php',
     headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15' },
     parse: html => {
-      // Official USD/KHR — NBC wraps the number in <font>: >4013</font> KHR / USD
-      // Try 3 patterns from most to least specific
-      const usdMatch =
-        html.match(/(\d{4,5})<\/font>\s*KHR\s*[/]\s*USD/i) ||
-        html.match(/Official[^<]*Exchange[^<]*Rate[^<]*<[^>]+>(\d{4,5})<\/[^>]+>/i) ||
-        html.match(/(\d{4,5})\s*KHR\s*[/]\s*USD/i);
+      // Actual NBC HTML: Official Exchange Rate : <font color="#FF3300">4013</font> KHR / USD
+      // [^]*? matches anything including newlines (JS alternative to dotAll flag)
+      const usdMatch = html.match(/Official Exchange Rate[^]*?<font[^>]*>(\d{4,5})<\/font>[^]*?KHR/i);
       const usdKHR = usdMatch ? parseInt(usdMatch[1]) : null;
 
-      // KRW cross rate row: KRW/KHR | unit(100) | buy | sell
-      // Rows may have newlines or extra whitespace between cells
-      const krwMatch = html.match(
-        /KRW\/KHR<\/td>[\s\S]*?<td[^>]*>(\d+)<\/td>[\s\S]*?<td[^>]*>(\d+)<\/td>/i,
-      );
+      // KRW row: <td align='center'>KRW/KHR</td> <td align='center'>100</td> <td align='right'>272</td>
+      const krwMatch = html.match(/KRW\/KHR<\/td>[^]*?<td[^>]*>(\d+)<\/td>[^]*?<td[^>]*>(\d+)<\/td>/i);
       const krwUnit = krwMatch ? parseInt(krwMatch[1]) : 100;
       const krwBuy  = krwMatch ? parseInt(krwMatch[2]) : null;
 
@@ -191,8 +186,9 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 async function fetchSources(sources) {
   const results = await Promise.allSettled(
     sources.map(async (src) => {
+      const ms = src.timeout ?? 9000;   // NBC gets its own longer timeout
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 9000);
+      const timer = setTimeout(() => controller.abort(), ms);
       const res = await fetch(src.url, {
         signal: controller.signal,
         headers: src.headers ?? {},
