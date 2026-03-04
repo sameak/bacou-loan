@@ -32,7 +32,7 @@ const TROY_OZ = 31.1035;   // grams per troy ounce
 const CHI_G   = 3.75;      // grams per chi (Cambodian/Vietnamese unit)
 
 const FX_CACHE   = 'exchange_rates_v2';   // v2: uses {data,time} format
-const GOLD_CACHE = 'gold_rates_v2';
+const GOLD_CACHE = 'gold_rates_v3';
 
 // ─── Exchange-rate sources ────────────────────────────────────────────────────
 
@@ -90,13 +90,13 @@ const GOLD_SOURCES = [
     }),
   },
   {
-    id: 'open_er_xau',
-    name: 'Open ER-API',
-    badge: 'ECB',
-    badgeColor: '#0EA5E9',
-    url: 'https://open.er-api.com/v6/latest/XAU',
-    // rates.USD = how many USD per 1 XAU (troy oz)
-    parse: d => ({ usdPerOz: d?.rates?.USD }),
+    id: 'yahoo_gc',
+    name: 'Yahoo Finance',
+    badge: 'GC=F',
+    badgeColor: '#6D28D9',
+    url: 'https://query1.finance.yahoo.com/v8/finance/chart/GC%3DF?interval=1d&range=1d&includePrePost=false',
+    // Gold futures — regularMarketPrice is USD per troy oz
+    parse: d => ({ usdPerOz: d?.chart?.result?.[0]?.meta?.regularMarketPrice }),
   },
 ];
 
