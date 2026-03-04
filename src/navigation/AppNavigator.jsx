@@ -67,10 +67,13 @@ import EditLoanScreen from '../screens/Loans/EditLoanScreen';
 import LoanCalculatorScreen from '../screens/Loans/LoanCalculatorScreen';
 import ReportsScreen from '../screens/Reports/ReportsScreen';
 import ExchangeRatesScreen from '../screens/Rates/ExchangeRatesScreen';
+import AssetsScreen from '../screens/Assets/AssetsScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
 import SessionsScreen from '../screens/Settings/SessionsScreen';
 import SetPINScreen   from '../screens/Settings/SetPINScreen';
 import AdminScreen    from '../screens/Settings/AdminScreen';
+import CapitalScreen    from '../screens/Settings/CapitalScreen';
+import AppearanceScreen from '../screens/Settings/AppearanceScreen';
 import { recordSession } from '../services/sessionService';
 
 const AuthStack     = createNativeStackNavigator();
@@ -81,15 +84,15 @@ const LoanStack     = createNativeStackNavigator();
 const SettingsStack = createNativeStackNavigator();
 
 const TAB_LABELS = {
-  en: { dashboard: 'Dashboard', borrowers: 'Borrowers', loans: 'Loans', settings: 'Settings' },
-  km: { dashboard: 'ទំព័រដើម', borrowers: 'អ្នកខ្ចី', loans: 'ប្រាក់កម្ចី', settings: 'ការកំណត់' },
+  en: { dashboard: 'Dashboard', borrowers: 'Borrowers', loans: 'Loans', menu: 'Menu' },
+  km: { dashboard: 'ទំព័រដើម', borrowers: 'អ្នកខ្ចី', loans: 'ប្រាក់កម្ចី', menu: 'ម៉ឺនុយ' },
 };
 
 const TAB_CONFIGS = [
   { name: 'DashboardTab', icon: 'grid',         iconOutline: 'grid-outline' },
   { name: 'BorrowersTab', icon: 'people',        iconOutline: 'people-outline' },
   { name: 'LoansTab',     icon: 'document-text', iconOutline: 'document-text-outline' },
-  { name: 'SettingsTab',  icon: 'settings',      iconOutline: 'settings-outline' },
+  { name: 'SettingsTab',  icon: 'menu',          iconOutline: 'menu-outline' },
 ];
 
 const ACCENT           = '#6366F1';
@@ -99,7 +102,7 @@ const TAB_BOTTOM_GAP   = 0;    // bar sits flush against the safe-area bottom
 // ─── Tab item (animated, scale on focus) ──────────────────────────────────────
 
 const TabItem = React.memo(function TabItem({
-  cfg, focused, activeColor, inactiveColor, label, language, ff,
+  cfg, focused, activeColor, inactiveColor, label, language, fs, ff,
   onPress, onPressIn, onPressOut, showActivePill, isDark,
 }) {
   const scale = useSharedValue(focused ? 1.0 : 0.88);
@@ -134,7 +137,7 @@ const TabItem = React.memo(function TabItem({
       <RAnimated.View style={iconStyle}>
         <Ionicons name={focused ? cfg.icon : cfg.iconOutline} size={22} color={color} />
       </RAnimated.View>
-      <Text style={[tabStyles.label, ff('600'), { letterSpacing: language === 'km' ? 0 : 0.1, color }]}>
+      <Text style={[tabStyles.label, ff('600'), { letterSpacing: 0, color, fontSize: fs(11.5), ...(language !== 'km' && { lineHeight: 16 }) }]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -145,11 +148,11 @@ const TabItem = React.memo(function TabItem({
 
 function LiquidGlassTabBar({ state, navigation }) {
   const { isDark }         = useTheme();
-  const { language, ff }   = useLanguage();
+  const { language, fs, ff } = useLanguage();
   const insets             = useSafeAreaInsets();
   const { width: screenW } = Dimensions.get('window');
   const tl     = TAB_LABELS[language] || TAB_LABELS.en;
-  const labels = [tl.dashboard, tl.borrowers, tl.loans, tl.settings];
+  const labels = [tl.dashboard, tl.borrowers, tl.loans, tl.menu];
   const bottom = insets.bottom + TAB_BOTTOM_GAP;
 
   const tabCount = state.routes.length;
@@ -240,6 +243,7 @@ function LiquidGlassTabBar({ state, navigation }) {
         inactiveColor={inactiveColor}
         label={labels[index]}
         language={language}
+        fs={fs}
         ff={ff}
         isDark={isDark}
         showActivePill={showActivePill}
@@ -267,29 +271,35 @@ function LiquidGlassTabBar({ state, navigation }) {
   }
 
   // ── Fallback: layered BlurView + animated sliding pill + shimmer + press bubble
+  // tabBarRoot is a clean wrapper with no shadow/borderRadius so iOS compositing
+  // doesn't clip Khmer diacritics that extend above the text bounding box.
   return (
-    <View style={[tabStyles.outerShell, { bottom, shadowOpacity: isDark ? 0.35 : 0.12 }]}>
-      <View style={tabStyles.innerShell}>
-        {/* 1. Glass blur */}
-        <BlurView
-          intensity={isDark ? 62 : 78}
-          tint={isDark ? 'dark' : 'light'}
-          style={StyleSheet.absoluteFillObject}
-        />
-        {/* 2. Tint overlay */}
-        <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: tintColor }]} />
-        {/* 6. Bloom — soft expanding glow */}
-        <RAnimated.View style={[tabStyles.pill, {
-          width: tabW - 12,
-          backgroundColor: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.95)',
-        }, bloomAnim]} />
-        {/* 7. Sliding pill indicator */}
-        <RAnimated.View style={[tabStyles.pill, { width: tabW - 12, backgroundColor: pillColor }, pillAnim]} />
-        {/* 8. Shimmer flash */}
-        <RAnimated.View style={[tabStyles.pill, { width: tabW - 12, backgroundColor: '#FFFFFF' }, pillAnim, shimmerStyle]} />
-        {/* 9. Tab items */}
-        <View style={tabStyles.tabsRow}>{makeTabItems(false)}</View>
+    <View pointerEvents="box-none" style={[tabStyles.tabBarRoot, { bottom }]}>
+      {/* Visual glass bar — shadow/borderRadius contained here */}
+      <View style={[tabStyles.outerShell, { shadowOpacity: isDark ? 0.35 : 0.12 }]}>
+        <View style={tabStyles.innerShell}>
+          {/* 1. Glass blur */}
+          <BlurView
+            intensity={isDark ? 62 : 78}
+            tint={isDark ? 'dark' : 'light'}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* 2. Tint overlay */}
+          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: tintColor }]} />
+          {/* 6. Bloom — soft expanding glow */}
+          <RAnimated.View style={[tabStyles.pill, {
+            width: tabW - 12,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.95)',
+          }, bloomAnim]} />
+          {/* 7. Sliding pill indicator */}
+          <RAnimated.View style={[tabStyles.pill, { width: tabW - 12, backgroundColor: pillColor }, pillAnim]} />
+          {/* 8. Shimmer flash */}
+          <RAnimated.View style={[tabStyles.pill, { width: tabW - 12, backgroundColor: '#FFFFFF' }, pillAnim, shimmerStyle]} />
+        </View>
       </View>
+
+      {/* 9. Tab items — outside outerShell so iOS shadow compositing doesn't clip Khmer diacritics */}
+      <View style={tabStyles.tabsRow}>{makeTabItems(false)}</View>
 
       {/* Glass press bubble — iridescent ring + frosted interior */}
       {pressedIndex >= 0 && (
@@ -326,11 +336,16 @@ const tabStyles = StyleSheet.create({
   nativeBar: { borderRadius: 28, overflow: 'hidden' },
 
   // ── Fallback path (floating pill)
-  outerShell: {
+  // tabBarRoot: clean wrapper — no shadow, no borderRadius → no iOS compositing clip
+  tabBarRoot: {
     position: 'absolute',
     left: 20,
     right: 20,
     height: TAB_BAR_HEIGHT,
+  },
+  outerShell: {
+    // fills tabBarRoot; shadow stays here so compositing clip is isolated
+    ...StyleSheet.absoluteFillObject,
     borderRadius: 28,
     backgroundColor: 'transparent',
     shadowColor: '#000',
@@ -371,8 +386,9 @@ const tabStyles = StyleSheet.create({
     paddingHorizontal: 8,
     zIndex: 4,
   },
-  tabsRow: {                      // fallback path
-    flex: 1,
+  tabsRow: {                      // fallback path — inside clean tabBarRoot (no shadow), not inside outerShell
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     zIndex: 4,
@@ -389,7 +405,7 @@ const tabStyles = StyleSheet.create({
     top: 0, bottom: 0, left: 4, right: 4,
     borderRadius: 20, borderWidth: 1,
   },
-  label: { fontSize: 11.5 },
+  label: {},
 
   // ── Press bubble
   glassBubble: {
@@ -433,6 +449,8 @@ function SettingsStackNav() {
       <SettingsStack.Screen name="Sessions"     component={SessionsScreen} />
       <SettingsStack.Screen name="SetPIN"       component={SetPINScreen} />
       <SettingsStack.Screen name="Admin"        component={AdminScreen} />
+      <SettingsStack.Screen name="Capital"    component={CapitalScreen} />
+      <SettingsStack.Screen name="Appearance" component={AppearanceScreen} />
     </SettingsStack.Navigator>
   );
 }
@@ -471,7 +489,8 @@ function MainStackNav() {
       <MainStack.Screen name="EditLoan"         component={EditLoanScreen} />
       <MainStack.Screen name="LoanCalculator" component={LoanCalculatorScreen} />
       <MainStack.Screen name="Reports"        component={ReportsScreen} />
-      <MainStack.Screen name="ExchangeRates" component={ExchangeRatesScreen} />
+      <MainStack.Screen name="ExchangeRates"  component={ExchangeRatesScreen} />
+      <MainStack.Screen name="Assets"         component={AssetsScreen} />
     </MainStack.Navigator>
   );
 }

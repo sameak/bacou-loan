@@ -60,10 +60,10 @@ const ACCENT = '#6366F1';
 
 const CreateBorrowerScreen = ({ navigation, route }) => {
   const { colors, isDark } = useTheme();
-  const { language, ff, fi } = useLanguage();
+  const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
 
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
   const scrollRef = useRef(null);
 
   // Allow pre-filling from BorrowerDetail → "New Loan" flow
@@ -193,21 +193,21 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (ff) => StyleSheet.create({
+const makeStyles = (fs, ff) => StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 64, paddingVertical: 4 },
-  headerBtnText: { fontSize: 15, ...ff('500') },
-  headerTitle: { fontSize: 18, ...ff('700') },
+  headerBtnText: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('400') },
+  headerTitle: { fontSize: fs(18), lineHeight: 23, letterSpacing: 0, ...ff('600') },
   content: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 80 },
-  label: { fontSize: 11, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 4 },
-  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15, ...ff('400'), marginBottom: 4 },
+  label: { fontSize: fs(11), lineHeight: 15, letterSpacing: 0, ...ff('600'), marginBottom: 8, marginTop: 4 },
+  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('400'), marginBottom: 4 },
   multiline: { height: 90, paddingTop: 14 },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },
-  errText: { fontSize: 12, color: '#EF4444', marginBottom: 8, marginLeft: 4 },
+  errText: { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, color: '#EF4444', marginBottom: 8, marginLeft: 4 },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },
   saveBtn: {
     height: 56, borderRadius: 16, backgroundColor: ACCENT,
@@ -217,7 +217,7 @@ const makeStyles = (ff) => StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
-  saveBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
+  saveBtnText: { color: '#fff', fontSize: fs(16), lineHeight: 21, letterSpacing: 0, ...ff('600') },
 });
 
 export default CreateBorrowerScreen;

@@ -408,7 +408,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
           </View>
 
           {/* Total */}
-          <Text style={[styles.payTotal, { color: '#10B981' }, ff('800')]}>{formatCurrency(payment.totalAmount, currency)}</Text>
+          <Text style={[styles.payTotal, { color: '#10B981' }, ff('600')]}>{formatCurrency(payment.totalAmount, currency)}</Text>
         </View>
         {payment.notes ? (
           <Text style={[styles.payNotes, { color: colors.textMuted, borderTopColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)' }, ff('400')]}>
@@ -722,12 +722,12 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
                 activeOpacity={0.7}
               >
                 <Ionicons name={active ? tab.icon.replace('-outline', '') : tab.icon} size={17} color={active ? ACCENT : colors.textMuted} />
-                <Text style={[styles.tabLabel, { color: active ? ACCENT : colors.textMuted }, ff(active ? '700' : '500')]}>
+                <Text style={[styles.tabLabel, { color: active ? ACCENT : colors.textMuted }, ff(active ? '600' : '400')]}>
                   {tab.label}
                 </Text>
                 {count > 0 && (
                   <View style={[styles.tabBadge, { backgroundColor: active ? ACCENT : colors.textMuted + '30' }]}>
-                    <Text style={[styles.tabBadgeText, { color: active ? '#fff' : colors.textMuted }, ff('700')]}>{count}</Text>
+                    <Text style={[styles.tabBadgeText, { color: active ? '#fff' : colors.textMuted }, ff('600')]}>{count}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -823,15 +823,15 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
   /* Hero */
   heroCard: { alignItems: 'center', paddingTop: 28, paddingBottom: 20, paddingHorizontal: 20 },
   heroAvatar: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  heroAvatarText: { fontSize: fs(32), lineHeight: 40, ...ff('800'), textAlign: 'center' },
-  heroName: { fontSize: fs(22), lineHeight: 28, ...ff('800'), marginBottom: 8, textAlign: 'center' },
+  heroAvatarText: { fontSize: fs(32), lineHeight: 40, ...ff('600'), textAlign: 'center' },
+  heroName: { fontSize: fs(22), lineHeight: 28, ...ff('600'), marginBottom: 8, textAlign: 'center' },
   heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
   heroMeta: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
   heroDivider: { height: 1, alignSelf: 'stretch', marginVertical: 16 },
   heroStats: { flexDirection: 'row', alignSelf: 'stretch', justifyContent: 'space-around' },
   heroStat: { flex: 1, alignItems: 'center', gap: 4 },
   heroStatDivider: { width: 1, marginVertical: 2 },
-  heroStatValue: { fontSize: fs(17), lineHeight: 22, ...ff('800') },
+  heroStatValue: { fontSize: fs(17), lineHeight: 22, ...ff('600') },
   heroStatLabel: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('600') },
   auditRow: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 14, paddingTop: 12, alignSelf: 'stretch', gap: 3 },
   auditText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('400'), textAlign: 'center' },
@@ -859,7 +859,7 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
     }),
   },
   newLoanInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52 },
-  newLoanBtnText: { color: '#fff', lineHeight: 20, ...ff('700') },
+  newLoanBtnText: { color: '#fff', lineHeight: 20, ...ff('600') },
 
   /* Upload button */
   uploadBtn: {
@@ -870,13 +870,13 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
     }),
   },
   uploadBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52 },
-  uploadBtnText: { color: '#fff', lineHeight: 20, ...ff('700') },
+  uploadBtnText: { color: '#fff', lineHeight: 20, ...ff('600') },
 
   /* Section headers */
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 },
-  sectionTitle: { ...ff('700'), lineHeight: 16, letterSpacing: 0 },
+  sectionTitle: { ...ff('600'), lineHeight: 16, letterSpacing: 0 },
   sectionBadge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  sectionBadgeText: { ...ff('700'), lineHeight: 15, textAlign: 'center' },
+  sectionBadgeText: { ...ff('600'), lineHeight: 15, textAlign: 'center' },
 
   /* Loan card */
   loanRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
@@ -884,9 +884,9 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
   loanDotInner: { width: 11, height: 11, borderRadius: 6 },
   loanInfo: { flex: 1 },
   loanTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  loanPrincipal: { fontSize: fs(16), lineHeight: 21, ...ff('700') },
+  loanPrincipal: { fontSize: fs(16), lineHeight: 21, ...ff('600') },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  statusText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('700') },
+  statusText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('600') },
   loanMeta: { fontSize: fs(12), lineHeight: 16, ...ff('400') },
   accruingText: { fontSize: fs(12), lineHeight: 16, color: '#F59E0B', ...ff('600'), marginTop: 2 },
 
@@ -910,7 +910,7 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
   fileThumbnail: {},
   fileVideoOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.2)' },
   fileNameBar: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 8, paddingVertical: 6 },
-  fileNameBarText: { color: '#fff', fontSize: 11, lineHeight: 14 },
+  fileNameBarText: { color: '#fff', fontSize: fs(11), lineHeight: 14, ...ff('400') },
 
   /* Document row */
   fileDocRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
@@ -939,8 +939,8 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
   modalCancelBtn: { minWidth: 60 },
   modalSaveBtn: { minWidth: 60, alignItems: 'flex-end' },
   modalCancel: { ...ff('400'), lineHeight: 20 },
-  modalTitle: { ...ff('700'), lineHeight: 21 },
-  modalSave: { ...ff('700'), lineHeight: 20 },
+  modalTitle: { ...ff('600'), lineHeight: 21 },
+  modalSave: { ...ff('600'), lineHeight: 20 },
   inputWrap: { borderRadius: 12, overflow: 'hidden' },
   editInput: { height: 50, paddingHorizontal: 14 },
 

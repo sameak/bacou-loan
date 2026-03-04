@@ -25,7 +25,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth } from '../../services/firebase';
-import { saveCapital, listenCapital } from '../../services/capitalService';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAppLock } from '../../context/AppLockContext';
@@ -43,9 +42,17 @@ function isAdmin() {
 
 const T = {
   en: {
-    title: 'Settings',
+    title: 'Menu',
+    tools: 'TOOLS',
+    toolAssets: 'Assets',
+    toolRates: 'Rates',
+    toolReports: 'Reports',
+    toolCapital: 'Capital',
     appearance: 'APPEARANCE',
-    darkMode: 'Dark Mode',
+    appearanceRow: 'Appearance',
+    themeAuto: 'Auto',
+    themeLight: 'Light',
+    themeDark: 'Dark',
     language: 'LANGUAGE',
     english: 'English',
     khmer: 'ខ្មែរ',
@@ -85,9 +92,17 @@ const T = {
     capitalHint: 'Enter 0 to hide a currency',
   },
   km: {
-    title: 'ការកំណត់',
+    title: 'ម៉ឺនុយ',
+    tools: 'ឧបករណ៍',
+    toolAssets: 'ទ្រព្យ',
+    toolRates: 'ប្តូរប្រាក់',
+    toolReports: 'របាយការណ៍',
+    toolCapital: 'ដើមទុន',
     appearance: 'រូបរាង',
-    darkMode: 'របៀបងងឹត',
+    appearanceRow: 'រូបរាង',
+    themeAuto: 'ស្វ័យប្រវត្ត',
+    themeLight: 'ភ្លឺ',
+    themeDark: 'ងងឹត',
     language: 'ភាសា',
     english: 'English',
     khmer: 'ខ្មែរ',
@@ -137,7 +152,7 @@ function formatSignInTime(timeStr) {
 }
 
 const Row = ({ label, right, onPress, colors, last, isDark }) => {
-  const { ff } = useLanguage();
+  const { fs, ff } = useLanguage();
   return (
     <TouchableOpacity
       style={[
@@ -148,7 +163,7 @@ const Row = ({ label, right, onPress, colors, last, isDark }) => {
       activeOpacity={onPress ? 0.7 : 1}
       disabled={!onPress}
     >
-      <Text style={[{ fontSize: 15, lineHeight: 20, ...ff('400'), flex: 1 }, { color: colors.text }]}>{label}</Text>
+      <Text style={[{ fontSize: fs(15), lineHeight: 20, ...ff('400'), flex: 1 }, { color: colors.text }]}>{label}</Text>
       {right}
     </TouchableOpacity>
   );
@@ -156,8 +171,9 @@ const Row = ({ label, right, onPress, colors, last, isDark }) => {
 
 const SettingsScreen = ({ navigation }) => {
   const { colors, isDark, themeMode, setThemeMode } = useTheme();
-  const { language, setLanguage, ff, fi } = useLanguage();
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const { language, setLanguage, fs, ff, fi } = useLanguage();
+  const isKhmer = language === 'km';
+  const styles = useMemo(() => makeStyles(fs, ff, isKhmer), [fs, ff, isKhmer]);
   const { biometricAvailable, biometricEnabled, pinEnabled, toggleBiometric, removePIN, verifyPIN } = useAppLock();
   const t = T[language] || T.en;
 
@@ -169,18 +185,6 @@ const SettingsScreen = ({ navigation }) => {
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
 
-  // Capital
-  const [editingCapital, setEditingCapital] = useState(false);
-  const [capitalUSD, setCapitalUSD] = useState('');
-  const [capitalKHR, setCapitalKHR] = useState('');
-  const [savingCapital, setSavingCapital] = useState(false);
-  const [currentCapital, setCurrentCapital] = useState({ capitalUSD: 0, capitalKHR: 0 });
-
-  useEffect(() => {
-    return listenCapital(c => {
-      setCurrentCapital(c);
-    });
-  }, []);
 
   // Auto-submit PIN verify when 4 digits entered
   useEffect(() => {
@@ -240,27 +244,6 @@ const SettingsScreen = ({ navigation }) => {
   };
 
 
-  const handleOpenCapital = () => {
-    setCapitalUSD(currentCapital.capitalUSD > 0 ? String(currentCapital.capitalUSD) : '');
-    setCapitalKHR(currentCapital.capitalKHR > 0 ? String(currentCapital.capitalKHR) : '');
-    setEditingCapital(true);
-  };
-
-  const handleSaveCapital = async () => {
-    setSavingCapital(true);
-    try {
-      const usd = parseFloat(capitalUSD.replace(/,/g, '')) || 0;
-      const khr = parseFloat(capitalKHR.replace(/,/g, '')) || 0;
-      await saveCapital({ capitalUSD: usd, capitalKHR: khr });
-      Toast.show({ text: t.capitalSaved, type: 'success' });
-      setEditingCapital(false);
-    } catch (err) {
-      Toast.show({ text: err.message, type: 'error' });
-    } finally {
-      setSavingCapital(false);
-    }
-  };
-
   const handleSignOut = () => {
     Alert.alert(t.signOut, t.signOutConfirm, [
       { text: t.signOutCancel, style: 'cancel' },
@@ -280,12 +263,6 @@ const SettingsScreen = ({ navigation }) => {
     ]);
   };
 
-  const toggleDark = () => {
-    if (themeMode === 'dark') setThemeMode('light');
-    else if (themeMode === 'light') setThemeMode('dark');
-    else setThemeMode(isDark ? 'light' : 'dark');
-  };
-
   return (
     <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
@@ -295,22 +272,51 @@ const SettingsScreen = ({ navigation }) => {
       </SafeAreaView>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {/* Tools row */}
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t.tools}</Text>
+        <View style={styles.toolsRow}>
+          {[
+            { icon: 'wallet-outline',          label: t.toolAssets,   color: '#6366F1', screen: 'Assets'        },
+            { icon: 'swap-horizontal-outline', label: t.toolRates,    color: '#F59E0B', screen: 'ExchangeRates' },
+            { icon: 'bar-chart-outline',       label: t.toolReports,  color: '#10B981', screen: 'Reports'       },
+            { icon: 'cash-outline',            label: t.toolCapital,  color: '#EC4899', screen: 'Capital'       },
+          ].map(item => (
+            <TouchableOpacity
+              key={item.screen}
+              style={styles.toolsCardWrap}
+              onPress={() => navigation.navigate(item.screen)}
+              activeOpacity={0.75}
+            >
+              <GlassCard style={styles.toolsCard}>
+                <View style={styles.toolsCardInner}>
+                  <View style={[styles.toolsIconCircle, { backgroundColor: item.color + '1A' }]}>
+                    <Ionicons name={item.icon} size={22} color={item.color} />
+                  </View>
+                  <Text style={[styles.toolsLabel, ff('600'), { color: colors.text }]} numberOfLines={1}>
+                    {item.label}
+                  </Text>
+                </View>
+              </GlassCard>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* Appearance */}
         <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t.appearance}</Text>
         <GlassCard style={{ marginBottom: 20 }}>
           <Row
-            label={t.darkMode}
+            label={t.appearanceRow}
             colors={colors}
             isDark={isDark}
+            onPress={() => navigation.navigate('Appearance')}
             last
             right={
-              <Switch
-                value={isDark}
-                onValueChange={toggleDark}
-                trackColor={{ false: '#D1D5DB', true: ACCENT + '80' }}
-                thumbColor={isDark ? ACCENT : '#fff'}
-                ios_backgroundColor="#D1D5DB"
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[{ fontSize: fs(13), lineHeight: 18, letterSpacing: 0 }, ff('400'), { color: colors.textMuted }]}>
+                  {themeMode === 'system' ? t.themeAuto : themeMode === 'light' ? t.themeLight : t.themeDark}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </View>
             }
           />
         </GlassCard>
@@ -365,39 +371,6 @@ const SettingsScreen = ({ navigation }) => {
               pinEnabled
                 ? <Text style={[styles.pinStatus, { color: ACCENT }]}>{t.pinSet}</Text>
                 : <Text style={[styles.pinStatus, { color: colors.textMuted }]}>{t.pinNotSet}</Text>
-            }
-          />
-        </GlassCard>
-
-        {/* Capital */}
-        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t.capital}</Text>
-        <GlassCard style={{ marginBottom: 20 }}>
-          <Row
-            label={t.myCapital}
-            colors={colors}
-            isDark={isDark}
-            onPress={handleOpenCapital}
-            last
-            right={
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                {(currentCapital.capitalUSD > 0 || currentCapital.capitalKHR > 0) ? (
-                  <View style={{ alignItems: 'flex-end', gap: 1 }}>
-                    {currentCapital.capitalUSD > 0 && (
-                      <Text style={[styles.capitalValue, { color: ACCENT }]}>
-                        ${Math.round(currentCapital.capitalUSD).toLocaleString()}
-                      </Text>
-                    )}
-                    {currentCapital.capitalKHR > 0 && (
-                      <Text style={[styles.capitalValue, { color: ACCENT }]}>
-                        ៛{Math.round(currentCapital.capitalKHR).toLocaleString()}
-                      </Text>
-                    )}
-                  </View>
-                ) : (
-                  <Text style={[styles.pinStatus, { color: colors.textMuted }]}>{t.capitalDesc}</Text>
-                )}
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-              </View>
             }
           />
         </GlassCard>
@@ -534,56 +507,6 @@ const SettingsScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Capital Edit Modal */}
-      <Modal visible={editingCapital} transparent animationType="slide">
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.surface : '#fff' }]}>
-            <View style={[styles.modalHandle, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)' }]} />
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <TouchableOpacity onPress={() => setEditingCapital(false)} style={styles.modalSideBtn}>
-                <Text style={[styles.modalCancel, { color: colors.textMuted }]}>{t.cancel}</Text>
-              </TouchableOpacity>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>{t.myCapital}</Text>
-              <TouchableOpacity onPress={handleSaveCapital} disabled={savingCapital} style={styles.modalSideBtn}>
-                {savingCapital
-                  ? <ActivityIndicator color={ACCENT} size="small" />
-                  : <Text style={[styles.modalSave, { color: ACCENT }]}>{t.save}</Text>
-                }
-              </TouchableOpacity>
-            </View>
-            <View style={{ padding: 20, gap: 12 }}>
-              <View style={[styles.inputWrap, { backgroundColor: isDark ? colors.surface : '#F2F4F8' }]}>
-                <TextInput
-                  style={[styles.nameInput, { color: colors.text }, fi()]}
-                  value={capitalUSD}
-                  onChangeText={setCapitalUSD}
-                  placeholder={t.capitalUSD}
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="numeric"
-                  returnKeyType="next"
-                />
-              </View>
-              <View style={[styles.inputWrap, { backgroundColor: isDark ? colors.surface : '#F2F4F8' }]}>
-                <TextInput
-                  style={[styles.nameInput, { color: colors.text }, fi()]}
-                  value={capitalKHR}
-                  onChangeText={setCapitalKHR}
-                  placeholder={t.capitalKHR}
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="numeric"
-                  returnKeyType="done"
-                  onSubmitEditing={handleSaveCapital}
-                />
-              </View>
-              <Text style={[styles.capitalHint, { color: colors.textMuted }]}>{t.capitalHint}</Text>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
       {/* Display Name Edit Modal */}
       <Modal visible={editingName} transparent animationType="slide">
         <KeyboardAvoidingView
@@ -626,35 +549,47 @@ const SettingsScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (ff) => StyleSheet.create({
+const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
   root: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  title: { fontSize: 28, lineHeight: 34, ...ff('800'), letterSpacing: 0 },
+  title: { fontSize: fs(28), ...(isKhmer ? {} : { lineHeight: 34 }), ...ff('800'), letterSpacing: 0 },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
-  sectionTitle: { fontSize: 12, lineHeight: 16, ...ff('700'), letterSpacing: 0, marginBottom: 8 },
+  // Theme segment
+  themeSegmentWrap: { flexDirection: 'row', padding: 8, gap: 6 },
+  themeSegmentBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 5, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5,
+  },
+  themeSegmentLabel: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
+  // Tools row (2×2 grid)
+  toolsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  toolsCardWrap: { width: '48%' },
+  toolsCard: {},
+  toolsCardInner: { alignItems: 'center', paddingVertical: 14, paddingHorizontal: 8, gap: 8 },
+  toolsIconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  toolsLabel: { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, textAlign: 'center' },
+  sectionTitle: { fontSize: fs(12), lineHeight: 16, ...ff('700'), letterSpacing: 0, marginBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 14, minHeight: 52 },
-  rowLabel: { fontSize: 15, lineHeight: 20, ...ff('400'), flex: 1 },
-  sessionText: { fontSize: 13, lineHeight: 18, ...ff('400') },
-  pinStatus:   { fontSize: 13, lineHeight: 18, ...ff('600') },
-  version: { fontSize: 12, lineHeight: 16, ...ff('400'), textAlign: 'center', marginTop: 8 },
+  rowLabel: { fontSize: fs(15), lineHeight: 20, ...ff('400'), flex: 1 },
+  sessionText: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
+  pinStatus:   { fontSize: fs(13), lineHeight: 18, ...ff('600') },
+  version: { fontSize: fs(12), lineHeight: 16, ...ff('400'), textAlign: 'center', marginTop: 8 },
   // PIN verify modal
   pinModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
   pinModalSheet: { width: '88%', borderRadius: 28, paddingBottom: 32, overflow: 'hidden' },
   pinModalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
   pinModalClose: { padding: 4 },
-  pinModalTitle: { flex: 1, textAlign: 'center', fontSize: 17, lineHeight: 22, fontWeight: '700', marginRight: 30 },
+  pinModalTitle: { flex: 1, textAlign: 'center', fontSize: fs(17), lineHeight: 22, ...ff('700'), marginRight: 30 },
   pinDots: { flexDirection: 'row', gap: 18, justifyContent: 'center', marginVertical: 28 },
   pinDot: { width: 13, height: 13, borderRadius: 6.5 },
-  pinErrorText: { textAlign: 'center', fontSize: 13, lineHeight: 18, marginBottom: 12, marginTop: -12 },
+  pinErrorText: { textAlign: 'center', fontSize: fs(13), lineHeight: 18, marginBottom: 12, marginTop: -12 },
   pinKeypad: { flexDirection: 'row', flexWrap: 'wrap', width: 288, alignSelf: 'center', justifyContent: 'center' },
   pinKeySlot: { width: 96, height: 80, justifyContent: 'center', alignItems: 'center' },
   pinKeyBtn: { width: 72, height: 72, borderRadius: 36, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
-  pinKeyText: { fontSize: 26 },
+  pinKeyText: { fontSize: fs(26), lineHeight: 34 },
 
-  capitalValue: { fontSize: 13, lineHeight: 18, ...ff('600') },
-  capitalHint: { fontSize: 12, lineHeight: 16, ...ff('400'), textAlign: 'center' },
   nameRight: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 },
-  nameValue: { fontSize: 13, lineHeight: 18, ...ff('400') },
+  nameValue: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32 },
   modalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
@@ -663,11 +598,11 @@ const makeStyles = (ff) => StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   modalSideBtn: { minWidth: 60 },
-  modalCancel: { fontSize: 15, lineHeight: 20, ...ff('400') },
-  modalTitle: { fontSize: 16, lineHeight: 21, ...ff('700') },
-  modalSave: { fontSize: 15, lineHeight: 20, ...ff('700'), textAlign: 'right' },
+  modalCancel: { fontSize: fs(15), lineHeight: 20, ...ff('400') },
+  modalTitle: { fontSize: fs(16), lineHeight: 21, ...ff('700') },
+  modalSave: { fontSize: fs(15), lineHeight: 20, ...ff('700'), textAlign: 'right' },
   inputWrap: { borderRadius: 12, overflow: 'hidden' },
-  nameInput: { height: 50, paddingHorizontal: 14, fontSize: 15, lineHeight: 20 },
+  nameInput: { height: 50, paddingHorizontal: 14, fontSize: fs(15), lineHeight: 20, ...ff('400') },
 });
 
 export default SettingsScreen;

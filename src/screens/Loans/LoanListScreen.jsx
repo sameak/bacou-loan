@@ -241,7 +241,7 @@ const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4,
   },
-  title: { fontSize: fs(28), lineHeight: 34, ...ff('800'), letterSpacing: 0 },
+  title: { fontSize: fs(28), ...(isKhmer ? {} : { lineHeight: 34 }), ...ff('800'), letterSpacing: 0 },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginTop: 8, marginBottom: 4,
