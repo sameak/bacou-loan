@@ -53,7 +53,7 @@ const Toast = forwardRef((_, ref) => {
     <Animated.View style={[styles.container, animStyle, { top: insets.top + 12 }]} pointerEvents="none">
       <View style={[styles.pill, { borderColor: color + '30' }]}>
         <Ionicons name={icon} size={18} color={color} />
-        <Text style={[styles.text, ff('600')]} numberOfLines={2}>{text}</Text>
+        <Text style={[styles.text, ff('400')]} numberOfLines={2}>{text}</Text>
       </View>
     </Animated.View>
   );

@@ -27,7 +27,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import Toast from '../../components/Toast';
 import CalendarPopup from '../../components/CalendarPopup';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 const CURRENCIES = ['USD', 'KHR', 'KRW', 'Other'];
 
 const T = {
@@ -80,23 +80,23 @@ const T = {
     principalAndInterest: 'បង់ប្រាក់ដើម និង ការប្រាក់',
     interestBasis: 'មូលដ្ឋានការប្រាក់',
     flat: 'ការប្រាក់ថេរ',
-    reducing: 'ការប្រាក់ថយតាមប្រាក់ដើម',
+    reducing: 'ការប្រាក់ថយចុះ',
     rate: 'អត្រាការប្រាក់ (% ក្នុងដំណាក់)',
     ratePlaceholder: '3',
-    frequency: 'ភាពញឹកញាប់',
+    frequency: 'រយៈពេលបង់',
     weekly: 'ប្រចាំសប្ដាហ៍',
     monthly: 'ប្រចាំខែ',
     schedule: 'កាលវិភាគ',
-    fixed: 'ចំនួនដំណាក់ថេរ',
-    open: 'បើក',
-    periods: 'ចំនួនដំណាក់',
+    fixed: 'បង់តាមកាលកំណត់',
+    open: 'មិនកំណត់ពេល',
+    periods: 'ចំនួនដំណាក់កាល',
     periodsPlaceholder: '12',
-    startDate: 'កាលបរិច្ឆេទចាប់ផ្ដើម',
-    notes: 'កំណត់ចំណាំ (ស្រេចចិត្ត)',
+    startDate: 'កាលបរិច្ឆេទចាប់ផ្ដើមបង់ប្រាក់',
+    notes: 'កំណត់ចំណាំ',
     notesPlaceholder: 'កំណត់ចំណាំ...',
     errPrincipal: 'បញ្ចូលចំនួនទឹកប្រាក់',
     errRate: 'បញ្ចូលអត្រាការប្រាក់',
-    errPeriods: 'បញ្ចូលចំនួនដំណាក់',
+    errPeriods: 'បញ្ចូលចំនួនដំណាក់កាល',
     errDate: 'បញ្ចូលកាលបរិច្ឆេទ',
     saved: 'បានធ្វើបច្ចុប្បន្នភាព',
     scheduleWarning: 'នឹងបង្កើតកាលវិភាគថ្មីសម្រាប់ដំណាក់ដែលមិនទាន់បង់។ ដំណាក់ដែលបានបង់ហើយនឹងត្រូវបានរក្សា។ បន្ត?',

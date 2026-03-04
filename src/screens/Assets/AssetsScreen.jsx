@@ -35,7 +35,7 @@ import {
 } from '../../services/investmentService';
 import { listenCapital } from '../../services/capitalService';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 const GREEN  = '#10B981';
 const RED    = '#EF4444';
 
@@ -187,7 +187,7 @@ function InvestmentCard({ inv, t, ff, fs, colors, onPress }) {
         <View style={{ padding: 16 }}>
           {/* Name + status badge */}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-            <Text style={[{ flex: 1, fontSize: fs(15), letterSpacing: 0, lineHeight: 20, color: colors.text }, ff('600')]} numberOfLines={1}>
+            <Text style={[{ flex: 1, fontSize: fs(15), letterSpacing: 0, lineHeight: 20, color: colors.text }, ff('400')]} numberOfLines={1}>
               {inv.name}
             </Text>
             <View style={{

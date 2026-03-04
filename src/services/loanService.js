@@ -650,20 +650,22 @@ export async function getPayments(loanId) {
  * Used by BorrowerDetailScreen to show unified payment history.
  */
 export async function getBorrowerPayments(loans) {
-  const allPayments = [];
-  for (const loan of loans) {
-    const snap = await getDocs(collection(db, 'loans', loan.id, 'payments'));
-    const payments = snap.docs.map(d => ({
-      id: d.id,
-      loanId: loan.id,
-      loanCurrency: loan.currency,
-      loanOriginalPrincipal: loan.originalPrincipal,
-      borrowerId: loan.borrowerId,
-      borrowerName: loan.borrowerName,
-      ...d.data(),
-    }));
-    allPayments.push(...payments);
-  }
+  const results = await Promise.all(
+    loans.map(loan =>
+      getDocs(collection(db, 'loans', loan.id, 'payments')).then(snap =>
+        snap.docs.map(d => ({
+          id: d.id,
+          loanId: loan.id,
+          loanCurrency: loan.currency,
+          loanOriginalPrincipal: loan.originalPrincipal,
+          borrowerId: loan.borrowerId,
+          borrowerName: loan.borrowerName,
+          ...d.data(),
+        }))
+      )
+    )
+  );
+  const allPayments = results.flat();
   allPayments.sort((a, b) => {
     if (a.date > b.date) return -1;
     if (a.date < b.date) return 1;
@@ -810,14 +812,15 @@ export async function markLoanPaid(loanId) {
 
 export function formatCurrency(amount, currency) {
   const n = Number(amount ?? 0);
+  const decimals = n % 1 === 0 ? 0 : 2;
   if (currency === 'KHR') {
-    return '៛' + n.toLocaleString();
+    return '៛' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
   if (currency === 'KRW') {
-    return '₩' + n.toLocaleString();
+    return '₩' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
   if (currency === 'USD') {
-    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
   }
-  return currency + ' ' + n.toLocaleString();
+  return currency + ' ' + n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
 }

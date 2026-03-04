@@ -40,9 +40,9 @@ import GlassCard from '../../components/GlassCard';
 import Toast from '../../components/Toast';
 import { Skeleton, SkeletonRow } from '../../components/Skeleton';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 const STATUS_COLORS = { active: '#10B981', overdue: '#EF4444', paid: '#9CA3AF', written_off: '#6B7280' };
-const PERIOD_STATUS_COLORS = { upcoming: '#6366F1', paid: '#10B981', partial: '#F59E0B', overdue: '#EF4444' };
+const PERIOD_STATUS_COLORS = { upcoming: '#00C2B2', paid: '#10B981', partial: '#F59E0B', overdue: '#EF4444' };
 
 const T = {
   en: {
@@ -109,11 +109,11 @@ const T = {
     accruing: 'បង្ហូរថ្ងៃនេះ',
     since: 'តាំងពី',
     originalPrincipal: 'ដើម',
-    outstanding: 'នៅជំពាក់',
+    outstanding: 'កម្ចីដែលបានផ្តល់',
     totalRepaid: 'បានបង់',
     totalInterest: 'ការប្រាក់',
     repaymentType: { interest_only: 'តែការប្រាក់', principal_and_interest: 'ដើម+ការប្រាក់' },
-    basis: { flat: 'ថេរ', reducing: 'ថយចុះ' },
+    basis: { flat: 'ការប្រាក់ថេរ', reducing: 'ការប្រាក់ថយចុះ' },
     freq: { weekly: 'សប្ដាហ៍', monthly: 'ខែ' },
     markedPaid: 'បានសម្គាល់ថាបានបង់',
     deleteLoan: 'លុបប្រាក់កម្ចី',
@@ -147,8 +147,7 @@ const LoanDetailScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const { language, fs, ff } = useLanguage();
   const t = T[language] || T.en;
-  const isKhmer = language === 'km';
-  const styles = useMemo(() => makeStyles(fs, ff, isKhmer), [fs, ff, isKhmer]);
+  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
 
   const [loan, setLoan] = useState(null);
   const [schedule, setSchedule] = useState([]);
@@ -671,84 +670,84 @@ const LoanDetailScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
+const makeStyles = (fs, ff) => StyleSheet.create({
   root: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontSize: fs(18), lineHeight: 23, ...ff('700'), textAlign: 'center', marginHorizontal: 8 },
+  headerTitle: { flex: 1, fontSize: fs(18), lineHeight: 29, ...ff('600'), textAlign: 'center', marginHorizontal: 8 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 90, justifyContent: 'flex-end' },
   editBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     borderWidth: 1.5, borderRadius: 8,
     paddingHorizontal: 10, paddingVertical: 5,
   },
-  editBtnText: { fontSize: fs(13), lineHeight: 18, ...ff('600') },
-  topUpText: { fontSize: fs(15), lineHeight: 20, ...ff('600') },
+  editBtnText: { fontSize: fs(13), lineHeight: 24, ...ff('600') },
+  topUpText: { fontSize: fs(15), lineHeight: 26, ...ff('600') },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 120 },
 
   // Summary card
   summaryCard: { padding: 20 },
   summaryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  statusText: { fontSize: fs(12), lineHeight: 16, ...ff('700') },
-  currency: { fontSize: fs(13), lineHeight: 18, ...ff('600') },
-  principalValue: { fontSize: fs(32), lineHeight: 40, ...ff('800'), marginBottom: 2 },
-  principalLabel: { fontSize: fs(13), ...(isKhmer ? {} : { lineHeight: 18 }), ...ff('400'), marginBottom: 16 },
+  statusText: { fontSize: fs(12), lineHeight: 22, ...ff('600') },
+  currency: { fontSize: fs(13), lineHeight: 24, ...ff('400') },
+  principalValue: { fontSize: fs(32), lineHeight: 40, ...ff('400'), marginBottom: 2 },
+  principalLabel: { fontSize: fs(13), lineHeight: 24, ...ff('400'), marginBottom: 16 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  chipText: { fontSize: fs(12), lineHeight: 16, ...ff('500') },
+  chipText: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
   accrualBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, padding: 10, marginBottom: 12 },
-  accrualText: { fontSize: fs(12), lineHeight: 16, color: '#F59E0B', ...ff('500'), flex: 1 },
+  accrualText: { fontSize: fs(12), lineHeight: 22, color: '#F59E0B', ...ff('400'), flex: 1 },
   progressSection: { marginBottom: 16 },
   progressBg: { height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
   progressFill: { height: '100%', borderRadius: 3 },
-  progressLabel: { fontSize: fs(12), lineHeight: 16, ...ff('400') },
+  progressLabel: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
   statsRow: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 14 },
   stat: { flex: 1, alignItems: 'center' },
   statBorder: { borderLeftWidth: StyleSheet.hairlineWidth, borderRightWidth: StyleSheet.hairlineWidth },
-  statValue: { fontSize: fs(14), lineHeight: 19, ...ff('700'), marginBottom: 2 },
-  statLabel: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('400') },
+  statValue: { fontSize: fs(14), lineHeight: 25, ...ff('400'), marginBottom: 2 },
+  statLabel: { fontSize: fs(11), lineHeight: 21, ...ff('400') },
 
   // Notes
   notesSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 14, marginTop: 4 },
-  notesLabel: { fontSize: fs(10), ...(isKhmer ? {} : { lineHeight: 14 }), ...ff('700'), letterSpacing: 0, marginBottom: 4 },
-  notesText: { fontSize: fs(14), lineHeight: 20, ...ff('400') },
+  notesLabel: { fontSize: fs(10), lineHeight: 20, ...ff('600'), letterSpacing: 0, marginBottom: 4 },
+  notesText: { fontSize: fs(14), lineHeight: 26, ...ff('400') },
 
   // Audit
   auditSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, marginTop: 10, gap: 2 },
-  auditText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('400'), letterSpacing: 0 },
+  auditText: { fontSize: fs(11), lineHeight: 21, ...ff('400'), letterSpacing: 0 },
 
   // Tab bar
   tabBar: { flexDirection: 'row', borderRadius: 12, padding: 3, marginBottom: 10 },
   tab: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' },
-  tabLabel: { fontSize: fs(13), lineHeight: 18, ...ff('600') },
+  tabLabel: { fontSize: fs(13), lineHeight: 24, ...ff('600') },
 
   // Schedule
   periodRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   periodNum: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  periodNumText: { fontSize: fs(12), lineHeight: 16, ...ff('700'), textAlign: 'center' },
+  periodNumText: { fontSize: fs(12), lineHeight: 22, ...ff('400'), textAlign: 'center' },
   periodInfo: { flex: 1 },
-  periodDate: { fontSize: fs(14), lineHeight: 19, ...ff('600'), marginBottom: 2 },
-  periodMeta: { fontSize: fs(12), lineHeight: 16, ...ff('400') },
-  periodTotal: { fontSize: fs(14), lineHeight: 19, ...ff('700'), marginBottom: 4 },
+  periodDate: { fontSize: fs(14), lineHeight: 25, ...ff('400'), marginBottom: 2 },
+  periodMeta: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
+  periodTotal: { fontSize: fs(14), lineHeight: 25, ...ff('400'), marginBottom: 4 },
   periodStatusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  periodStatusText: { fontSize: fs(10), ...(isKhmer ? {} : { lineHeight: 14 }), ...ff('700') },
+  periodStatusText: { fontSize: fs(10), lineHeight: 20, ...ff('600') },
 
   // Payments
   payRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   payIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   payInfo: { flex: 1 },
-  payDate: { fontSize: fs(14), lineHeight: 19, ...ff('600'), marginBottom: 2 },
-  payMeta: { fontSize: fs(12), lineHeight: 16, ...ff('400') },
-  payNotes: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('400'), marginTop: 2 },
-  payTotal: { fontSize: fs(15), lineHeight: 20, ...ff('700') },
+  payDate: { fontSize: fs(14), lineHeight: 25, ...ff('400'), marginBottom: 2 },
+  payMeta: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
+  payNotes: { fontSize: fs(11), lineHeight: 21, ...ff('400'), marginTop: 2 },
+  payTotal: { fontSize: fs(15), lineHeight: 26, ...ff('400') },
 
   // Mark paid
   markPaidBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginTop: 20, paddingVertical: 14, borderRadius: 14, borderWidth: 1,
   },
-  markPaidText: { fontSize: fs(14), lineHeight: 19, ...ff('600') },
+  markPaidText: { fontSize: fs(14), lineHeight: 25, ...ff('600') },
 
   // FAB
   fab: {
@@ -764,8 +763,8 @@ const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
   // Monthly checklist (open-ended loans)
   monthRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   monthCheck: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  monthLabel: { fontSize: fs(14), lineHeight: 19, ...ff('600'), marginBottom: 2 },
-  monthMeta:  { fontSize: fs(12), lineHeight: 16, ...ff('400') },
+  monthLabel: { fontSize: fs(14), lineHeight: 25, ...ff('400'), marginBottom: 2 },
+  monthMeta:  { fontSize: fs(12), lineHeight: 22, ...ff('400') },
 
   // Misc
   openModeNote: { fontSize: fs(14), textAlign: 'center', marginTop: 8 },

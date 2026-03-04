@@ -25,8 +25,8 @@ export function LanguageProvider({ children, initialLanguage }) {
     await storage.set(STORAGE_KEYS.LANGUAGE, lang);
   }, []);
 
-  /** fs(size) — +10% in Khmer mode for better readability */
-  const fs = useCallback((size) => language === 'km' ? size * 1.1 : size, [language]);
+  /** fs(size) — +10% in Khmer for better readability */
+  const fs = useCallback((size) => language === 'km' ? Math.round(size * 1.1) : size, [language]);
 
   /**
    * ff(weight) — always uses Koh Santepheap (supports both Latin + Khmer),

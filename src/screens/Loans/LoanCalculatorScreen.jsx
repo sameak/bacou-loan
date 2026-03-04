@@ -27,7 +27,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import GlassCard from '../../components/GlassCard';
 import CalendarPopup from '../../components/CalendarPopup';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 const CURRENCIES = ['USD', 'KHR', 'KRW'];
 
 const T = {
@@ -87,16 +87,16 @@ const T = {
     principalAndInterest: 'ប្រាក់ដើម + ការប្រាក់',
     interestBasis: 'មូលដ្ឋានការប្រាក់',
     flat: 'ការប្រាក់ថេរ',
-    reducing: 'ការប្រាក់ថយ',
+    reducing: 'ការប្រាក់ថយចុះ',
     rate: 'អត្រាការប្រាក់ (% ក្នុងដំណាក់)',
     ratePlaceholder: '3',
-    frequency: 'ភាពញឹកញាប់',
+    frequency: 'រយៈពេលបង់',
     weekly: 'ប្រចាំសប្ដាហ៍',
     monthly: 'ប្រចាំខែ',
     schedule: 'កាលវិភាគ',
-    fixed: 'ចំនួនដំណាក់ថេរ',
-    open: 'បើក',
-    periods: 'ចំនួនដំណាក់',
+    fixed: 'បង់តាមកាលកំណត់',
+    open: 'មិនកំណត់ពេល',
+    periods: 'ចំនួនដំណាក់កាល',
     periodsPlaceholder: '12',
     startDate: 'ថ្ងៃចាប់ផ្ដើម',
     preview: 'ចំនួនដំណាក់បង្ហាញ',
@@ -185,7 +185,7 @@ function buildHtml({ principal, rate, currency, repaymentType, interestBasis, fr
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
   body{font-family:-apple-system,Arial,sans-serif;margin:0;padding:28px 32px;color:#111827;font-size:13px}
-  h1{font-size:24px;font-weight:800;color:#6366F1;margin:0 0 4px}
+  h1{font-size:24px;font-weight:800;color:#00C2B2;margin:0 0 4px}
   .sub{font-size:12px;color:#9ca3af;margin:0 0 20px}
   .params{background:#f9fafb;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:6px 24px}
   .param{font-size:12px;color:#374151}
@@ -193,10 +193,10 @@ function buildHtml({ principal, rate, currency, repaymentType, interestBasis, fr
   .card{flex:1;background:#f9fafb;border-radius:10px;padding:14px 16px;border:1px solid #f3f4f6}
   .clabel{font-size:10px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:6px}
   .cval{font-size:19px;font-weight:800}
-  .cv-interest{color:#d97706}.cv-total{color:#6366F1}.cv-period{color:#111827}
+  .cv-interest{color:#d97706}.cv-total{color:#00C2B2}.cv-period{color:#111827}
   .preview-note{font-size:11px;color:#9ca3af;font-style:italic;margin-bottom:10px}
   table{width:100%;border-collapse:collapse;font-size:12px}
-  thead tr{background:#6366F1}
+  thead tr{background:#00C2B2}
   thead th{color:#fff;padding:9px 10px;font-weight:700;font-size:11px;text-transform:uppercase;text-align:right}
   thead th:first-child,thead th:nth-child(2){text-align:left}
   tbody td{padding:8px 10px;border-bottom:1px solid #f3f4f6;text-align:right}

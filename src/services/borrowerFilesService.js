@@ -86,3 +86,20 @@ export async function deleteBorrowerFile(borrowerId, fileId, storagePath) {
   }
   await deleteDoc(doc(db, 'borrowers', borrowerId, 'files', fileId));
 }
+
+/**
+ * Upload (or replace) the borrower's profile photo.
+ * Storage path: borrowers/{borrowerId}/profile.jpg
+ * Returns the download URL.
+ */
+export async function uploadProfilePhoto(borrowerId, imageUri) {
+  const { uid } = getUserInfo();
+  if (!uid) throw new Error('Not authenticated');
+
+  const response = await fetch(imageUri);
+  const blob = await response.blob();
+  const storagePath = `borrowers/${borrowerId}/profile.jpg`;
+  const storageRef = ref(storage, storagePath);
+  await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
+  return getDownloadURL(storageRef);
+}

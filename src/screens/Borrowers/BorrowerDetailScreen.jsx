@@ -24,23 +24,40 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { updateBorrower, deleteBorrower, listenBorrowers } from '../../services/borrowerService';
+import { updateBorrower, deleteBorrower, listenBorrowers, mergeBorrowers, getBorrowers } from '../../services/borrowerService';
 import { listenLoansByBorrower, getLoansByBorrower, deleteLoan, formatCurrency, calcAccruedInterest, getBorrowerPayments } from '../../services/loanService';
-import { uploadBorrowerFile, listenBorrowerFiles, deleteBorrowerFile } from '../../services/borrowerFilesService';
+import { uploadBorrowerFile, listenBorrowerFiles, deleteBorrowerFile, uploadProfilePhoto } from '../../services/borrowerFilesService';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import GlassCard from '../../components/GlassCard';
 import Toast from '../../components/Toast';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 const STATUS_COLORS = { active: '#10B981', overdue: '#EF4444', paid: '#9CA3AF', written_off: '#6B7280' };
 const SCREEN_W = Dimensions.get('window').width;
 
-const AVATAR_COLORS = ['#6366F1','#8B5CF6','#EC4899','#F59E0B','#10B981','#3B82F6','#EF4444','#14B8A6'];
+const AVATAR_COLORS = ['#00C2B2','#8B5CF6','#EC4899','#F59E0B','#10B981','#3B82F6','#EF4444','#14B8A6'];
 function avatarColor(name) {
   if (!name) return ACCENT;
   return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 }
+
+function isSimilarName(a, b) {
+  const la = a.toLowerCase().trim();
+  const lb = b.toLowerCase().trim();
+  if (la === lb) return true;
+  if (la.includes(lb) || lb.includes(la)) return true;
+  const wa = la.split(/\s+/)[0];
+  const wb = lb.split(/\s+/)[0];
+  return wa.length >= 2 && wa === wb;
+}
+
+const SOCIAL_META = [
+  { key: 'facebook',  icon: 'logo-facebook',      color: '#1877F2' },
+  { key: 'telegram',  icon: 'paper-plane-outline', color: '#2AABEE' },
+  { key: 'whatsapp',  icon: 'logo-whatsapp',       color: '#25D366' },
+  { key: 'instagram', icon: 'logo-instagram',      color: '#E1306C' },
+];
 
 function isImage(mimeType) {
   return mimeType?.startsWith('image/');
@@ -63,6 +80,7 @@ function fileIcon(mimeType) {
 
 const T = {
   en: {
+    merge: 'Merge with...', mergeTitle: 'Merge Borrower', mergeDesc: 'All loans will move to the selected borrower. This cannot be undone.', mergeDone: 'Borrowers merged', mergeConfirm: 'Merge', searchBorrower: 'Search...', suggested: 'SUGGESTED', others: 'OTHERS',
     edit: 'Edit', save: 'Save', cancel: 'Cancel',
     newLoan: 'New Loan',
     activeLoans: 'Active', overdueLoans: 'Overdue', paidLoans: 'Paid',
@@ -75,8 +93,11 @@ const T = {
     confirmDelete: 'Delete this borrower and ALL their loans? This cannot be undone.',
     confirmDeleteYes: 'Delete', deleted: 'Borrower deleted',
     interestOnly: 'I/O', principalInterest: 'P+I', accruing: 'Accruing',
+    basis: { flat: 'Flat', reducing: 'Reducing' },
     name: 'Name', phone: 'Phone', address: 'Address',
     addedBy: 'Added by', editedBy: 'Edited by',
+    tapToChange: 'Tap to change photo',
+    socialSection: 'Social Links',
     // Tabs
     tabLoans: 'Loans', tabPayments: 'Payments', tabFiles: 'Files',
     // Payments
@@ -93,20 +114,24 @@ const T = {
     fileDeleted: 'File deleted',
   },
   km: {
+    merge: 'បញ្ចូលជាមួយ...', mergeTitle: 'បញ្ចូលអតិថិជន', mergeDesc: 'ប្រាក់កម្ចីទាំងអស់នឹងផ្លាស់ទៅអតិថិជនដែលបានជ្រើស។ មិនអាចមិនធ្វើវិញ។', mergeDone: 'បានបញ្ចូល', mergeConfirm: 'បញ្ចូល', searchBorrower: 'ស្វែងរក...', suggested: 'ស្រដៀងគ្នា', others: 'ផ្សេងៗ',
     edit: 'កែប្រែ', save: 'រក្សាទុក', cancel: 'បោះបង់',
     newLoan: 'ប្រាក់កម្ចីថ្មី',
     activeLoans: 'ដំណើរការ', overdueLoans: 'ហួសកំណត់', paidLoans: 'បានបង់',
-    noLoans: 'មិនទាន់មានប្រាក់កម្ចី', noLoansHint: 'បង្កើតប្រាក់កម្ចីសម្រាប់អ្នកខ្ចីនេះ',
-    outstanding: 'នៅជំពាក់', totalLoans: 'កម្ចី', activeCount: 'ដំណើរការ',
+    noLoans: 'មិនទាន់មានប្រាក់កម្ចី', noLoansHint: 'បង្កើតប្រាក់កម្ចីសម្រាប់អតិថិជននេះ',
+    outstanding: 'កម្ចីដែលបានផ្តល់', totalLoans: 'កម្ចី', activeCount: 'ដំណើរការ',
     status: { active: 'ដំណើរការ', overdue: 'ហួសកំណត់', paid: 'បានបង់', written_off: 'បោះបង់' },
     writtenOffLoans: 'បោះបង់',
     saved: 'បានកែប្រែ',
-    deleteBorrower: 'លុបអ្នកខ្ចី',
-    confirmDelete: 'លុបអ្នកខ្ចីនេះ និងប្រាក់កម្ចីទាំងអស់? មិនអាចមិនធ្វើវិញបានទេ។',
-    confirmDeleteYes: 'លុប', deleted: 'បានលុបអ្នកខ្ចី',
+    deleteBorrower: 'លុបអតិថិជន',
+    confirmDelete: 'លុបអតិថិជននេះ និងប្រាក់កម្ចីទាំងអស់? មិនអាចមិនធ្វើវិញបានទេ។',
+    confirmDeleteYes: 'លុប', deleted: 'បានលុបអតិថិជន',
     interestOnly: 'ការប្រាក់', principalInterest: 'ដើម+ការប្រាក់', accruing: 'បង្ហូរ',
+    basis: { flat: 'ការប្រាក់ថេរ', reducing: 'ការប្រាក់ថយចុះ' },
     name: 'ឈ្មោះ', phone: 'ទូរសព្ទ', address: 'អាសយដ្ឋាន',
     addedBy: 'បន្ថែមដោយ', editedBy: 'កែដោយ',
+    tapToChange: 'ចុចផ្លាស់ប្ដូររូបភាព',
+    socialSection: 'ទំនាក់ទំនងបន្ថែម',
     tabLoans: 'កម្ចី', tabPayments: 'ការទូទាត់', tabFiles: 'ឯកសារ',
     noPayments: 'មិនទាន់មានការទូទាត់', noPaymentsHint: 'ការទូទាត់នឹងបង្ហាញនៅទីនេះ',
     principal: 'ដើម', interest: 'ការប្រាក់', total: 'សរុប',
@@ -126,8 +151,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
   const { colors, isDark } = useTheme();
   const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
-  const isKhmer = language === 'km';
-  const styles = useMemo(() => makeStyles(fs, ff, isKhmer, isDark), [fs, ff, isKhmer, isDark]);
+  const styles = useMemo(() => makeStyles(fs, ff, isDark), [fs, ff, isDark]);
 
   // Core data
   const [borrower, setBorrower] = useState(null);
@@ -139,6 +163,11 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [editPhotoUri, setEditPhotoUri] = useState(null);
+  const [editFacebook, setEditFacebook] = useState('');
+  const [editTelegram, setEditTelegram] = useState('');
+  const [editWhatsapp, setEditWhatsapp] = useState('');
+  const [editInstagram, setEditInstagram] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Tabs
@@ -155,6 +184,12 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [viewingImage, setViewingImage] = useState(null);
 
+  // Merge modal
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [mergeCandidates, setMergeCandidates] = useState([]);
+  const [mergeSearch, setMergeSearch] = useState('');
+  const [merging, setMerging] = useState(false);
+
   // ── Listeners ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -165,6 +200,10 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
         setEditName(found.name);
         setEditPhone(found.phone ?? '');
         setEditAddress(found.address ?? '');
+        setEditFacebook(found.socialLinks?.facebook ?? '');
+        setEditTelegram(found.socialLinks?.telegram ?? '');
+        setEditWhatsapp(found.socialLinks?.whatsapp ?? '');
+        setEditInstagram(found.socialLinks?.instagram ?? '');
       }
     });
     return unsub;
@@ -199,7 +238,23 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
     if (!editName.trim()) return;
     setSaving(true);
     try {
-      await updateBorrower(borrowerId, { name: editName.trim(), phone: editPhone.trim(), address: editAddress.trim() });
+      const fields = {
+        name: editName.trim(),
+        phone: editPhone.trim(),
+        address: editAddress.trim(),
+        socialLinks: {
+          facebook: editFacebook.trim(),
+          telegram: editTelegram.trim(),
+          whatsapp: editWhatsapp.trim(),
+          instagram: editInstagram.trim(),
+        },
+      };
+      if (editPhotoUri) {
+        const url = await uploadProfilePhoto(borrowerId, editPhotoUri);
+        fields.photoURL = url;
+        setEditPhotoUri(null);
+      }
+      await updateBorrower(borrowerId, fields);
       Toast.show({ text: t.saved, type: 'success' });
       setEditing(false);
     } catch (err) {
@@ -207,6 +262,25 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const pickEditPhoto = async () => {
+    const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!granted) { Toast.show({ text: 'Photo library permission denied', type: 'error' }); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (!result.canceled) setEditPhotoUri(result.assets[0].uri);
+  };
+
+  const openSocialLink = (platform, value) => {
+    if (!value.trim()) return;
+    let url = value.trim();
+    if (!url.startsWith('http')) {
+      if (platform === 'facebook') url = `https://facebook.com/${url}`;
+      else if (platform === 'telegram') url = `https://t.me/${url.replace('@', '')}`;
+      else if (platform === 'whatsapp') url = `https://wa.me/${url.replace(/[^0-9]/g, '')}`;
+      else if (platform === 'instagram') url = `https://instagram.com/${url.replace('@', '')}`;
+    }
+    Linking.openURL(url).catch(() => Toast.show({ text: 'Cannot open link', type: 'error' }));
   };
 
   const handleDeleteBorrower = () => {
@@ -223,6 +297,44 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
             navigation.goBack();
           } catch (err) {
             Toast.show({ text: err.message, type: 'error' });
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleOpenMerge = async () => {
+    const all = await getBorrowers();
+    const currentName = borrower?.name ?? '';
+    const candidates = all
+      .filter(b => b.id !== borrowerId)
+      .map(b => ({ ...b, _similar: isSimilarName(currentName, b.name) }))
+      .sort((a, b) => {
+        if (a._similar && !b._similar) return -1;
+        if (!a._similar && b._similar) return 1;
+        return a.name.localeCompare(b.name);
+      });
+    setMergeCandidates(candidates);
+    setMergeSearch('');
+    setShowMergeModal(true);
+  };
+
+  const handleMerge = (target) => {
+    Alert.alert(t.mergeTitle, t.mergeDesc, [
+      { text: t.cancel, style: 'cancel' },
+      {
+        text: t.mergeConfirm, style: 'destructive',
+        onPress: async () => {
+          setMerging(true);
+          try {
+            await mergeBorrowers(borrowerId, target.id, target.name);
+            Toast.show({ text: t.mergeDone, type: 'success' });
+            setShowMergeModal(false);
+            navigation.goBack();
+          } catch (err) {
+            Toast.show({ text: err.message, type: 'error' });
+          } finally {
+            setMerging(false);
           }
         },
       },
@@ -367,7 +479,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
                 </View>
               </View>
               <Text style={[styles.loanMeta, { color: colors.textMuted }]}>
-                {loan.startDate} · {loan.interestRate}% · {loan.interestBasis} · {loan.repaymentType === 'interest_only' ? t.interestOnly : t.principalInterest}
+                {loan.startDate} · {loan.interestRate}% · {t.basis[loan.interestBasis] ?? loan.interestBasis} · {loan.repaymentType === 'interest_only' ? t.interestOnly : t.principalInterest}
               </Text>
               {accrued !== null && accrued > 0 && (
                 <Text style={styles.accruingText}>{t.accruing}: {formatCurrency(accrued, loan.currency)}</Text>
@@ -388,7 +500,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
           {/* Date badge */}
           <View style={[styles.payDateBadge, { backgroundColor: ACCENT + '15' }]}>
             <Ionicons name="calendar-outline" size={14} color={ACCENT} />
-            <Text style={[styles.payDateText, { color: ACCENT }, ff('600')]}>{payment.date}</Text>
+            <Text style={[styles.payDateText, { color: ACCENT }, ff('400')]}>{payment.date}</Text>
           </View>
 
           {/* Breakdown */}
@@ -396,19 +508,19 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
             {payment.principalAmount > 0 && (
               <View style={styles.payLine}>
                 <Text style={[styles.payLabel, { color: colors.textMuted }, ff('400')]}>{t.principal}</Text>
-                <Text style={[styles.payValue, { color: colors.text }, ff('600')]}>{formatCurrency(payment.principalAmount, currency)}</Text>
+                <Text style={[styles.payValue, { color: colors.text }, ff('400')]}>{formatCurrency(payment.principalAmount, currency)}</Text>
               </View>
             )}
             {payment.interestAmount > 0 && (
               <View style={styles.payLine}>
                 <Text style={[styles.payLabel, { color: colors.textMuted }, ff('400')]}>{t.interest}</Text>
-                <Text style={[styles.payValue, { color: '#F59E0B' }, ff('600')]}>{formatCurrency(payment.interestAmount, currency)}</Text>
+                <Text style={[styles.payValue, { color: '#F59E0B' }, ff('400')]}>{formatCurrency(payment.interestAmount, currency)}</Text>
               </View>
             )}
           </View>
 
           {/* Total */}
-          <Text style={[styles.payTotal, { color: '#10B981' }, ff('600')]}>{formatCurrency(payment.totalAmount, currency)}</Text>
+          <Text style={[styles.payTotal, { color: '#10B981' }, ff('400')]}>{formatCurrency(payment.totalAmount, currency)}</Text>
         </View>
         {payment.notes ? (
           <Text style={[styles.payNotes, { color: colors.textMuted, borderTopColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)' }, ff('400')]}>
@@ -462,7 +574,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
               <Ionicons name={fileIcon(file.mimeType)} size={22} color={ACCENT} />
             </View>
             <View style={styles.fileDocInfo}>
-              <Text style={[styles.fileDocName, { color: colors.text }, ff('600')]} numberOfLines={2}>{file.name}</Text>
+              <Text style={[styles.fileDocName, { color: colors.text }, ff('400')]} numberOfLines={2}>{file.name}</Text>
               {file.size ? <Text style={[styles.fileDocSize, { color: colors.textMuted }, ff('400')]}>{formatBytes(file.size)}</Text> : null}
             </View>
             <Ionicons name="open-outline" size={16} color={colors.textMuted} />
@@ -591,7 +703,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
 
         {files.length === 0 ? (
           <View style={styles.emptyWrap}>
-            <View style={[styles.emptyIconWrap, { backgroundColor: '#6366F115' }]}>
+            <View style={[styles.emptyIconWrap, { backgroundColor: '#00C2B215' }]}>
               <Ionicons name="folder-outline" size={32} color={ACCENT} />
             </View>
             <Text style={[styles.emptyText, { color: colors.text, fontSize: fs(16) }]}>{t.noFiles}</Text>
@@ -638,7 +750,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
           <TouchableOpacity
-            onPress={() => setEditing(true)}
+            onPress={() => { setEditing(true); setEditPhotoUri(null); }}
             style={[styles.editBtn, { backgroundColor: isDark ? colors.surface : '#fff', borderColor: colors.border }]}
             activeOpacity={0.7}
           >
@@ -653,11 +765,17 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
         {/* Hero card */}
         <GlassCard style={{ marginBottom: 16 }}>
           <View style={styles.heroCard}>
-            <View style={[styles.heroAvatar, { backgroundColor: aColor + '20', borderColor: aColor + '40', borderWidth: 2 }]}>
-              <Text style={[styles.heroAvatarText, { color: aColor }]}>
-                {borrower.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            {borrower.photoURL ? (
+              <View style={[styles.heroAvatar, { overflow: 'hidden' }]}>
+                <Image source={{ uri: borrower.photoURL }} style={styles.heroAvatarImg} />
+              </View>
+            ) : (
+              <View style={[styles.heroAvatar, { backgroundColor: aColor + '20', borderColor: aColor + '40', borderWidth: 2 }]}>
+                <Text style={[styles.heroAvatarText, { color: aColor }]}>
+                  {borrower.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
             <Text style={[styles.heroName, { color: colors.text }]}>{borrower.name}</Text>
             {borrower.phone ? (
               <View style={styles.heroMetaRow}>
@@ -671,10 +789,29 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
                 <Text style={[styles.heroMeta, { color: colors.textMuted }]}>{borrower.address}</Text>
               </View>
             ) : null}
+            {SOCIAL_META.some(s => borrower.socialLinks?.[s.key]) && (
+              <View style={styles.heroSocialRow}>
+                {SOCIAL_META.map(({ key, icon, color }) => {
+                  const val = borrower.socialLinks?.[key];
+                  if (!val) return null;
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[styles.heroSocialBtn, { backgroundColor: color + '18' }]}
+                      onPress={() => openSocialLink(key, val)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name={icon} size={20} color={color} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
             <View style={[styles.heroDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' }]} />
             <View style={styles.heroStats}>
               <View style={styles.heroStat}>
-                <Text style={[styles.heroStatValue, { color: loanStats.outstanding > 0 ? '#F59E0B' : colors.textMuted }]}>
+                <Text style={[styles.heroStatValue, { color: loanStats.outstanding > 0 ? '#F59E0B' : colors.textMuted }]}
+                  numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                   {loanStats.outstanding > 0 ? formatCurrency(loanStats.outstanding, loanStats.currency) : '—'}
                 </Text>
                 <Text style={[styles.heroStatLabel, { color: colors.textMuted }]}>{t.outstanding}</Text>
@@ -727,7 +864,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
                 </Text>
                 {count > 0 && (
                   <View style={[styles.tabBadge, { backgroundColor: active ? ACCENT : colors.textMuted + '30' }]}>
-                    <Text style={[styles.tabBadgeText, { color: active ? '#fff' : colors.textMuted }, ff('600')]}>{count}</Text>
+                    <Text style={[styles.tabBadgeText, { color: active ? '#fff' : colors.textMuted }, ff('400')]}>{count}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -741,6 +878,16 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
           {activeTab === 'payments' && renderPaymentsTab()}
           {activeTab === 'files'    && renderFilesTab()}
         </View>
+
+        {/* Merge borrower */}
+        <TouchableOpacity
+          style={[styles.mergeBtn, { borderColor: '#F59E0B28', backgroundColor: isDark ? '#F59E0B10' : '#FFFBEB' }]}
+          onPress={handleOpenMerge}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="git-merge-outline" size={18} color="#F59E0B" />
+          <Text style={[styles.mergeBtnText]}>{t.merge}</Text>
+        </TouchableOpacity>
 
         {/* Delete borrower */}
         <TouchableOpacity
@@ -770,6 +917,30 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, gap: 12 }}>
+              {/* Profile photo picker */}
+              <View style={{ alignItems: 'center', marginBottom: 4 }}>
+                <TouchableOpacity onPress={pickEditPhoto} style={styles.editPhotoBtn} activeOpacity={0.8}>
+                  {editPhotoUri ? (
+                    <View style={[styles.editPhotoCircle, { overflow: 'hidden' }]}>
+                      <Image source={{ uri: editPhotoUri }} style={{ width: 80, height: 80 }} />
+                    </View>
+                  ) : borrower.photoURL ? (
+                    <View style={[styles.editPhotoCircle, { overflow: 'hidden' }]}>
+                      <Image source={{ uri: borrower.photoURL }} style={{ width: 80, height: 80 }} />
+                    </View>
+                  ) : (
+                    <View style={[styles.editPhotoCircle, { backgroundColor: aColor + '20', borderWidth: 2, borderColor: aColor + '40', alignItems: 'center', justifyContent: 'center' }]}>
+                      <Text style={{ fontSize: fs(26), lineHeight: 40, letterSpacing: 0, color: aColor, ...ff('600') }}>{borrower?.name.charAt(0).toUpperCase()}</Text>
+                    </View>
+                  )}
+                  <View style={[styles.editPhotoCam, { backgroundColor: ACCENT }]}>
+                    <Ionicons name="camera" size={14} color="#fff" />
+                  </View>
+                </TouchableOpacity>
+                <Text style={[{ fontSize: fs(12), lineHeight: 22, letterSpacing: 0, color: colors.textMuted, marginTop: 6, ...ff('400') }]}>{t.tapToChange}</Text>
+              </View>
+
+              {/* Name / Phone / Address */}
               {[
                 { value: editName,    setter: setEditName,    placeholder: t.name,    capitalize: 'words',     keyboard: 'default' },
                 { value: editPhone,   setter: setEditPhone,   placeholder: t.phone,   capitalize: 'none',      keyboard: 'phone-pad' },
@@ -784,6 +955,32 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
                     keyboardType={keyboard}
                     placeholder={placeholder}
                     placeholderTextColor={colors.textMuted}
+                  />
+                </View>
+              ))}
+
+              {/* Social Links */}
+              <Text style={[{ fontSize: fs(11), lineHeight: 21, letterSpacing: 0, ...ff('600'), color: colors.textMuted }]}>
+                {t.socialSection.toUpperCase()}
+              </Text>
+              {[
+                { key: 'facebook',  icon: 'logo-facebook',      color: '#1877F2', value: editFacebook,  setter: setEditFacebook,  ph: 'Facebook username' },
+                { key: 'telegram',  icon: 'paper-plane-outline', color: '#2AABEE', value: editTelegram,  setter: setEditTelegram,  ph: 'Telegram @username' },
+                { key: 'whatsapp',  icon: 'logo-whatsapp',       color: '#25D366', value: editWhatsapp,  setter: setEditWhatsapp,  ph: 'WhatsApp +855...' },
+                { key: 'instagram', icon: 'logo-instagram',      color: '#E1306C', value: editInstagram, setter: setEditInstagram, ph: 'Instagram @username' },
+              ].map(({ key, icon, color, value, setter, ph }) => (
+                <View key={key} style={[styles.socialInputRow, { backgroundColor: inputBg }]}>
+                  <View style={[styles.socialInputIcon, { backgroundColor: color + '18' }]}>
+                    <Ionicons name={icon} size={18} color={color} />
+                  </View>
+                  <TextInput
+                    style={[styles.socialInputField, { color: colors.text, fontSize: fs(15) }, fi()]}
+                    value={value}
+                    onChangeText={setter}
+                    placeholder={ph}
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="none"
+                    keyboardType="url"
                   />
                 </View>
               ))}
@@ -807,34 +1004,100 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Merge modal */}
+      <Modal visible={showMergeModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowMergeModal(false)} />
+          <View style={[styles.mergeSheet, { backgroundColor: colors.surface }]}>
+            <View style={[styles.pickerHandle, { backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)' }]} />
+            <Text style={[styles.mergeSheetTitle, { color: colors.text }]}>{t.mergeTitle}</Text>
+            <View style={[styles.mergeSearchWrap, { backgroundColor: isDark ? colors.background : '#F2F4F8', borderColor: colors.border }]}>
+              <Ionicons name="search-outline" size={15} color={colors.textMuted} />
+              <TextInput
+                style={[styles.mergeSearchInput, { color: colors.text }, fi()]}
+                value={mergeSearch}
+                onChangeText={setMergeSearch}
+                placeholder={t.searchBorrower}
+                placeholderTextColor={colors.textMuted}
+                autoFocus
+              />
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              {(() => {
+                const filtered = mergeCandidates.filter(b => !mergeSearch || b.name.toLowerCase().includes(mergeSearch.toLowerCase()));
+                const similar = filtered.filter(b => b._similar);
+                const rest = filtered.filter(b => !b._similar);
+                const renderRow = (b, i, arr) => (
+                  <TouchableOpacity
+                    key={b.id}
+                    style={[styles.mergeRow, i < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+                    onPress={() => handleMerge(b)}
+                    activeOpacity={0.7}
+                    disabled={merging}
+                  >
+                    <View style={[styles.mergeAvatar, { backgroundColor: ACCENT + '20' }]}>
+                      <Text style={[styles.mergeAvatarText, { color: ACCENT }, ff('600')]}>{b.name.charAt(0).toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.mergeName, { color: colors.text }, ff('400')]}>{b.name}</Text>
+                      {b.phone ? <Text style={[styles.mergePhone, { color: colors.textMuted }, ff('400')]}>{b.phone}</Text> : null}
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                );
+                return (
+                  <>
+                    {similar.length > 0 && (
+                      <>
+                        <Text style={[styles.mergeSectionHeader, { color: ACCENT }]}>{t.suggested}</Text>
+                        {similar.map((b, i) => renderRow(b, i, similar))}
+                      </>
+                    )}
+                    {rest.length > 0 && (
+                      <>
+                        {similar.length > 0 && <Text style={[styles.mergeSectionHeader, { color: colors.textMuted }]}>{t.others}</Text>}
+                        {rest.map((b, i) => renderRow(b, i, rest))}
+                      </>
+                    )}
+                  </>
+                );
+              })()}
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };
 
-const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.create({
+const makeStyles = (fs, ff, isDark = false) => StyleSheet.create({
   root: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   editBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7 },
-  editBtnText: { fontSize: fs(13), lineHeight: 18, ...ff('600') },
+  editBtnText: { fontSize: fs(13), lineHeight: 24, ...ff('600') },
 
   content: { paddingHorizontal: 16, paddingTop: 4 },
 
   /* Hero */
   heroCard: { alignItems: 'center', paddingTop: 28, paddingBottom: 20, paddingHorizontal: 20 },
   heroAvatar: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  heroAvatarText: { fontSize: fs(32), lineHeight: 40, ...ff('600'), textAlign: 'center' },
-  heroName: { fontSize: fs(22), lineHeight: 28, ...ff('600'), marginBottom: 8, textAlign: 'center' },
+  heroAvatarImg: { width: 80, height: 80 },
+  heroAvatarText: { fontSize: fs(32), lineHeight: 46, ...ff('600'), textAlign: 'center' },
+  heroName: { fontSize: fs(22), lineHeight: 34, ...ff('600'), marginBottom: 8, textAlign: 'center' },
   heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
-  heroMeta: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
+  heroMeta: { fontSize: fs(13), lineHeight: 24, ...ff('400') },
+  heroSocialRow: { flexDirection: 'row', gap: 10, marginTop: 12, marginBottom: 4 },
+  heroSocialBtn: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   heroDivider: { height: 1, alignSelf: 'stretch', marginVertical: 16 },
-  heroStats: { flexDirection: 'row', alignSelf: 'stretch', justifyContent: 'space-around' },
-  heroStat: { flex: 1, alignItems: 'center', gap: 4 },
-  heroStatDivider: { width: 1, marginVertical: 2 },
-  heroStatValue: { fontSize: fs(17), lineHeight: 22, ...ff('600') },
-  heroStatLabel: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('600') },
+  heroStats: { flexDirection: 'row', alignSelf: 'stretch', alignItems: 'center' },
+  heroStat: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 4 },
+  heroStatDivider: { width: 1, height: 36, alignSelf: 'center' },
+  heroStatValue: { fontSize: fs(17), lineHeight: 28, ...ff('400') },
+  heroStatLabel: { fontSize: fs(11), lineHeight: 21, ...ff('600') },
   auditRow: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 14, paddingTop: 12, alignSelf: 'stretch', gap: 3 },
-  auditText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('400'), textAlign: 'center' },
+  auditText: { fontSize: fs(11), lineHeight: 21, ...ff('400'), textAlign: 'center' },
 
   /* Tab bar */
   tabBar: {
@@ -846,9 +1109,9 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
     gap: 5, paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
   tabItemActive: {},
-  tabLabel: { fontSize: fs(12.5), lineHeight: 17 },
+  tabLabel: { fontSize: fs(12.5), lineHeight: 23 },
   tabBadge: { minWidth: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  tabBadgeText: { fontSize: fs(10.5), lineHeight: 14 },
+  tabBadgeText: { fontSize: fs(10.5), lineHeight: 14, includeFontPadding: false },
 
   /* New Loan button */
   newLoanBtn: {
@@ -863,7 +1126,7 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
 
   /* Upload button */
   uploadBtn: {
-    borderRadius: 14, backgroundColor: '#6366F1', marginBottom: 16,
+    borderRadius: 14, backgroundColor: '#00C2B2', marginBottom: 16,
     ...Platform.select({
       ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.22, shadowRadius: 10 },
       android: { elevation: 6 },
@@ -874,9 +1137,9 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
 
   /* Section headers */
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 },
-  sectionTitle: { ...ff('600'), lineHeight: 16, letterSpacing: 0 },
+  sectionTitle: { ...ff('600'), lineHeight: 22, letterSpacing: 0 },
   sectionBadge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  sectionBadgeText: { ...ff('600'), lineHeight: 15, textAlign: 'center' },
+  sectionBadgeText: { ...ff('600'), lineHeight: 21, textAlign: 'center' },
 
   /* Loan card */
   loanRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
@@ -884,23 +1147,23 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
   loanDotInner: { width: 11, height: 11, borderRadius: 6 },
   loanInfo: { flex: 1 },
   loanTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  loanPrincipal: { fontSize: fs(16), lineHeight: 21, ...ff('600') },
+  loanPrincipal: { fontSize: fs(16), lineHeight: 27, ...ff('400') },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  statusText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('600') },
-  loanMeta: { fontSize: fs(12), lineHeight: 16, ...ff('400') },
-  accruingText: { fontSize: fs(12), lineHeight: 16, color: '#F59E0B', ...ff('600'), marginTop: 2 },
+  statusText: { fontSize: fs(11), lineHeight: 21, ...ff('600') },
+  loanMeta: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
+  accruingText: { fontSize: fs(12), lineHeight: 22, color: '#F59E0B', ...ff('600'), marginTop: 2 },
 
   /* Payment rows */
   payRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 },
   payDateBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10 },
-  payDateText: { fontSize: fs(11.5), lineHeight: 15 },
+  payDateText: { fontSize: fs(11.5), lineHeight: 21 },
   payBreakdown: { flex: 1, gap: 2 },
   payLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  payLabel: { fontSize: fs(11.5), lineHeight: 15 },
-  payValue: { fontSize: fs(13), lineHeight: 17 },
-  payTotal: { fontSize: fs(15), lineHeight: 20 },
+  payLabel: { fontSize: fs(11.5), lineHeight: 21 },
+  payValue: { fontSize: fs(13), lineHeight: 23 },
+  payTotal: { fontSize: fs(15), lineHeight: 26 },
   payNotes: {
-    fontSize: fs(12), lineHeight: 16, paddingHorizontal: 14, paddingBottom: 12,
+    fontSize: fs(12), lineHeight: 22, paddingHorizontal: 14, paddingBottom: 12,
     borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 8, marginTop: -4,
   },
 
@@ -910,26 +1173,41 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
   fileThumbnail: {},
   fileVideoOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.2)' },
   fileNameBar: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 8, paddingVertical: 6 },
-  fileNameBarText: { color: '#fff', fontSize: fs(11), lineHeight: 14, ...ff('400') },
+  fileNameBarText: { color: '#fff', fontSize: fs(11), lineHeight: 20, ...ff('400') },
 
   /* Document row */
   fileDocRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   fileDocIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   fileDocInfo: { flex: 1 },
-  fileDocName: { fontSize: fs(14), lineHeight: 19 },
-  fileDocSize: { fontSize: fs(11.5), lineHeight: 15, marginTop: 2 },
+  fileDocName: { fontSize: fs(14), lineHeight: 25 },
+  fileDocSize: { fontSize: fs(11.5), lineHeight: 21, marginTop: 2 },
 
-  longPressHint: { fontSize: fs(11), lineHeight: 15, textAlign: 'center', marginTop: 8, marginBottom: 4 },
+  longPressHint: { fontSize: fs(11), lineHeight: 21, textAlign: 'center', marginTop: 8, marginBottom: 4 },
 
   /* Empty */
   emptyWrap: { alignItems: 'center', gap: 10, paddingTop: 32, paddingBottom: 16 },
   emptyIconWrap: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   emptyText: { ...ff('600'), lineHeight: 21 },
-  emptyHint: { lineHeight: 18, ...ff('400') },
+  emptyHint: { lineHeight: 24, ...ff('400') },
 
   /* Delete */
   deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 20, paddingVertical: 15, borderRadius: 14, borderWidth: 1 },
-  deleteBtnText: { ...ff('600'), lineHeight: 19, color: '#EF4444' },
+  deleteBtnText: { ...ff('600'), lineHeight: 25, color: '#EF4444' },
+
+  /* Merge */
+  mergeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 20, paddingVertical: 15, borderRadius: 14, borderWidth: 1 },
+  mergeBtnText: { fontSize: fs(14), lineHeight: 25, color: '#F59E0B', letterSpacing: 0, ...ff('600') },
+  mergeSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%', paddingBottom: 24 },
+  pickerHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
+  mergeSheetTitle: { fontSize: fs(16), lineHeight: 27, letterSpacing: 0, ...ff('700'), textAlign: 'center', marginBottom: 12 },
+  mergeSearchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 12, height: 40, borderRadius: 12, borderWidth: 1 },
+  mergeSearchInput: { flex: 1, fontSize: fs(14), letterSpacing: 0 },
+  mergeSectionHeader: { fontSize: fs(11), lineHeight: 21, letterSpacing: 0, ...ff('700'), paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
+  mergeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14 },
+  mergeAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  mergeAvatarText: { fontSize: fs(15), lineHeight: 26, letterSpacing: 0 },
+  mergeName: { fontSize: fs(14), lineHeight: 25, letterSpacing: 0, marginBottom: 1 },
+  mergePhone: { fontSize: fs(12), lineHeight: 23, letterSpacing: 0 },
 
   /* Edit modal */
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
@@ -943,6 +1221,12 @@ const makeStyles = (fs, ff, isKhmer = false, isDark = false) => StyleSheet.creat
   modalSave: { ...ff('600'), lineHeight: 20 },
   inputWrap: { borderRadius: 12, overflow: 'hidden' },
   editInput: { height: 50, paddingHorizontal: 14 },
+  editPhotoBtn: { position: 'relative' },
+  editPhotoCircle: { width: 80, height: 80, borderRadius: 40 },
+  editPhotoCam: { position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  socialInputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, overflow: 'hidden' },
+  socialInputIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  socialInputField: { flex: 1, height: 48, paddingHorizontal: 12, lineHeight: 20, letterSpacing: 0, ...ff('400') },
 
   /* Image viewer */
   imgViewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },

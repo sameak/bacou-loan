@@ -6,8 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import {
   FlatList,
+  Image,
   Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -22,14 +24,17 @@ import { formatCurrency } from '../../services/loanService';
 import GlassCard from '../../components/GlassCard';
 import { Skeleton } from '../../components/Skeleton';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
+const RED    = '#EF4444';
 
-// Palette of accent colors for avatars — cycles by first-letter charCode
-const AVATAR_COLORS = ['#6366F1','#8B5CF6','#EC4899','#F59E0B','#10B981','#3B82F6','#EF4444','#14B8A6'];
+const AVATAR_COLORS = ['#00C2B2','#8B5CF6','#EC4899','#F59E0B','#10B981','#3B82F6','#EF4444','#14B8A6'];
 function avatarColor(name) {
   if (!name) return ACCENT;
   return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 }
+
+const FILTERS = ['all', 'active', 'overdue', 'noLoans'];
+const SORTS   = ['nameAsc', 'outstandingDesc', 'loansDesc'];
 
 const T = {
   en: {
@@ -37,20 +42,38 @@ const T = {
     search: 'Search name or phone...',
     empty: 'No borrowers yet',
     emptyHint: 'Add your first borrower to get started',
-    activeLoans: (n) => `${n} active loan${n !== 1 ? 's' : ''}`,
+    activeLoans: (n) => `${n} loan${n !== 1 ? 's' : ''}`,
     noLoans: 'No active loans',
     outstanding: 'Outstanding',
     borrowerCount: (n) => `${n} borrower${n !== 1 ? 's' : ''}`,
+    // Filters
+    filterAll:     'All',
+    filterActive:  'Active',
+    filterOverdue: 'Overdue',
+    filterNoLoans: 'No Loans',
+    // Sort
+    sortNameAsc:        'Name A→Z',
+    sortOutstandingDesc:'Amount ↓',
+    sortLoansDesc:      'Loans ↓',
   },
   km: {
-    title: 'អ្នកខ្ចី',
+    title: 'អតិថិជន',
     search: 'ស្វែងរកឈ្មោះ ឬលេខទូរសព្ទ...',
-    empty: 'មិនទាន់មានអ្នកខ្ចីទេ',
-    emptyHint: 'បន្ថែមអ្នកខ្ចីដំបូងរបស់អ្នក',
-    activeLoans: (n) => `${n} ប្រាក់កម្ចី`,
-    noLoans: 'គ្មានប្រាក់កម្ចី',
-    outstanding: 'នៅជំពាក់',
+    empty: 'មិនទាន់មានអតិថិជនទេ',
+    emptyHint: 'បន្ថែមអតិថិជនដំបូងរបស់អ្នក',
+    activeLoans: (n) => `${n} កម្ចី`,
+    noLoans: 'គ្មានកម្ចី',
+    outstanding: 'កម្ចីដែលបានផ្តល់',
     borrowerCount: (n) => `${n} នាក់`,
+    // Filters
+    filterAll:     'ទាំងអស់',
+    filterActive:  'ដំណើរការ',
+    filterOverdue: 'ហួសកំណត់',
+    filterNoLoans: 'គ្មានកម្ចី',
+    // Sort
+    sortNameAsc:        'ឈ្មោះ ក→ឬ',
+    sortOutstandingDesc:'ចំនួន ↓',
+    sortLoansDesc:      'កម្ចី ↓',
   },
 };
 
@@ -59,25 +82,38 @@ const BorrowerListScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
-  const isKhmer = language === 'km';
-  const styles = useMemo(() => makeStyles(fs, ff, isKhmer), [fs, ff, isKhmer]);
+  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
 
   const { borrowers, loans, borrowersLoaded } = useData();
-  const [search, setSearch] = useState('');
-  const loading = !borrowersLoaded;
+  const [search, setSearch]     = useState('');
+  const [filter, setFilter]     = useState('all');
+  const [sort, setSort]         = useState('nameAsc');
   const [refreshing, setRefreshing] = useState(false);
+  const loading = !borrowersLoaded;
 
-  // Build per-borrower stats
+  const cycleSort = () => {
+    const idx = SORTS.indexOf(sort);
+    setSort(SORTS[(idx + 1) % SORTS.length]);
+  };
+
+  const sortLabel = {
+    nameAsc:        t.sortNameAsc,
+    outstandingDesc:t.sortOutstandingDesc,
+    loansDesc:      t.sortLoansDesc,
+  }[sort];
+
+  // Build per-borrower stats (active + overdue)
   const borrowerStats = useMemo(() => {
     const map = {};
     for (const loan of loans) {
       if (!map[loan.borrowerId]) {
-        map[loan.borrowerId] = { activeCount: 0, outstanding: 0, currency: loan.currency ?? 'USD' };
+        map[loan.borrowerId] = { activeCount: 0, overdueCount: 0, outstanding: 0, currency: loan.currency ?? 'USD' };
       }
-      if (loan.status !== 'paid') {
+      if (loan.status === 'active' || loan.status === 'overdue') {
         map[loan.borrowerId].activeCount++;
         map[loan.borrowerId].outstanding += loan.currentPrincipal ?? 0;
         map[loan.borrowerId].currency = loan.currency ?? map[loan.borrowerId].currency;
+        if (loan.status === 'overdue') map[loan.borrowerId].overdueCount++;
       }
     }
     return map;
@@ -88,18 +124,43 @@ const BorrowerListScreen = ({ navigation }) => {
     setTimeout(() => setRefreshing(false), 800);
   };
 
+  // Filter → sort pipeline
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return borrowers;
-    return borrowers.filter(b =>
+    let result = borrowers;
+
+    // Search
+    if (q) result = result.filter(b =>
       b.name.toLowerCase().includes(q) || (b.phone || '').includes(q)
     );
-  }, [borrowers, search]);
+
+    // Filter
+    if (filter === 'active')  result = result.filter(b => (borrowerStats[b.id]?.activeCount ?? 0) > 0);
+    if (filter === 'overdue') result = result.filter(b => (borrowerStats[b.id]?.overdueCount ?? 0) > 0);
+    if (filter === 'noLoans') result = result.filter(b => (borrowerStats[b.id]?.activeCount ?? 0) === 0);
+
+    // Sort
+    result = [...result];
+    if (sort === 'nameAsc')         result.sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === 'outstandingDesc') result.sort((a, b) => (borrowerStats[b.id]?.outstanding ?? 0) - (borrowerStats[a.id]?.outstanding ?? 0));
+    if (sort === 'loansDesc')       result.sort((a, b) => (borrowerStats[b.id]?.activeCount ?? 0) - (borrowerStats[a.id]?.activeCount ?? 0));
+
+    return result;
+  }, [borrowers, search, filter, sort, borrowerStats]);
+
+  const filterLabels = {
+    all:     t.filterAll,
+    active:  t.filterActive,
+    overdue: t.filterOverdue,
+    noLoans: t.filterNoLoans,
+  };
 
   const renderItem = ({ item }) => {
-    const stats = borrowerStats[item.id] ?? { activeCount: 0, outstanding: 0, currency: 'USD' };
-    const aColor = avatarColor(item.name);
-    const hasActive = stats.activeCount > 0;
+    const stats   = borrowerStats[item.id] ?? { activeCount: 0, overdueCount: 0, outstanding: 0, currency: 'USD' };
+    const aColor  = avatarColor(item.name);
+    const hasActive  = stats.activeCount > 0;
+    const hasOverdue = stats.overdueCount > 0;
+    const rowColor   = hasOverdue ? RED : aColor;
 
     return (
       <TouchableOpacity
@@ -110,11 +171,17 @@ const BorrowerListScreen = ({ navigation }) => {
         <GlassCard>
           <View style={styles.cardRow}>
             {/* Avatar */}
-            <View style={[styles.avatar, { backgroundColor: aColor + '22' }]}>
-              <Text style={[styles.avatarText, { color: aColor }]}>
-                {item.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+            {item.photoURL ? (
+              <View style={[styles.avatar, { overflow: 'hidden' }]}>
+                <Image source={{ uri: item.photoURL }} style={styles.avatarImg} />
+              </View>
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: rowColor + '22' }]}>
+                <Text style={[styles.avatarText, { color: rowColor }]}>
+                  {item.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
 
             {/* Info */}
             <View style={styles.info}>
@@ -128,11 +195,11 @@ const BorrowerListScreen = ({ navigation }) => {
             <View style={styles.statsCol}>
               {hasActive ? (
                 <>
-                  <Text style={[styles.outstandingAmt, { color: aColor }]}>
+                  <Text style={[styles.outstandingAmt, { color: rowColor }]}>
                     {formatCurrency(stats.outstanding, stats.currency)}
                   </Text>
-                  <View style={[styles.loanCountChip, { backgroundColor: aColor + '18' }]}>
-                    <Text style={[styles.loanCountText, { color: aColor }]}>
+                  <View style={[styles.loanCountChip, { backgroundColor: rowColor + '18' }]}>
+                    <Text style={[styles.loanCountText, { color: rowColor }]}>
                       {t.activeLoans(stats.activeCount)}
                     </Text>
                   </View>
@@ -169,11 +236,17 @@ const BorrowerListScreen = ({ navigation }) => {
     </View>
   );
 
+  const pillBg = (active) => active
+    ? ACCENT
+    : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)');
+
   return (
     <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
+
+        {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.title, { color: colors.text }]}>{t.title}</Text>
             {!loading && borrowers.length > 0 && (
               <Text style={[styles.subtitle, { color: colors.textMuted }]}>
@@ -181,6 +254,15 @@ const BorrowerListScreen = ({ navigation }) => {
               </Text>
             )}
           </View>
+          {/* Sort button */}
+          <TouchableOpacity
+            style={[styles.sortBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
+            onPress={cycleSort}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="funnel-outline" size={14} color={ACCENT} />
+            <Text style={[styles.sortBtnText, { color: ACCENT }, ff('600')]}>{sortLabel}</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Search */}
@@ -200,6 +282,34 @@ const BorrowerListScreen = ({ navigation }) => {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Filter pills */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterBar}
+          contentContainerStyle={styles.filterBarContent}
+        >
+          {FILTERS.map(f => {
+            const active = filter === f;
+            return (
+              <TouchableOpacity
+                key={f}
+                style={[styles.filterPill, { backgroundColor: pillBg(active) }]}
+                onPress={() => setFilter(f)}
+                activeOpacity={0.7}
+              >
+                {f === 'overdue' && (
+                  <View style={[styles.filterDot, { backgroundColor: active ? '#fff' : RED }]} />
+                )}
+                <Text style={[styles.filterPillText, { color: active ? '#fff' : colors.textMuted }, ff(active ? '600' : '400')]}>
+                  {filterLabels[f]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
       </SafeAreaView>
 
       {loading ? renderSkeleton() : (
@@ -236,36 +346,55 @@ const BorrowerListScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
+const makeStyles = (fs, ff) => StyleSheet.create({
   root: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  title: { fontSize: fs(28), ...(isKhmer ? {} : { lineHeight: 34 }), ...ff('600'), letterSpacing: 0 },
+  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  title: { fontSize: fs(28), lineHeight: 40, ...ff('600'), letterSpacing: 0 },
   subtitle: { fontSize: fs(13), lineHeight: 18, ...ff('400'), marginTop: 1 },
+
+  // Sort button
+  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, flexShrink: 0 },
+  sortBtnText: { fontSize: fs(12), lineHeight: 17, letterSpacing: 0 },
+
+  // Search
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: 16, marginTop: 8, marginBottom: 4,
-    paddingHorizontal: 14, height: 44, borderRadius: 14,
-    borderWidth: 1,
+    marginHorizontal: 16, marginTop: 8, marginBottom: 0,
+    paddingHorizontal: 14, height: 44, borderRadius: 14, borderWidth: 1,
   },
   searchInput: { flex: 1, fontSize: fs(15), lineHeight: 20, ...ff('400') },
-  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100, gap: 8 },
+
+  // Filter pills
+  filterBar: { marginTop: 10 },
+  filterBarContent: { paddingHorizontal: 16, gap: 8, flexDirection: 'row', paddingBottom: 4 },
+  filterPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
+  filterPillText: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
+  filterDot: { width: 6, height: 6, borderRadius: 3 },
+
+  // List
+  list: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 100, gap: 8 },
   listEmpty: { flexGrow: 1, justifyContent: 'center' },
   cardWrap: {},
   cardRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  avatarImg: { width: 48, height: 48 },
   avatarText: { fontSize: fs(20), lineHeight: 26, ...ff('600'), textAlign: 'center' },
   info: { flex: 1, minWidth: 0 },
-  name: { fontSize: fs(15), lineHeight: 20, ...ff('400'), marginBottom: 2 },
+  name: { fontSize: fs(14), lineHeight: 19, ...ff('400'), marginBottom: 2 },
   phone: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
   statsCol: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
-  outstandingAmt: { fontSize: fs(14), lineHeight: 19, ...ff('600') },
+  outstandingAmt: { fontSize: fs(14), lineHeight: 19, ...ff('400') },
   loanCountChip: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  loanCountText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('600') },
+  loanCountText: { fontSize: fs(11), lineHeight: 21, ...ff('400') },
   noLoansText: { fontSize: fs(12), lineHeight: 16, ...ff('400') },
+
+  // Empty
   emptyWrap: { alignItems: 'center', gap: 12, paddingBottom: 80 },
   emptyIconWrap: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   emptyText: { fontSize: fs(17), lineHeight: 22, ...ff('600') },
   emptyHint: { fontSize: fs(14), lineHeight: 19, ...ff('400') },
+
+  // FAB
   fab: {
     position: 'absolute', right: 24,
     width: 56, height: 56, borderRadius: 28,

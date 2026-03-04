@@ -22,7 +22,7 @@ import GlassCard from '../../components/GlassCard';
 import { listenAllSessions, removeSession } from '../../services/sessionService';
 import { auth } from '../../services/firebase';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 
 // ── Status helpers ─────────────────────────────────────────────────────────────
 
@@ -103,8 +103,8 @@ const T = {
     removeCancel: 'បោះបង់',
     createdLoan:  'បង្កើតប្រាក់កម្ចី',
     editedLoan:   'កែប្រាក់កម្ចី',
-    createdBorrower: 'បន្ថែមអ្នកខ្ចី',
-    editedBorrower:  'កែអ្នកខ្ចី',
+    createdBorrower: 'បន្ថែមអតិថិជន',
+    editedBorrower:  'កែអតិថិជន',
     for:          'សម្រាប់',
     by:           'ដោយ',
     secNone:      'គ្មានសោ',
@@ -284,7 +284,7 @@ export default function AdminScreen({ navigation }) {
                 {/* Security method badges */}
                 <View style={styles.secBadgeRow}>
                   {s.biometricEnabled ? (
-                    <View style={[styles.secBadge, { backgroundColor: '#6366F118' }]}>
+                    <View style={[styles.secBadge, { backgroundColor: '#00C2B218' }]}>
                       <Ionicons
                         name={s.biometricType === 'faceId' ? 'scan-outline' : 'finger-print'}
                         size={11}

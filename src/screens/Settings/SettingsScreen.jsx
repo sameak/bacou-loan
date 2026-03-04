@@ -23,7 +23,7 @@ import {
   Vibration,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth } from '../../services/firebase';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -31,7 +31,7 @@ import { useAppLock } from '../../context/AppLockContext';
 import GlassCard from '../../components/GlassCard';
 import Toast from '../../components/Toast';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 
 // Phone numbers that have admin access (E.164 and local formats)
 const ADMIN_PHONES = ['+85512514608', '+821079274494', '012514608', '01079274494'];
@@ -95,7 +95,7 @@ const T = {
     title: 'ម៉ឺនុយ',
     tools: 'ឧបករណ៍',
     toolAssets: 'ទ្រព្យ',
-    toolRates: 'ប្តូរប្រាក់',
+    toolRates: 'ហាងឆេងប្តូរប្រាក់',
     toolReports: 'របាយការណ៍',
     toolCapital: 'ដើមទុន',
     appearance: 'រូបរាង',
@@ -170,10 +170,10 @@ const Row = ({ label, right, onPress, colors, last, isDark }) => {
 };
 
 const SettingsScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { colors, isDark, themeMode, setThemeMode } = useTheme();
   const { language, setLanguage, fs, ff, fi } = useLanguage();
-  const isKhmer = language === 'km';
-  const styles = useMemo(() => makeStyles(fs, ff, isKhmer), [fs, ff, isKhmer]);
+  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
   const { biometricAvailable, biometricEnabled, pinEnabled, toggleBiometric, removePIN, verifyPIN } = useAppLock();
   const t = T[language] || T.en;
 
@@ -271,12 +271,12 @@ const SettingsScreen = ({ navigation }) => {
         </View>
       </SafeAreaView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
         {/* Tools row */}
         <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t.tools}</Text>
         <View style={styles.toolsRow}>
           {[
-            { icon: 'wallet-outline',          label: t.toolAssets,   color: '#6366F1', screen: 'Assets'        },
+            { icon: 'wallet-outline',          label: t.toolAssets,   color: '#00C2B2', screen: 'Assets'        },
             { icon: 'swap-horizontal-outline', label: t.toolRates,    color: '#F59E0B', screen: 'ExchangeRates' },
             { icon: 'bar-chart-outline',       label: t.toolReports,  color: '#10B981', screen: 'Reports'       },
             { icon: 'cash-outline',            label: t.toolCapital,  color: '#EC4899', screen: 'Capital'       },
@@ -549,10 +549,10 @@ const SettingsScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
+const makeStyles = (fs, ff) => StyleSheet.create({
   root: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  title: { fontSize: fs(28), ...(isKhmer ? {} : { lineHeight: 34 }), ...ff('800'), letterSpacing: 0 },
+  title: { fontSize: fs(28), lineHeight: 40, ...ff('800'), letterSpacing: 0 },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
   // Theme segment
   themeSegmentWrap: { flexDirection: 'row', padding: 8, gap: 6 },
@@ -572,7 +572,7 @@ const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 14, minHeight: 52 },
   rowLabel: { fontSize: fs(15), lineHeight: 20, ...ff('400'), flex: 1 },
   sessionText: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
-  pinStatus:   { fontSize: fs(13), lineHeight: 18, ...ff('600') },
+  pinStatus:   { fontSize: fs(13), lineHeight: 18, ...ff('400') },
   version: { fontSize: fs(12), lineHeight: 16, ...ff('400'), textAlign: 'center', marginTop: 8 },
   // PIN verify modal
   pinModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },

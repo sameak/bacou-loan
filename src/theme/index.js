@@ -1,12 +1,12 @@
 /**
  * THEME SYSTEM — Bacou Loan
- * Accent: #6366F1 (indigo)
+ * Accent: #00C2B2 (indigo)
  */
 
 import { Platform } from 'react-native';
 
 export const lightColors = {
-  primary: '#6366F1',
+  primary: '#00C2B2',
   primaryDark: '#4f46e5',
 
   danger: '#EF4444',
@@ -24,7 +24,7 @@ export const lightColors = {
 
 export const darkColors = {
   primary: '#818cf8',
-  primaryDark: '#6366F1',
+  primaryDark: '#00C2B2',
 
   danger: '#FF8A8A',
   warning: '#FFD97A',

@@ -25,7 +25,7 @@ import {
   removeSession,
 } from '../../services/sessionService';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 
 const T = {
   en: {
@@ -249,7 +249,7 @@ const makeStyles = (ff) => StyleSheet.create({
   iconWrap:  { width: 42, height: 42, borderRadius: 13, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   info:      { flex: 1 },
   nameRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 },
-  deviceName:{ ...ff('600'), lineHeight: 20 },
+  deviceName:{ ...ff('400'), lineHeight: 20 },
   badge:     { backgroundColor: ACCENT, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   badgeText: { color: '#fff', ...ff('700'), lineHeight: 15 },
   meta:      { marginTop: 2, lineHeight: 18, ...ff('400') },

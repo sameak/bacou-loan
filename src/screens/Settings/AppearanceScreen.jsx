@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 
 // ── Mini phone mockup ──────────────────────────────────────────────────────────
 

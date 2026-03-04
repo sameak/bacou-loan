@@ -33,7 +33,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import Toast from '../../components/Toast';
 import CalendarPopup from '../../components/CalendarPopup';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 
 const T = {
   en: {
@@ -70,11 +70,11 @@ const T = {
     cancel: 'បោះបង់',
     save: 'កត់ត្រា',
     period: 'ដំណាក់',
-    selectPeriod: 'ជ្រើសដំណាក់ (ស្រេចចិត្ត)',
+    selectPeriod: 'ជ្រើសដំណាក់',
     principalPaid: 'ប្រាក់ដើម',
     interestPaid: 'ការប្រាក់',
     date: 'កាលបរិច្ឆេទ',
-    notes: 'កំណត់ចំណាំ (ស្រេចចិត្ត)',
+    notes: 'កំណត់ចំណាំ',
     notesPlaceholder: 'កំណត់ចំណាំ...',
     accruedInfo: (days, amount, currency) => `ប្រូងក្នុង ${days} ថ្ងៃ: ${formatCurrency(amount, currency)}`,
     errDate: 'បញ្ចូលកាលបរិច្ឆេទ',
@@ -89,7 +89,7 @@ const T = {
     confirmDelete: 'លុបការបង់នេះ? ប្រាក់ដើមនឹងត្រូវវិលត្រឡប់។',
     confirmDeleteYes: 'លុប',
     confirmCancel: 'បោះបង់',
-    outstanding: 'នៅជំពាក់',
+    outstanding: 'កម្ចីដែលបានផ្តល់',
     dueThisPeriod: 'ត្រូវបង់',
     noPeriods: 'គ្មានដំណាក់',
     totalPayment: 'សរុបការបង់',
@@ -478,7 +478,7 @@ const makeStyles = (ff) => StyleSheet.create({
   emptyText: { fontSize: 14, textAlign: 'center', paddingVertical: 24 },
   periodRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 12 },
   periodInfo: { flex: 1 },
-  periodNum: { fontSize: 15, ...ff('600'), marginBottom: 2 },
+  periodNum: { fontSize: 15, ...ff('400'), marginBottom: 2 },
   periodDate: { fontSize: 13 },
   periodAmount: { fontSize: 15, ...ff('700') },
 });

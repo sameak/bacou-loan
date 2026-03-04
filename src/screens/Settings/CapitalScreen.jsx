@@ -25,7 +25,7 @@ import { listenCapital, listenCapitalHistory, saveCapital } from '../../services
 import GlassCard from '../../components/GlassCard';
 import Toast from '../../components/Toast';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 const GREEN  = '#10B981';
 
 // ── i18n ──────────────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ const T = {
     title:       'ដើមទុនខ្ញុំ',
     currentUSD:  'ដើមទុន USD',
     currentKHR:  'ដើមទុន KHR',
-    notSet:      'មិនទាន់កំណត់',
+    notSet:      'មិនទាន់បញ្ចូល',
     edit:        'កែ',
     save:        'រក្សាទុក',
     cancel:      'បោះបង់',
@@ -149,15 +149,15 @@ export default function CapitalScreen({ navigation }) {
           <GlassCard style={styles.card}>
             <View style={styles.currentRow}>
               <View style={styles.currentCol}>
-                <Text style={[styles.currLabel, ff('400'), { color: colors.subtext ?? '#8E8E93' }]}>{t.currentUSD}</Text>
-                <Text style={[styles.currValue, ff('700'), { color: capital.capitalUSD > 0 ? colors.text : (colors.subtext ?? '#8E8E93') }]}>
+                <Text style={[styles.currLabel, ff('600'), { color: colors.subtext ?? '#8E8E93' }]}>{t.currentUSD}</Text>
+                <Text style={[capital.capitalUSD > 0 ? styles.currValue : styles.currNotSet, ff('400'), { color: capital.capitalUSD > 0 ? colors.text : (colors.subtext ?? '#8E8E93') }]}>
                   {capital.capitalUSD > 0 ? fmtUSD(capital.capitalUSD) : t.notSet}
                 </Text>
               </View>
               <View style={[styles.currentDivider, { backgroundColor: 'rgba(120,120,128,0.2)' }]} />
               <View style={[styles.currentCol, { alignItems: 'flex-end' }]}>
-                <Text style={[styles.currLabel, ff('400'), { color: colors.subtext ?? '#8E8E93' }]}>{t.currentKHR}</Text>
-                <Text style={[styles.currValue, ff('700'), { color: capital.capitalKHR > 0 ? colors.text : (colors.subtext ?? '#8E8E93') }]}>
+                <Text style={[styles.currLabel, ff('600'), { color: colors.subtext ?? '#8E8E93' }]}>{t.currentKHR}</Text>
+                <Text style={[capital.capitalKHR > 0 ? styles.currValue : styles.currNotSet, ff('400'), { color: capital.capitalKHR > 0 ? colors.text : (colors.subtext ?? '#8E8E93') }]}>
                   {capital.capitalKHR > 0 ? fmtKHR(capital.capitalKHR) : t.notSet}
                 </Text>
               </View>
@@ -233,7 +233,7 @@ export default function CapitalScreen({ navigation }) {
                       <View style={[styles.avatarDot, { backgroundColor: ACCENT + '33' }]}>
                         <Ionicons name="person-outline" size={12} color={ACCENT} />
                       </View>
-                      <Text style={[styles.historyName, ff('600'), { color: colors.text }]} numberOfLines={1}>
+                      <Text style={[styles.historyName, ff('400'), { color: colors.text }]} numberOfLines={1}>
                         {entry.updatedByName ?? '—'}
                       </Text>
                     </View>
@@ -276,7 +276,7 @@ const makeStyles = (fs, ff) => StyleSheet.create({
     paddingLeft: 8, paddingRight: 16, paddingTop: 8, paddingBottom: 12,
   },
   backBtn:      { padding: 4 },
-  headerTitle:  { flex: 1, fontSize: fs(22), letterSpacing: 0, lineHeight: 28, paddingLeft: 4 },
+  headerTitle:  { flex: 1, fontSize: fs(22), letterSpacing: 0, lineHeight: 34, paddingLeft: 4 },
   editBtn:      { paddingHorizontal: 8, paddingVertical: 4 },
   editBtnText:  { fontSize: fs(15), letterSpacing: 0, lineHeight: 20 },
   scroll:  { flex: 1 },
@@ -287,8 +287,9 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   currentRow:   { flexDirection: 'row', alignItems: 'center', padding: 20 },
   currentCol:   { flex: 1 },
   currentDivider: { width: 1, height: 44, marginHorizontal: 16 },
-  currLabel:    { fontSize: fs(12), letterSpacing: 0, lineHeight: 16, marginBottom: 6 },
-  currValue:    { fontSize: fs(22), letterSpacing: 0, lineHeight: 28 },
+  currLabel:    { fontSize: fs(13), letterSpacing: 0, lineHeight: 24, marginBottom: 6 },
+  currValue:    { fontSize: fs(22), letterSpacing: 0, lineHeight: 34 },
+  currNotSet:   { fontSize: fs(14), letterSpacing: 0, lineHeight: 19 },
 
   // Edit form
   inputWrap:    { borderRadius: 10, borderWidth: 1, overflow: 'hidden' },

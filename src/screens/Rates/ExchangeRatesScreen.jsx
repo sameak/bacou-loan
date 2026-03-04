@@ -24,7 +24,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import GlassCard from '../../components/GlassCard';
 
-const ACCENT  = '#6366F1';
+const ACCENT  = '#00C2B2';
 const GREEN   = '#10B981';
 const GOLD_C  = '#F59E0B';
 
@@ -41,7 +41,7 @@ const FX_SOURCES = [
     id: 'fawaz',
     name: 'Currency-API',
     badge: 'CDN',
-    badgeColor: '#6366F1',
+    badgeColor: '#00C2B2',
     url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
     parse: d => ({ KHR: d?.usd?.khr, KRW: d?.usd?.krw }),
   },
@@ -64,6 +64,7 @@ const FX_SOURCES = [
   {
     id: 'nbc',
     name: 'Natl. Bank Cambodia',
+    namekm: 'ធនាគារជាតិ',
     badge: 'NBC',
     badgeColor: '#DC2626',
     type: 'html',
@@ -98,7 +99,7 @@ const GOLD_SOURCES = [
     id: 'fawaz_xau',
     name: 'Currency-API',
     badge: 'CDN',
-    badgeColor: '#6366F1',
+    badgeColor: '#00C2B2',
     url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.json',
     // xau.usd = price of 1 troy oz in USD; xau.khr = price in KHR
     parse: d => ({
@@ -120,6 +121,7 @@ const GOLD_SOURCES = [
   {
     id: 'yahoo_gc',
     name: 'Yahoo Finance',
+    namekm: 'Yahoo ហ្វាយណេន',
     badge: 'GC=F',
     badgeColor: '#6D28D9',
     url: 'https://query1.finance.yahoo.com/v8/finance/chart/GC%3DF?interval=1d&range=1d&includePrePost=false',
@@ -160,8 +162,8 @@ const T = {
   },
   km: {
     title: 'អត្រាទីផ្សារ',
-    tabFX:   'អត្រាប្ដូរ',
-    tabGold: 'តម្លៃមាស',
+    tabFX:   'អត្រាប្តូរប្រាក់',
+    tabGold: 'ហាងឆេងមាស',
     subtitle: '1 ដុល្លា ស្មើ',
     updatedToday: 'ធ្វើបច្ចុប្បន្នភាពថ្ងៃនេះ',
     loading: 'កំពុងទាញ…',
@@ -339,7 +341,7 @@ const ExchangeRatesScreen = ({ navigation }) => {
                 style={[styles.srcRow, idx < fxSources.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
               >
                 <View style={styles.srcLeft}>
-                  <Text style={[styles.srcName, { color: colors.text }, ff('500')]}>{src.name}</Text>
+                  <Text style={[styles.srcName, { color: colors.text }, ff('500')]}>{(language === 'km' && src.namekm) ? src.namekm : src.name}</Text>
                   <View style={[styles.badge, { backgroundColor: src.badgeColor + '22' }]}>
                     <Text style={[styles.badgeText, { color: src.badgeColor }, ff('600')]}>{src.badge}</Text>
                   </View>
@@ -349,10 +351,8 @@ const ExchangeRatesScreen = ({ navigation }) => {
                     <Text style={[styles.errText, ff('500')]}>{t.error}</Text>
                   ) : (
                     <View style={styles.rateRow}>
-                      <Text style={[styles.rateSymbol, { color: isHigh ? GREEN : colors.textMuted }, ff('600')]}>{pair.symbol}</Text>
-                      <Text style={[styles.rateVal, { color: isHigh ? GREEN : colors.text }, ff('700')]}>{fmtNum(Math.round(val))}</Text>
-                      {isHigh && !isLow && <Ionicons name="arrow-up"   size={12} color={GREEN}    style={{ marginLeft: 3 }} />}
-                      {isLow  && !isHigh && <Ionicons name="arrow-down" size={12} color="#EF4444" style={{ marginLeft: 3 }} />}
+                      <Text style={[styles.rateSymbol, { color: isHigh && !isLow ? GREEN : isLow && !isHigh ? '#EF4444' : colors.textMuted }, ff('600')]}>{pair.symbol}</Text>
+                      <Text style={[styles.rateVal, { color: isHigh && !isLow ? GREEN : isLow && !isHigh ? '#EF4444' : colors.text }, ff('700')]}>{fmtNum(Math.round(val))}</Text>
                     </View>
                   )}
                 </View>
@@ -415,7 +415,7 @@ const ExchangeRatesScreen = ({ navigation }) => {
                   style={[styles.srcRow, idx < goldSources.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
                 >
                   <View style={styles.srcLeft}>
-                    <Text style={[styles.srcName, { color: colors.text }, ff('500')]}>{src.name}</Text>
+                    <Text style={[styles.srcName, { color: colors.text }, ff('500')]}>{(language === 'km' && src.namekm) ? src.namekm : src.name}</Text>
                     <View style={[styles.badge, { backgroundColor: src.badgeColor + '22' }]}>
                       <Text style={[styles.badgeText, { color: src.badgeColor }, ff('600')]}>{src.badge}</Text>
                     </View>
@@ -425,10 +425,8 @@ const ExchangeRatesScreen = ({ navigation }) => {
                       <Text style={[styles.errText, ff('500')]}>{t.error}</Text>
                     ) : (
                       <View style={styles.rateRow}>
-                        <Text style={[styles.rateSymbol, { color: isHigh ? GREEN : colors.textMuted }, ff('600')]}>$</Text>
-                        <Text style={[styles.rateVal, { color: isHigh ? GREEN : colors.text }, ff('700')]}>{fmtNum(Math.round(val))}</Text>
-                        {isHigh && !isLow && <Ionicons name="arrow-up"   size={12} color={GREEN}    style={{ marginLeft: 3 }} />}
-                        {isLow  && !isHigh && <Ionicons name="arrow-down" size={12} color="#EF4444" style={{ marginLeft: 3 }} />}
+                        <Text style={[styles.rateSymbol, { color: isHigh && !isLow ? GREEN : isLow && !isHigh ? '#EF4444' : colors.textMuted }, ff('600')]}>$</Text>
+                        <Text style={[styles.rateVal, { color: isHigh && !isLow ? GREEN : isLow && !isHigh ? '#EF4444' : colors.text }, ff('700')]}>{fmtNum(Math.round(val))}</Text>
                       </View>
                     )}
                   </View>
@@ -522,7 +520,7 @@ const ExchangeRatesScreen = ({ navigation }) => {
         {(activeSources ?? []).map(src => (
           <View key={src.id} style={[styles.legendItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
             <View style={[styles.legendDot, { backgroundColor: src.badgeColor }]} />
-            <Text style={[styles.legendText, { color: colors.textMuted }, ff('500')]}>{src.name}</Text>
+            <Text style={[styles.legendText, { color: colors.textMuted }, ff('500')]}>{(language === 'km' && src.namekm) ? src.namekm : src.name}</Text>
           </View>
         ))}
       </View>
@@ -640,7 +638,7 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   },
   backBtn:     { width: 40, alignItems: 'center', paddingVertical: 4 },
   refreshBtn:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: fs(17), lineHeight: 22, letterSpacing: 0 },
+  headerTitle: { fontSize: fs(17), lineHeight: 28, letterSpacing: 0 },
   headerSub:   { fontSize: fs(11), lineHeight: 15, letterSpacing: 0, marginTop: 1 },
 
   // Tab bar
@@ -653,7 +651,7 @@ const makeStyles = (ff, fs) => StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: 9, borderRadius: 12, borderWidth: 1,
   },
-  tabLabel: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
+  tabLabel: { fontSize: fs(13), lineHeight: 24, letterSpacing: 0 },
 
   // Legend
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
@@ -671,7 +669,7 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   // Pair header
   pairHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   pairFlag:   { fontSize: 28, lineHeight: 34 },
-  pairCode:   { fontSize: fs(18), lineHeight: 23, letterSpacing: 0 },
+  pairCode:   { fontSize: fs(18), lineHeight: 29, letterSpacing: 0 },
   pairName:   { fontSize: fs(12), lineHeight: 17, letterSpacing: 0 },
   basePill:   { borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 },
   basePillText: { fontSize: fs(11), lineHeight: 15, letterSpacing: 0 },

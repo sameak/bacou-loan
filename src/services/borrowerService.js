@@ -13,6 +13,8 @@ import {
   orderBy,
   serverTimestamp,
   onSnapshot,
+  writeBatch,
+  where,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -34,13 +36,13 @@ function getUserInfo() {
  * Create a new borrower.
  * Returns the new borrower document with id.
  */
-export async function createBorrower({ name, phone, address = '', notes = '' }) {
+export async function createBorrower({ name, phone, address = '', notes = '', photoURL = null, socialLinks = null }) {
   const uid = getUid();
   if (!uid) throw new Error('Not authenticated');
 
   const { name: userName } = getUserInfo();
 
-  const ref = await addDoc(collection(db, COLL), {
+  const docData = {
     ownerId: uid,
     name: name.trim(),
     phone: phone.trim(),
@@ -49,7 +51,11 @@ export async function createBorrower({ name, phone, address = '', notes = '' }) 
     createdBy: uid,
     createdByName: userName,
     createdAt: serverTimestamp(),
-  });
+  };
+  if (photoURL) docData.photoURL = photoURL;
+  if (socialLinks) docData.socialLinks = socialLinks;
+
+  const ref = await addDoc(collection(db, COLL), docData);
 
   return { id: ref.id, ownerId: uid, name, phone, address, notes };
 }
@@ -103,4 +109,20 @@ export function listenBorrowers(callback) {
     borrowers.sort((a, b) => a.name.localeCompare(b.name));
     callback(borrowers);
   }, err => console.error('borrower listener error:', err));
+}
+
+/**
+ * Merge fromBorrowerId into toBorrowerId.
+ * All loans are reassigned to the target borrower, then the source borrower is deleted.
+ */
+export async function mergeBorrowers(fromBorrowerId, toBorrowerId, toBorrowerName) {
+  const loansQ = query(collection(db, 'loans'), where('borrowerId', '==', fromBorrowerId));
+  const loansSnap = await getDocs(loansQ);
+
+  const batch = writeBatch(db);
+  loansSnap.docs.forEach(d => {
+    batch.update(d.ref, { borrowerId: toBorrowerId, borrowerName: toBorrowerName });
+  });
+  batch.delete(doc(db, COLL, fromBorrowerId));
+  await batch.commit();
 }

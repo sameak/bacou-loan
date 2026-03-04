@@ -24,7 +24,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import Toast from '../../components/Toast';
 import CalendarPopup from '../../components/CalendarPopup';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 const CURRENCIES = ['USD', 'KHR', 'KRW', 'Other'];
 const CURRENCY_LABELS = {
   km: { USD: 'ប្រាក់ដុល្លា', KHR: 'ប្រាក់រៀល', KRW: 'ប្រាក់វ៉ុន', Other: 'ផ្សេងៗ' },
@@ -76,8 +76,8 @@ const T = {
     save: 'បង្កើតប្រាក់កម្ចី',
     friendlyLoan: 'ប្រាក់កម្ចីអត់ការប្រាក់',
     friendlyLoanHint: '0% · បង់ពេលណាក៏បាន',
-    borrower: 'អ្នកខ្ចី',
-    selectBorrower: 'ជ្រើសរើសអ្នកខ្ចី...',
+    borrower: 'អតិថិជន',
+    selectBorrower: 'ជ្រើសរើសអតិថិជន...',
     currency: 'រូបិយប័ណ្ណ',
     principal: 'ចំនួនទឹកប្រាក់',
     principalPlaceholder: '0',
@@ -86,33 +86,33 @@ const T = {
     principalAndInterest: 'បង់ប្រាក់ដើម និង ការប្រាក់',
     interestBasis: 'មូលដ្ឋានការប្រាក់',
     flat: 'ការប្រាក់ថេរ',
-    reducing: 'ការប្រាក់ថយតាមប្រាក់ដើម',
+    reducing: 'ការប្រាក់ថយចុះ',
     rate: 'អត្រាការប្រាក់',
     ratePlaceholder: '3',
-    frequency: 'ភាពញឹកញាប់',
+    frequency: 'រយៈពេលបង់',
     weekly: 'ប្រចាំសប្ដាហ៍',
     monthly: 'ប្រចាំខែ',
-    schedule: 'កាលវិភាគ',
-    fixed: 'ចំនួនដំណាក់ថេរ',
-    open: 'បើក',
-    periods: 'ចំនួនដំណាក់',
+    schedule: 'កាលវិភាគបង់ប្រាក់',
+    fixed: 'បង់តាមកាលកំណត់',
+    open: 'មិនកំណត់ពេល',
+    periods: 'ចំនួនដំណាក់កាល',
     periodsPlaceholder: '12',
-    startDate: 'កាលបរិច្ឆេទចាប់ផ្ដើម',
-    notes: 'កំណត់ចំណាំ (ស្រេចចិត្ត)',
+    startDate: 'កាលបរិច្ឆេទចាប់ផ្ដើមបង់ប្រាក់',
+    notes: 'កំណត់ចំណាំ',
     notesPlaceholder: 'កំណត់ចំណាំ...',
-    errBorrower: 'ជ្រើសរើសអ្នកខ្ចី',
+    errBorrower: 'ជ្រើសរើសអតិថិជន',
     errPrincipal: 'បញ្ចូលចំនួនទឹកប្រាក់',
     errRate: 'បញ្ចូលអត្រាការប្រាក់',
-    errPeriods: 'បញ្ចូលចំនួនដំណាក់',
+    errPeriods: 'បញ្ចូលចំនួនដំណាក់កាល',
     errDate: 'បញ្ចូលកាលបរិច្ឆេទ',
     created: 'បានបង្កើតប្រាក់កម្ចីដោយជោគជ័យ',
-    searchBorrower: 'ស្វែងរកអ្នកខ្ចី...',
-    addBorrower: '+ បន្ថែមអ្នកខ្ចីថ្មី',
+    searchBorrower: 'ស្វែងរកអតិថិជន...',
+    addBorrower: '+ បន្ថែមអតិថិជនថ្មី',
   },
 };
 
 const ToggleGroup = ({ options, value, onChange, colors, isDark }) => {
-  const { ff } = useLanguage();
+  const { ff, fs } = useLanguage();
   return (
     <View style={[{ flexDirection: 'row', borderRadius: 12, padding: 3, marginBottom: 4 }, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
       {options.map(opt => {
@@ -124,7 +124,7 @@ const ToggleGroup = ({ options, value, onChange, colors, isDark }) => {
             onPress={() => onChange(opt.value)}
             activeOpacity={0.8}
           >
-            <Text style={[{ fontSize: 13, lineHeight: 18, ...ff('600') }, { color: active ? (isDark ? '#000' : '#fff') : colors.textMuted }]}>
+            <Text style={[{ fontSize: fs(13), lineHeight: 18, letterSpacing: 0, ...ff('600') }, { color: active ? (isDark ? '#000' : '#fff') : colors.textMuted }]}>
               {opt.label}
             </Text>
           </TouchableOpacity>
@@ -136,10 +136,9 @@ const ToggleGroup = ({ options, value, onChange, colors, isDark }) => {
 
 const CreateLoanScreen = ({ navigation, route }) => {
   const { colors, isDark } = useTheme();
-  const { language, ff, fi } = useLanguage();
+  const { language, ff, fi, fs } = useLanguage();
   const t = T[language] || T.en;
-
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const styles = useMemo(() => makeStyles(ff, fs), [ff, fs]);
   const scrollRef = useRef(null);
 
   // Pre-fill from BorrowerDetail or DashboardScreen FAB
@@ -380,7 +379,7 @@ const CreateLoanScreen = ({ navigation, route }) => {
             onPress={() => { setShowDatePicker(true); if (errors.startDate) setErrors(e => ({ ...e, startDate: null })); }}
             activeOpacity={0.7}
           >
-            <Text style={{ color: startDate ? colors.text : colors.textMuted, fontSize: 15 }}>
+            <Text style={{ color: startDate ? colors.text : colors.textMuted, fontSize: fs(15), letterSpacing: 0 }}>
               {startDate || 'Select date'}
             </Text>
           </TouchableOpacity>
@@ -499,16 +498,16 @@ const CreateLoanScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (ff) => StyleSheet.create({
+const makeStyles = (ff, fs) => StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 64, paddingVertical: 4 },
-  headerBtnText: { fontSize: 15, ...ff('500') },
-  headerTitle: { fontSize: 18, ...ff('700') },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 80, gap: 4 },
+  headerBtnText: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('500') },
+  headerTitle: { fontSize: fs(18), lineHeight: 29, letterSpacing: 0, ...ff('700') },
+  content: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 80, gap: 8 },
   presetChip: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     borderWidth: 1, borderRadius: 14,
@@ -516,21 +515,21 @@ const makeStyles = (ff) => StyleSheet.create({
     marginBottom: 8,
   },
   presetIcon: { fontSize: 22 },
-  presetTitle: { fontSize: 14, fontWeight: '700', marginBottom: 1 },
-  presetHint: { fontSize: 12, opacity: 0.8 },
-  label: { fontSize: 11, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 12 },
-  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15, ...ff('400') },
+  presetTitle: { fontSize: fs(14), lineHeight: 25, letterSpacing: 0, ...ff('700'), marginBottom: 1 },
+  presetHint: { fontSize: fs(12), lineHeight: 22, letterSpacing: 0, opacity: 0.8 },
+  label: { fontSize: fs(11), lineHeight: 21, letterSpacing: 0, ...ff('700'), marginBottom: 4, marginTop: 24 },
+  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: fs(15), letterSpacing: 0, ...ff('400') },
   multiline: { height: 90, paddingTop: 14, textAlignVertical: 'top' },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },
-  errText: { fontSize: 12, color: '#EF4444', marginTop: 4, marginLeft: 4 },
+  errText: { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, color: '#EF4444', marginTop: 4, marginLeft: 4 },
   currencyRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
   currencyBtn: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: 13, ...ff('700') },
+  currencyText: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0, ...ff('700') },
   rateWrap: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 14, paddingHorizontal: 16 },
-  rateInput: { flex: 1, fontSize: 15, ...ff('400') },
-  rateSuffix: { fontSize: 16, ...ff('700'), marginLeft: 8 },
+  rateInput: { flex: 1, fontSize: fs(15), letterSpacing: 0, ...ff('400') },
+  rateSuffix: { fontSize: fs(16), lineHeight: 21, letterSpacing: 0, ...ff('700'), marginLeft: 8 },
   pickerRow: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 14, paddingHorizontal: 16 },
-  pickerText: { flex: 1, fontSize: 15, ...ff('400') },
+  pickerText: { flex: 1, fontSize: fs(15), letterSpacing: 0, ...ff('400') },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },
   saveBtn: {
     height: 56, borderRadius: 16, backgroundColor: ACCENT,
@@ -540,7 +539,7 @@ const makeStyles = (ff) => StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
-  saveBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
+  saveBtnText: { color: '#fff', fontSize: fs(16), lineHeight: 21, letterSpacing: 0, ...ff('700') },
   // Borrower picker modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   pickerSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%', paddingBottom: 24 },
@@ -550,18 +549,18 @@ const makeStyles = (ff) => StyleSheet.create({
     marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 12,
     height: 42, borderRadius: 12, borderWidth: 1,
   },
-  pickerSearch: { flex: 1, fontSize: 15 },
+  pickerSearch: { flex: 1, fontSize: fs(15), letterSpacing: 0 },
   addBorrowerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 20, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  addBorrowerText: { fontSize: 15, ...ff('600') },
+  addBorrowerText: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('600') },
   borrowerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14 },
   borrowerAvatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  borrowerAvatarText: { fontSize: 16, ...ff('700') },
-  borrowerName: { fontSize: 15, ...ff('500'), marginBottom: 1 },
-  borrowerPhone: { fontSize: 13 },
+  borrowerAvatarText: { fontSize: fs(16), lineHeight: 21, letterSpacing: 0, ...ff('700') },
+  borrowerName: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('500'), marginBottom: 1 },
+  borrowerPhone: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
 });
 
 export default CreateLoanScreen;

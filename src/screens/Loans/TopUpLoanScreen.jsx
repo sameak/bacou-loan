@@ -21,7 +21,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import Toast from '../../components/Toast';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 
 const T = {
   en: {
@@ -52,8 +52,8 @@ const T = {
     merge: 'បញ្ចូលទៅក្នុងប្រាក់កម្ចីនេះ',
     mergeDesc: 'បន្ថែមទៅប្រាក់ជំពាក់ ចំណាំ: ការបង្កើតកាលវិភាគឡើងវិញ',
     newLoan: 'ប្រាក់កម្ចីថ្មីដែលភ្ជាប់',
-    newLoanDesc: 'បង្កើតប្រាក់កម្ចីដាច់ដោយឡែករបស់អ្នកខ្ចីដូចគ្នា',
-    notes: 'កំណត់ចំណាំ (ស្រេចចិត្ត)',
+    newLoanDesc: 'បង្កើតប្រាក់កម្ចីដាច់ដោយឡែករបស់អតិថិជនដូចគ្នា',
+    notes: 'កំណត់ចំណាំ',
     notesPlaceholder: 'មូលហេតុ...',
     save: 'អនុវត្ត',
     errAmount: 'បញ្ចូលចំនួន',
@@ -240,7 +240,7 @@ const makeStyles = (ff) => StyleSheet.create({
   methodCardActive: { borderColor: ACCENT },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center' },
   radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
-  methodTitle: { fontSize: 14, ...ff('600'), marginBottom: 2 },
+  methodTitle: { fontSize: 14, ...ff('400'), marginBottom: 2 },
   methodDesc: { fontSize: 12 },
   notesInput: { borderRadius: 14, padding: 14, fontSize: 15, height: 80, textAlignVertical: 'top' },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },

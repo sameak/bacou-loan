@@ -12,7 +12,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { auth } from '../services/firebase';
 
-const ACCENT  = '#6366F1';
+const ACCENT  = '#00C2B2';
 const PIN_LEN = 4;
 const KEYS    = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
 

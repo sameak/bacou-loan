@@ -1,7 +1,6 @@
 /**
- * REPORTS SCREEN — Profit & Loss
- * Monthly breakdown of interest earned and principal collected,
- * split by currency (USD / KHR). Data loaded from all loan payments.
+ * REPORTS SCREEN — Comprehensive financial dashboard
+ * Year-filterable overview + monthly cash flow breakdown with capital deployment tracking.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +8,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,37 +21,81 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import GlassCard from '../../components/GlassCard';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
+const GREEN  = '#10B981';
+const TEAL   = '#06B6D4';
+const AMBER  = '#F59E0B';
+const RED    = '#EF4444';
 
 const T = {
   en: {
     title: 'Reports',
-    interestEarned: 'Interest Earned',
-    principalCollected: 'Principal Collected',
     allTime: 'All time',
+    outstanding: 'Outstanding Capital',
+    activeLoans: 'Active Loans',
+    overdue: 'overdue',
+    interestEarned: 'Interest Earned',
+    totalReceived: 'Total Received',
+    interest: 'Interest',
+    principalIn: 'Principal In',
+    capitalOut: 'Capital Out',
+    netFlow: 'Net Flow',
+    newLoan: 'new loan',
+    newLoans: 'new loans',
     payments: 'payments',
     payment: 'payment',
-    noData: 'No payment records yet',
-    totalInterest: 'Total Interest',
-    totalPrincipal: 'Total Principal',
+    noData: 'No records yet',
     loading: 'Loading payments...',
     months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
   },
   km: {
     title: 'របាយការណ៍',
-    interestEarned: 'ការប្រាក់ទទួលបាន',
-    principalCollected: 'ដើមទុនទទួល',
     allTime: 'ទាំងអស់',
+    outstanding: 'កម្ចីដែលបានផ្តល់',
+    activeLoans: 'អតិថិជនសរុប',
+    overdue: 'ហួសកាល',
+    interestEarned: 'ការប្រាក់ទទួលបាន',
+    totalReceived: 'សរុបទទួល',
+    interest: 'ការប្រាក់',
+    principalIn: 'ដើមទុនទទួល',
+    capitalOut: 'កម្ចីដែលបានផ្តល់',
+    netFlow: 'លំហូរសុទ្ធ',
+    newLoan: 'ប្រាក់កម្ចីថ្មី',
+    newLoans: 'ប្រាក់កម្ចីថ្មី',
     payments: 'ការបង់',
     payment: 'ការបង់',
-    noData: 'មិនទាន់មានការបង់',
-    totalInterest: 'ការប្រាក់សរុប',
-    totalPrincipal: 'ដើមទុនសរុប',
+    noData: 'មិនទាន់មានទិន្នន័យ',
     loading: 'កំពុងផ្ទុក...',
     months: ['មករា','កុម្ភៈ','មីនា','មេសា','ឧសភា','មិថុនា','កក្កដា','សីហា','កញ្ញា','តុលា','វិច្ឆិកា','ធ្នូ'],
   },
 };
 
+// ---------------------------------------------------------------------------
+// MetricRow — dot + label + right-aligned USD / KHR values
+// ---------------------------------------------------------------------------
+function MetricRow({ dot, label, usd, khr, color, colorSub, ff, styles, colors }) {
+  return (
+    <View style={styles.metricRow}>
+      {dot
+        ? <View style={[styles.metricDot, { backgroundColor: color }]} />
+        : <View style={styles.metricDotPlaceholder} />
+      }
+      <Text style={[styles.metricLabel, { color: colors.textMuted }, ff('500')]}>{label}</Text>
+      <View style={styles.metricVals}>
+        {usd != null && (
+          <Text style={[styles.metricVal, { color }, ff('600')]}>{usd}</Text>
+        )}
+        {khr != null && (
+          <Text style={[styles.metricValSub, { color: colorSub ?? (color + 'BB') }, ff('400')]}>{khr}</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
 const ReportsScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const { language, ff, fs } = useLanguage();
@@ -59,8 +103,9 @@ const ReportsScreen = ({ navigation }) => {
   const styles = useMemo(() => makeStyles(ff, fs), [ff, fs]);
 
   const { loans, loansLoaded } = useData();
-  const [payments, setPayments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [payments, setPayments]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [selectedYear, setSelectedYear] = useState(null); // null = all time
 
   useEffect(() => {
     if (!loansLoaded) return;
@@ -70,153 +115,300 @@ const ReportsScreen = ({ navigation }) => {
       .catch(() => setLoading(false));
   }, [loansLoaded]);
 
-  const fmtUSD = (n) => '$' + Math.round(n).toLocaleString('en-US');
-  const fmtKHR = (n) => '៛' + Math.round(n).toLocaleString();
+  const fmtUSD = n => '$' + Math.round(n).toLocaleString('en-US');
+  const fmtKHR = n => '៛' + Math.round(n).toLocaleString();
 
-  const monthLabel = (key) => {
-    const [year, month] = key.split('-').map(Number);
-    return `${t.months[month - 1]} ${year}`;
+  const monthLabel = key => {
+    const [yr, mo] = key.split('-').map(Number);
+    return `${t.months[mo - 1]} ${yr}`;
   };
 
-  // Group payments by month, split by currency
-  const { monthGroups, summary } = useMemo(() => {
+  // --- Live portfolio stats (not year-filtered) ---
+  const portfolioStats = useMemo(() => {
+    let outstandingUSD = 0, outstandingKHR = 0;
+    let activeCount = 0, overdueCount = 0;
+    for (const loan of loans) {
+      if (loan.status === 'active' || loan.status === 'overdue') {
+        const p = loan.currentPrincipal ?? 0;
+        if (loan.currency === 'KHR') outstandingKHR += p;
+        else outstandingUSD += p;
+        if (loan.status === 'overdue') overdueCount++;
+        else activeCount++;
+      }
+    }
+    return { outstandingUSD, outstandingKHR, activeCount, overdueCount };
+  }, [loans]);
+
+  // --- Monthly groups (payments + loan deployments) ---
+  const { monthGroups, years } = useMemo(() => {
     const groups = {};
-    let totalInterestUSD = 0, totalInterestKHR = 0;
-    let totalPrincipalUSD = 0, totalPrincipalKHR = 0;
+    const yearSet = new Set();
+
+    const ensureGroup = mk => {
+      if (!groups[mk]) {
+        groups[mk] = {
+          key: mk,
+          usdInterest: 0, usdPrincipal: 0, usdDeployed: 0, usdCount: 0,
+          khrInterest: 0, khrPrincipal: 0, khrDeployed: 0, khrCount: 0,
+          newLoanCount: 0,
+        };
+      }
+      return groups[mk];
+    };
 
     for (const pay of payments) {
       if (!pay.date) continue;
-      const monthKey = pay.date.slice(0, 7); // 'YYYY-MM'
+      const mk = pay.date.slice(0, 7);
+      yearSet.add(mk.slice(0, 4));
       const isKHR = (pay.loanCurrency ?? pay.currency) === 'KHR';
-
-      if (!groups[monthKey]) {
-        groups[monthKey] = {
-          key: monthKey,
-          usdInterest: 0, usdPrincipal: 0, usdCount: 0,
-          khrInterest: 0, khrPrincipal: 0, khrCount: 0,
-        };
-      }
-
-      const g = groups[monthKey];
+      const g = ensureGroup(mk);
       if (isKHR) {
         g.khrInterest  += pay.interestAmount  ?? 0;
         g.khrPrincipal += pay.principalAmount ?? 0;
         g.khrCount++;
-        totalInterestKHR  += pay.interestAmount  ?? 0;
-        totalPrincipalKHR += pay.principalAmount ?? 0;
       } else {
         g.usdInterest  += pay.interestAmount  ?? 0;
         g.usdPrincipal += pay.principalAmount ?? 0;
         g.usdCount++;
-        totalInterestUSD  += pay.interestAmount  ?? 0;
-        totalPrincipalUSD += pay.principalAmount ?? 0;
       }
     }
 
+    for (const loan of loans) {
+      if (!loan.startDate) continue;
+      const mk = loan.startDate.slice(0, 7);
+      yearSet.add(mk.slice(0, 4));
+      const isKHR = loan.currency === 'KHR';
+      const principal = loan.originalPrincipal ?? loan.principal ?? 0;
+      const g = ensureGroup(mk);
+      if (isKHR) g.khrDeployed += principal;
+      else g.usdDeployed += principal;
+      g.newLoanCount++;
+    }
+
     const sorted = Object.values(groups).sort((a, b) => b.key.localeCompare(a.key));
-    return {
-      monthGroups: sorted,
-      summary: { totalInterestUSD, totalInterestKHR, totalPrincipalUSD, totalPrincipalKHR },
-    };
-  }, [payments]);
+    const sortedYears = Array.from(yearSet).sort((a, b) => b.localeCompare(a));
+    return { monthGroups: sorted, years: sortedYears };
+  }, [payments, loans]);
 
-  const { totalInterestUSD, totalInterestKHR, totalPrincipalUSD, totalPrincipalKHR } = summary;
-  const hasUSD = totalInterestUSD > 0 || totalPrincipalUSD > 0;
-  const hasKHR = totalInterestKHR > 0 || totalPrincipalKHR > 0;
+  // --- Filtered month groups ---
+  const filteredGroups = useMemo(() => {
+    if (!selectedYear) return monthGroups;
+    return monthGroups.filter(g => g.key.startsWith(selectedYear));
+  }, [monthGroups, selectedYear]);
 
+  // --- Period totals for overview cards ---
+  const overviewTotals = useMemo(() => {
+    let interestUSD = 0, interestKHR = 0, receivedUSD = 0, receivedKHR = 0;
+    for (const g of filteredGroups) {
+      interestUSD += g.usdInterest;
+      interestKHR += g.khrInterest;
+      receivedUSD += g.usdInterest + g.usdPrincipal;
+      receivedKHR += g.khrInterest + g.khrPrincipal;
+    }
+    return { interestUSD, interestKHR, receivedUSD, receivedKHR };
+  }, [filteredGroups]);
+
+  const periodLabel = selectedYear ?? t.allTime;
+
+  // --- Month card ---
   const renderMonth = ({ item: g }) => {
-    const hasMonthUSD = g.usdCount > 0;
-    const hasMonthKHR = g.khrCount > 0;
-    const count = g.usdCount + g.khrCount;
+    const payCount = g.usdCount + g.khrCount;
+    const hasDeployed = g.usdDeployed > 0 || g.khrDeployed > 0;
+    const totalRecUSD = g.usdInterest + g.usdPrincipal;
+    const totalRecKHR = g.khrInterest + g.khrPrincipal;
+    const netUSD = totalRecUSD - g.usdDeployed;
+    const netKHR = totalRecKHR - g.khrDeployed;
+    // Determine net color by the primary (USD) currency, fall back to KHR
+    const primaryNet = (g.usdCount > 0 || g.usdDeployed > 0) ? netUSD : netKHR;
+    const netColor = primaryNet >= 0 ? GREEN : RED;
+    const netIcon = primaryNet >= 0 ? 'trending-up-outline' : 'trending-down-outline';
+
+    const fmtNet = (n) => (n >= 0 ? fmtUSD(n) : '−' + fmtUSD(Math.abs(n)));
+    const fmtNetK = (n) => (n >= 0 ? fmtKHR(n) : '−' + fmtKHR(Math.abs(n)));
+
+    const pillBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+
     return (
       <GlassCard style={styles.monthCard}>
         <View style={styles.monthCardInner}>
-          {/* Month header */}
+          {/* Header */}
           <View style={styles.monthHeader}>
             <Text style={[styles.monthLabel, { color: colors.text }, ff('700')]}>{monthLabel(g.key)}</Text>
-            <View style={[styles.countPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
-              <Text style={[styles.countText, { color: colors.textMuted }, ff('500')]}>
-                {count} {count === 1 ? t.payment : t.payments}
-              </Text>
+            <View style={styles.monthPills}>
+              {payCount > 0 && (
+                <View style={[styles.pill, { backgroundColor: pillBg }]}>
+                  <Text style={[styles.pillText, { color: colors.textMuted }, ff('500')]}>
+                    {payCount} {payCount === 1 ? t.payment : t.payments}
+                  </Text>
+                </View>
+              )}
+              {g.newLoanCount > 0 && (
+                <View style={[styles.pill, { backgroundColor: AMBER + '22' }]}>
+                  <Text style={[styles.pillText, { color: AMBER }, ff('500')]}>
+                    {g.newLoanCount} {g.newLoanCount === 1 ? t.newLoan : t.newLoans}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-          {/* Interest row */}
-          <View style={styles.metricRow}>
-            <View style={[styles.metricDot, { backgroundColor: ACCENT }]} />
-            <Text style={[styles.metricLabel, { color: colors.textMuted }, ff('500')]}>{t.interestEarned}</Text>
+          {/* Interest */}
+          <MetricRow
+            dot label={t.interest}
+            usd={g.usdCount > 0 ? fmtUSD(g.usdInterest) : null}
+            khr={g.khrCount > 0 ? fmtKHR(g.khrInterest) : null}
+            color={ACCENT}
+            ff={ff} styles={styles} colors={colors}
+          />
+
+          {/* Principal In */}
+          <MetricRow
+            dot label={t.principalIn}
+            usd={g.usdCount > 0 ? fmtUSD(g.usdPrincipal) : null}
+            khr={g.khrCount > 0 ? fmtKHR(g.khrPrincipal) : null}
+            color={GREEN}
+            ff={ff} styles={styles} colors={colors}
+          />
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          {/* Total Received */}
+          <View style={styles.totalRow}>
+            <View style={styles.metricDotPlaceholder} />
+            <Text style={[styles.totalLabel, { color: colors.text }, ff('600')]}>{t.totalReceived}</Text>
             <View style={styles.metricVals}>
-              {hasMonthUSD && (
-                <Text style={[styles.metricVal, { color: ACCENT }, ff('700')]}>{fmtUSD(g.usdInterest)}</Text>
+              {g.usdCount > 0 && (
+                <Text style={[styles.totalVal, { color: GREEN }, ff('700')]}>{fmtUSD(totalRecUSD)}</Text>
               )}
-              {hasMonthKHR && (
-                <Text style={[styles.metricVal, { color: ACCENT + 'CC' }, ff('600')]}>{fmtKHR(g.khrInterest)}</Text>
+              {g.khrCount > 0 && (
+                <Text style={[styles.totalValSub, { color: GREEN + 'BB' }, ff('600')]}>{fmtKHR(totalRecKHR)}</Text>
               )}
             </View>
           </View>
 
-          {/* Principal row */}
-          <View style={[styles.metricRow, { marginBottom: 0 }]}>
-            <View style={[styles.metricDot, { backgroundColor: '#10B981' }]} />
-            <Text style={[styles.metricLabel, { color: colors.textMuted }, ff('500')]}>{t.principalCollected}</Text>
-            <View style={styles.metricVals}>
-              {hasMonthUSD && (
-                <Text style={[styles.metricVal, { color: '#10B981' }, ff('700')]}>{fmtUSD(g.usdPrincipal)}</Text>
-              )}
-              {hasMonthKHR && (
-                <Text style={[styles.metricVal, { color: '#10B981BB' }, ff('600')]}>{fmtKHR(g.khrPrincipal)}</Text>
-              )}
-            </View>
-          </View>
+          {/* Capital Out + Net Flow — only when loans were deployed this month */}
+          {hasDeployed && (
+            <>
+              <View style={[styles.dividerDouble, { backgroundColor: colors.border }]} />
+
+              {/* Capital Out */}
+              <MetricRow
+                dot label={t.capitalOut}
+                usd={g.usdDeployed > 0 ? '−' + fmtUSD(g.usdDeployed) : null}
+                khr={g.khrDeployed > 0 ? '−' + fmtKHR(g.khrDeployed) : null}
+                color={AMBER}
+                ff={ff} styles={styles} colors={colors}
+              />
+
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              {/* Net Flow */}
+              <View style={styles.netRow}>
+                <Ionicons name={netIcon} size={14} color={netColor} style={styles.netIcon} />
+                <Text style={[styles.netLabel, { color: colors.text }, ff('600')]}>{t.netFlow}</Text>
+                <View style={styles.metricVals}>
+                  {(g.usdCount > 0 || g.usdDeployed > 0) && (
+                    <Text style={[styles.netVal, { color: netColor }, ff('700')]}>{fmtNet(netUSD)}</Text>
+                  )}
+                  {(g.khrCount > 0 || g.khrDeployed > 0) && (
+                    <Text style={[styles.netValSub, { color: netColor + 'BB' }, ff('500')]}>{fmtNetK(netKHR)}</Text>
+                  )}
+                </View>
+              </View>
+            </>
+          )}
         </View>
       </GlassCard>
     );
   };
 
-  const ListHeader = () => (
-    <View style={styles.summaryRow}>
-      {/* Total Interest card */}
-      <GlassCard style={styles.summaryCard}>
-        <View style={styles.summaryCardInner}>
-          <View style={[styles.summaryTag, { backgroundColor: ACCENT + '20' }]}>
-            <Ionicons name="trending-up-outline" size={13} color={ACCENT} />
-            <Text style={[styles.summaryTagText, { color: ACCENT }, ff('600')]}>{t.totalInterest}</Text>
-          </View>
-          {hasUSD && (
-            <Text style={[styles.summaryMain, { color: ACCENT }, ff('800')]}>{fmtUSD(totalInterestUSD)}</Text>
-          )}
-          {hasKHR && (
-            <Text style={[styles.summarySecond, { color: ACCENT + 'BB' }, ff('700')]}>{fmtKHR(totalInterestKHR)}</Text>
-          )}
-          {!hasUSD && !hasKHR && (
-            <Text style={[styles.summaryMain, { color: ACCENT }, ff('800')]}>—</Text>
-          )}
-          <Text style={[styles.summaryHint, { color: colors.textMuted }, ff('400')]}>{t.allTime}</Text>
-        </View>
-      </GlassCard>
+  // --- List header: year pills + overview grid ---
+  const { outstandingUSD, outstandingKHR, activeCount, overdueCount } = portfolioStats;
+  const { interestUSD, interestKHR, receivedUSD, receivedKHR } = overviewTotals;
 
-      {/* Total Principal card */}
-      <GlassCard style={styles.summaryCard}>
-        <View style={styles.summaryCardInner}>
-          <View style={[styles.summaryTag, { backgroundColor: '#10B98120' }]}>
-            <Ionicons name="cash-outline" size={13} color="#10B981" />
-            <Text style={[styles.summaryTagText, { color: '#10B981' }, ff('600')]}>{t.totalPrincipal}</Text>
-          </View>
-          {hasUSD && (
-            <Text style={[styles.summaryMain, { color: '#10B981' }, ff('800')]}>{fmtUSD(totalPrincipalUSD)}</Text>
-          )}
-          {hasKHR && (
-            <Text style={[styles.summarySecond, { color: '#10B981BB' }, ff('700')]}>{fmtKHR(totalPrincipalKHR)}</Text>
-          )}
-          {!hasUSD && !hasKHR && (
-            <Text style={[styles.summaryMain, { color: '#10B981' }, ff('800')]}>—</Text>
-          )}
-          <Text style={[styles.summaryHint, { color: colors.textMuted }, ff('400')]}>{t.allTime}</Text>
+  const OverviewCard = ({ tagIcon, tagLabel, tagColor, mainVal, subVal, hint }) => (
+    <GlassCard style={styles.overviewCard}>
+      <View style={styles.overviewCardInner}>
+        <View style={[styles.overviewTag, { backgroundColor: tagColor + '22' }]}>
+          <Ionicons name={tagIcon} size={13} color={tagColor} />
+          <Text style={[styles.overviewTagText, { color: tagColor }, ff('600')]}>{tagLabel}</Text>
         </View>
-      </GlassCard>
-    </View>
+        <Text style={[styles.overviewMain, { color: tagColor }, ff('800')]}>{mainVal}</Text>
+        {subVal != null && (
+          <Text style={[styles.overviewSub, { color: tagColor + 'BB' }, ff('700')]}>{subVal}</Text>
+        )}
+        <Text style={[styles.overviewHint, { color: colors.textMuted }, ff('400')]}>{hint}</Text>
+      </View>
+    </GlassCard>
+  );
+
+  const ListHeader = () => (
+    <>
+      {/* Year filter bar */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.yearBar}
+        contentContainerStyle={styles.yearBarContent}
+      >
+        {[null, ...years].map(yr => {
+          const active = selectedYear === yr;
+          return (
+            <TouchableOpacity
+              key={yr ?? 'all'}
+              onPress={() => setSelectedYear(yr)}
+              activeOpacity={0.7}
+              style={[
+                styles.yearPill,
+                { backgroundColor: active ? ACCENT : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') },
+              ]}
+            >
+              <Text style={[styles.yearPillText, { color: active ? '#fff' : colors.textMuted }, ff(active ? '600' : '500')]}>
+                {yr ?? t.allTime}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Overview 2×2 grid */}
+      <View style={styles.overviewGrid}>
+        <OverviewCard
+          tagIcon="wallet-outline"
+          tagLabel={t.outstanding}
+          tagColor={ACCENT}
+          mainVal={outstandingUSD > 0 ? fmtUSD(outstandingUSD) : outstandingKHR > 0 ? fmtKHR(outstandingKHR) : '—'}
+          subVal={(outstandingUSD > 0 && outstandingKHR > 0) ? fmtKHR(outstandingKHR) : null}
+          hint={t.allTime}
+        />
+        <OverviewCard
+          tagIcon="people-outline"
+          tagLabel={t.activeLoans}
+          tagColor={GREEN}
+          mainVal={String(activeCount + overdueCount)}
+          subVal={overdueCount > 0 ? `${overdueCount} ${t.overdue}` : null}
+          hint={t.allTime}
+        />
+        <OverviewCard
+          tagIcon="trending-up-outline"
+          tagLabel={t.interestEarned}
+          tagColor={ACCENT}
+          mainVal={interestUSD > 0 ? fmtUSD(interestUSD) : interestKHR > 0 ? fmtKHR(interestKHR) : '—'}
+          subVal={(interestUSD > 0 && interestKHR > 0) ? fmtKHR(interestKHR) : null}
+          hint={periodLabel}
+        />
+        <OverviewCard
+          tagIcon="cash-outline"
+          tagLabel={t.totalReceived}
+          tagColor={TEAL}
+          mainVal={receivedUSD > 0 ? fmtUSD(receivedUSD) : receivedKHR > 0 ? fmtKHR(receivedKHR) : '—'}
+          subVal={(receivedUSD > 0 && receivedKHR > 0) ? fmtKHR(receivedKHR) : null}
+          hint={periodLabel}
+        />
+      </View>
+    </>
   );
 
   return (
@@ -238,7 +430,7 @@ const ReportsScreen = ({ navigation }) => {
         </View>
       ) : (
         <FlatList
-          data={monthGroups}
+          data={filteredGroups}
           keyExtractor={g => g.key}
           renderItem={renderMonth}
           contentContainerStyle={styles.list}
@@ -256,6 +448,9 @@ const ReportsScreen = ({ navigation }) => {
   );
 };
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 const makeStyles = (ff, fs) => StyleSheet.create({
   root: { flex: 1 },
   header: {
@@ -263,35 +458,73 @@ const makeStyles = (ff, fs) => StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backBtn: { width: 40, alignItems: 'center', paddingVertical: 4 },
-  headerTitle: { fontSize: fs(18), lineHeight: 24 },
+  headerTitle: { fontSize: fs(18), lineHeight: 30 },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
-  loadingText: { fontSize: fs(14), lineHeight: 20 },
+  loadingText: { fontSize: fs(14), lineHeight: 26 },
   list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 48 },
-  summaryRow: { flexDirection: 'row', gap: 12, marginTop: 16, marginBottom: 16 },
-  summaryCard: { flex: 1 },
-  summaryCardInner: { padding: 14, gap: 3 },
-  summaryTag: {
-    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+
+  // Year bar
+  yearBar: { marginTop: 16 },
+  yearBarContent: { paddingHorizontal: 0, gap: 8, flexDirection: 'row' },
+  yearPill: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
+  yearPillText: { fontSize: fs(13), lineHeight: 24 },
+
+  // Overview grid
+  overviewGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 12,
+    marginTop: 16, marginBottom: 16,
+  },
+  overviewCard: { width: '47.5%' },
+  overviewCardInner: { padding: 14, gap: 2 },
+  overviewTag: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
     borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 6,
   },
-  summaryTagText: { fontSize: fs(11), lineHeight: 15 },
-  summaryMain: { fontSize: fs(18), lineHeight: 24 },
-  summarySecond: { fontSize: fs(13), lineHeight: 18 },
-  summaryHint: { fontSize: fs(11), lineHeight: 15, marginTop: 4 },
+  overviewTagText: { fontSize: fs(10), lineHeight: 20 },
+  overviewMain: { fontSize: fs(18), lineHeight: 30 },
+  overviewSub: { fontSize: fs(13), lineHeight: 24 },
+  overviewHint: { fontSize: fs(11), lineHeight: 21, marginTop: 4 },
+
+  // Month cards
   monthCard: { marginBottom: 12 },
   monthCardInner: { paddingHorizontal: 16, paddingVertical: 14 },
-  monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  monthLabel: { fontSize: fs(15), lineHeight: 20, flexShrink: 1, marginRight: 8 },
-  countPill: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
-  countText: { fontSize: fs(12), lineHeight: 17 },
-  divider: { height: StyleSheet.hairlineWidth, marginBottom: 12 },
+  monthHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: 12,
+  },
+  monthLabel: { fontSize: fs(15), lineHeight: 26, flexShrink: 1, marginRight: 8 },
+  monthPills: { flexDirection: 'row', gap: 6, flexShrink: 1, justifyContent: 'flex-end', flexWrap: 'wrap' },
+  pill: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  pillText: { fontSize: fs(11), lineHeight: 21 },
+
+  divider: { height: StyleSheet.hairlineWidth, marginVertical: 10 },
+  dividerDouble: { height: StyleSheet.hairlineWidth, marginVertical: 10 },
+
+  // MetricRow
   metricRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   metricDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  metricLabel: { flex: 1, fontSize: fs(13), lineHeight: 18 },
+  metricDotPlaceholder: { width: 8, height: 8, flexShrink: 0 },
+  metricLabel: { flex: 1, fontSize: fs(13), lineHeight: 24, letterSpacing: 0 },
   metricVals: { alignItems: 'flex-end', gap: 2, flexShrink: 0, minWidth: 80 },
-  metricVal: { fontSize: fs(13), lineHeight: 18 },
+  metricVal: { fontSize: fs(13), lineHeight: 24, letterSpacing: 0 },
+  metricValSub: { fontSize: fs(11), lineHeight: 21, letterSpacing: 0 },
+
+  // Total Received row
+  totalRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, marginTop: 2 },
+  totalLabel: { flex: 1, fontSize: fs(13), lineHeight: 24, letterSpacing: 0, marginLeft: 16 },
+  totalVal: { fontSize: fs(15), lineHeight: 26, letterSpacing: 0 },
+  totalValSub: { fontSize: fs(12), lineHeight: 23, letterSpacing: 0 },
+
+  // Net Flow row
+  netRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  netIcon: { marginRight: 6, flexShrink: 0 },
+  netLabel: { flex: 1, fontSize: fs(13), lineHeight: 24, letterSpacing: 0 },
+  netVal: { fontSize: fs(14), lineHeight: 26, letterSpacing: 0 },
+  netValSub: { fontSize: fs(11), lineHeight: 21, letterSpacing: 0 },
+
+  // Empty state
   emptyWrap: { alignItems: 'center', justifyContent: 'center', gap: 14, paddingTop: 80 },
-  emptyText: { fontSize: fs(15), lineHeight: 20 },
+  emptyText: { fontSize: fs(15), lineHeight: 26, letterSpacing: 0 },
 });
 
 export default ReportsScreen;

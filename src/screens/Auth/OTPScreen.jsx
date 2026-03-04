@@ -159,7 +159,7 @@ const OTPScreen = ({ navigation, route }) => {
                 disabled={countdown > 0}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.resendText, { color: countdown > 0 ? colors.textMuted : '#6366F1' }]}>
+                <Text style={[styles.resendText, { color: countdown > 0 ? colors.textMuted : '#00C2B2' }]}>
                   {countdown > 0 ? t.resendIn(countdown) : t.resend}
                 </Text>
               </TouchableOpacity>

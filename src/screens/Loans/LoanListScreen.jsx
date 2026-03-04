@@ -23,7 +23,7 @@ import { useData } from '../../context/DataContext';
 import GlassCard from '../../components/GlassCard';
 import { Skeleton } from '../../components/Skeleton';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 const STATUS_COLORS = { active: '#10B981', overdue: '#EF4444', paid: '#9CA3AF', written_off: '#6B7280' };
 
 const T = {
@@ -36,6 +36,7 @@ const T = {
     interestOnly: 'I/O',
     principalInterest: 'P+I',
     accruing: 'Accruing',
+    basis: { flat: 'Flat', reducing: 'Reducing' },
     filterAll: 'All',
     filterActive: 'Active',
     filterOverdue: 'Overdue',
@@ -44,13 +45,14 @@ const T = {
   },
   km: {
     title: 'ប្រាក់កម្ចី',
-    search: 'ស្វែងរកអ្នកខ្ចី...',
+    search: 'ស្វែងរកអតិថិជន...',
     empty: 'មិនទាន់មានប្រាក់កម្ចី',
     emptyHint: 'បង្កើតប្រាក់កម្ចីដំបូងរបស់អ្នក',
     status: { active: 'ដំណើរការ', overdue: 'ហួសកំណត់', paid: 'បានបង់', written_off: 'បោះបង់' },
     interestOnly: 'ការប្រាក់',
     principalInterest: 'ដើម+ការប្រាក់',
     accruing: 'បង្ហូរ',
+    basis: { flat: 'ការប្រាក់ថេរ', reducing: 'ការប្រាក់ថយចុះ' },
     filterAll: 'ទាំងអស់',
     filterActive: 'ដំណើរការ',
     filterOverdue: 'ហួសកំណត់',
@@ -64,8 +66,7 @@ const LoanListScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
-  const isKhmer = language === 'km';
-  const styles = useMemo(() => makeStyles(fs, ff, isKhmer), [fs, ff, isKhmer]);
+  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
 
   const { loans, loansLoaded } = useData();
   const [search, setSearch] = useState('');
@@ -124,7 +125,7 @@ const LoanListScreen = ({ navigation }) => {
 
               <View style={styles.metaRow}>
                 <Text style={[styles.meta, { color: colors.textMuted }]}>
-                  {loan.interestRate}% · {loan.interestBasis} · {loan.repaymentType === 'interest_only' ? t.interestOnly : t.principalInterest}
+                  {loan.interestRate}% · {t.basis[loan.interestBasis] ?? loan.interestBasis} · {loan.repaymentType === 'interest_only' ? t.interestOnly : t.principalInterest}
                 </Text>
                 {accrued !== null && accrued > 0 && (
                   <Text style={styles.accruingText}>
@@ -235,13 +236,13 @@ const LoanListScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
+const makeStyles = (fs, ff) => StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4,
   },
-  title: { fontSize: fs(28), ...(isKhmer ? {} : { lineHeight: 34 }), ...ff('800'), letterSpacing: 0 },
+  title: { fontSize: fs(28), lineHeight: 40, ...ff('600'), letterSpacing: 0 },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     marginHorizontal: 16, marginTop: 8, marginBottom: 4,
@@ -250,17 +251,17 @@ const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
   searchInput: { flex: 1, fontSize: fs(15), lineHeight: 20, ...ff('400') },
   filterRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
-  filterChipText: { fontSize: fs(13), lineHeight: 18, ...ff('700') },
+  filterChipText: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
   list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100, gap: 8 },
   listEmpty: { flexGrow: 1, justifyContent: 'center' },
   cardWrap: {},
   loanRow: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
   loanMain: { flex: 1 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
-  borrowerName: { flex: 1, fontSize: fs(15), lineHeight: 20, ...ff('600') },
+  borrowerName: { flex: 1, fontSize: fs(14), lineHeight: 19, ...ff('400') },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  statusText: { fontSize: fs(11), ...(isKhmer ? {} : { lineHeight: 15 }), ...ff('700') },
-  principal: { fontSize: fs(20), lineHeight: 26, ...ff('800'), marginBottom: 4 },
+  statusText: { fontSize: fs(11), lineHeight: 21, ...ff('600') },
+  principal: { fontSize: fs(16), lineHeight: 21, ...ff('400'), marginBottom: 4 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   meta: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
   accruingText: { fontSize: fs(12), lineHeight: 16, color: '#F59E0B', ...ff('600') },

@@ -85,7 +85,7 @@ const SettingsStack = createNativeStackNavigator();
 
 const TAB_LABELS = {
   en: { dashboard: 'Dashboard', borrowers: 'Borrowers', loans: 'Loans', menu: 'Menu' },
-  km: { dashboard: 'ទំព័រដើម', borrowers: 'អ្នកខ្ចី', loans: 'ប្រាក់កម្ចី', menu: 'ម៉ឺនុយ' },
+  km: { dashboard: 'ទំព័រដើម', borrowers: 'អតិថិជន', loans: 'ប្រាក់កម្ចី', menu: 'ម៉ឺនុយ' },
 };
 
 const TAB_CONFIGS = [
@@ -95,7 +95,7 @@ const TAB_CONFIGS = [
   { name: 'SettingsTab',  icon: 'menu',          iconOutline: 'menu-outline' },
 ];
 
-const ACCENT           = '#6366F1';
+const ACCENT           = '#00C2B2';
 const TAB_BAR_HEIGHT   = 88;   // row padding + icon + gap + label
 const TAB_BOTTOM_GAP   = 0;    // bar sits flush against the safe-area bottom
 

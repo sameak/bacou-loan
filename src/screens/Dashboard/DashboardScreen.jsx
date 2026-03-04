@@ -33,7 +33,7 @@ import { useData } from '../../context/DataContext';
 import GlassCard from '../../components/GlassCard';
 import { Skeleton } from '../../components/Skeleton';
 
-const ACCENT = '#6366F1';
+const ACCENT = '#00C2B2';
 const GREEN  = '#10B981';
 const AMBER  = '#F59E0B';
 const RED    = '#EF4444';
@@ -108,11 +108,11 @@ const T = {
     noCapital: 'ទៅការកំណត់ → ដើមទុនខ្ញុំ ដើម្បីកំណត់',
     lent: 'បានផ្ដល់',
     total: 'សរុប',
-    active: 'ដំណើរការ',
+    active: 'កម្ចីសរុប',
     onTrack: 'ទៀងទាត់',
-    outstanding: 'នៅជំពាក់',
+    outstanding: 'កម្ចីដែលបានផ្តល់',
     overdueAlert: (n, amt) => `${n} ហួសកំណត់ · ${amt} ប្រយ័ត្ន`,
-    portfolio: 'ផតហ្វូលីយ៉ូ',
+    portfolio: 'បញ្ជីប្រាក់កម្ចី',
     overdue: 'ហួសកំណត់',
     recentActivity: 'សកម្មភាពថ្មីៗ',
     noActivity: 'មិនទាន់មានការបង់',
@@ -233,6 +233,7 @@ const DashboardScreen = ({ navigation }) => {
   const greetKey       = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
   const userName       = auth.currentUser?.displayName?.split(' ')[0] ?? '';
   const thisMonthKey   = monthKey(0);
+  const sectionUp = s => language === 'en' ? s.toUpperCase() : s;
 
   return (
     <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
@@ -242,7 +243,7 @@ const DashboardScreen = ({ navigation }) => {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { color: colors.textMuted }, ff('400')]}>{t[greetKey]}{userName ? `, ${userName}` : ''}</Text>
-            <Text style={[styles.appTitle, { color: colors.text }, ff('800')]}>Bacou</Text>
+            <Text style={[styles.appTitle, { color: colors.text }, ff('600')]}>Bacou</Text>
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity
@@ -272,12 +273,12 @@ const DashboardScreen = ({ navigation }) => {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.sectionLabel, { color: colors.textMuted }, ff('600')]}>{t.portfolioHealth}</Text>
                 <View style={styles.healthScoreRow}>
-                  <Text style={[styles.healthNum, { color: healthColor }, ff('800')]}>{health}</Text>
+                  <Text style={[styles.healthNum, { color: healthColor }, ff('400')]}>{health}</Text>
                   <Text style={[styles.healthDenom, { color: colors.textMuted }, ff('400')]}>/100</Text>
                 </View>
               </View>
               <View style={[styles.healthBadge, { backgroundColor: healthColor + '20' }]}>
-                <Text style={[styles.healthBadgeText, { color: healthColor }, ff('700')]}>{healthLabel}</Text>
+                <Text style={[styles.healthBadgeText, { color: healthColor }, ff('600')]}>{healthLabel}</Text>
               </View>
             </View>
 
@@ -290,22 +291,22 @@ const DashboardScreen = ({ navigation }) => {
             <View style={styles.healthDots}>
               <View style={styles.healthDot}>
                 <View style={[styles.dot, { backgroundColor: GREEN }]} />
-                <Text style={[styles.healthDotText, { color: colors.textMuted }, ff('500')]}>{activeCount} {t.active}</Text>
+                <Text style={[styles.healthDotText, { color: colors.textMuted }, ff('400')]}>{activeCount} {t.active}</Text>
               </View>
               <View style={styles.healthDot}>
                 <View style={[styles.dot, { backgroundColor: RED }]} />
-                <Text style={[styles.healthDotText, { color: colors.textMuted }, ff('500')]}>{overdueCount} {t.overdue}</Text>
+                <Text style={[styles.healthDotText, { color: colors.textMuted }, ff('400')]}>{overdueCount} {t.overdue}</Text>
               </View>
               <View style={styles.healthDot}>
                 <View style={[styles.dot, { backgroundColor: ACCENT }]} />
-                <Text style={[styles.healthDotText, { color: colors.textMuted }, ff('500')]}>{onTrackPct}% {t.onTrack}</Text>
+                <Text style={[styles.healthDotText, { color: colors.textMuted }, ff('400')]}>{onTrackPct}% {t.onTrack}</Text>
               </View>
             </View>
           </View>
         </GlassCard>
 
         {/* ── 2. This Month Income ── */}
-        <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('700')]}>{t.thisMonth.toUpperCase()}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('600')]}>{sectionUp(t.thisMonth)}</Text>
         <View style={styles.twoCol}>
 
           {/* Interest card */}
@@ -322,8 +323,8 @@ const DashboardScreen = ({ navigation }) => {
                 </View>
               ) : (
                 <>
-                  <Text style={[styles.incomeMain, { color: ACCENT }, ff('800')]}>{fmtUSD(incomeData.tiUSD)}</Text>
-                  {incomeData.tiKHR > 0 && <Text style={[styles.incomeSub, { color: ACCENT + 'BB' }, ff('600')]}>{fmtKHR(incomeData.tiKHR)}</Text>}
+                  <Text style={[styles.incomeMain, { color: ACCENT }, ff('400')]}>{fmtUSD(incomeData.tiUSD)}</Text>
+                  {incomeData.tiKHR > 0 && <Text style={[styles.incomeSub, { color: ACCENT + 'BB' }, ff('400')]}>{fmtKHR(incomeData.tiKHR)}</Text>}
                   {incomeData.changeUSD !== null ? (
                     <View style={styles.changeRow}>
                       <Ionicons name={incomeData.changeUSD >= 0 ? 'arrow-up' : 'arrow-down'} size={10} color={incomeData.changeUSD >= 0 ? GREEN : RED} />
@@ -353,8 +354,8 @@ const DashboardScreen = ({ navigation }) => {
                 </View>
               ) : (
                 <>
-                  <Text style={[styles.incomeMain, { color: GREEN }, ff('800')]}>{fmtUSD(incomeData.tpUSD)}</Text>
-                  {incomeData.tpKHR > 0 && <Text style={[styles.incomeSub, { color: GREEN + 'BB' }, ff('600')]}>{fmtKHR(incomeData.tpKHR)}</Text>}
+                  <Text style={[styles.incomeMain, { color: GREEN }, ff('400')]}>{fmtUSD(incomeData.tpUSD)}</Text>
+                  {incomeData.tpKHR > 0 && <Text style={[styles.incomeSub, { color: GREEN + 'BB' }, ff('400')]}>{fmtKHR(incomeData.tpKHR)}</Text>}
                   <Text style={[styles.changeText, { color: colors.textMuted }, ff('400')]}>{t.thisMonth}</Text>
                 </>
               )}
@@ -363,7 +364,7 @@ const DashboardScreen = ({ navigation }) => {
         </View>
 
         {/* ── 3. 6-Month Bar Chart ── */}
-        <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('700')]}>{t.chart6m.toUpperCase()}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('600')]}>{sectionUp(t.chart6m)}</Text>
         <GlassCard style={styles.card}>
           <View style={styles.chartInner}>
             {paymentsLoading ? (
@@ -386,12 +387,12 @@ const DashboardScreen = ({ navigation }) => {
                       <View key={d.key} style={styles.barGroup}>
                         {/* Amount above current month bar */}
                         {isCurrent && d.usd > 0 && (
-                          <Text style={[styles.barCurLabel, { color: ACCENT }, ff('700')]}>{fmtUSD(d.usd)}</Text>
+                          <Text style={[styles.barCurLabel, { color: ACCENT }, ff('400')]}>{fmtUSD(d.usd)}</Text>
                         )}
                         <View style={styles.barTrack}>
                           <View style={[styles.barFill, { height: `${pct}%`, backgroundColor: barColor, borderRadius: isCurrent ? 6 : 4 }]} />
                         </View>
-                        <Text style={[styles.barMonthLabel, { color: labelColor }, ff(isCurrent ? '700' : '400')]}>
+                        <Text style={[styles.barMonthLabel, { color: labelColor }, ff(isCurrent ? '600' : '400')]}>
                           {t.chartMonths[d.mIdx]}
                         </Text>
                       </View>
@@ -409,16 +410,16 @@ const DashboardScreen = ({ navigation }) => {
         {/* ── 4. Capital Utilization ── */}
         {hasCapital && (
           <>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('700')]}>{t.myCapital}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('600')]}>{sectionUp(t.myCapital)}</Text>
             <GlassCard style={styles.card}>
               <View style={styles.capitalInner}>
                 {capital.capitalUSD > 0 && (
                   <View style={styles.capitalItem}>
                     <View style={styles.capitalTopRow}>
                       <View style={[styles.cBadge, { backgroundColor: ACCENT + '18' }]}>
-                        <Text style={[styles.cBadgeText, { color: ACCENT }, ff('700')]}>🇺🇸 USD</Text>
+                        <Text style={[styles.cBadgeText, { color: ACCENT }, ff('600')]}>🇺🇸 USD</Text>
                       </View>
-                      <Text style={[styles.cPct, { color: colors.text }, ff('700')]}>{capitalUtil.usdPct}%</Text>
+                      <Text style={[styles.cPct, { color: colors.text }, ff('400')]}>{capitalUtil.usdPct}%</Text>
                       <Text style={[styles.cAvail, { color: colors.textMuted }, ff('400')]}>
                         {fmtUSD(capital.capitalUSD - loanStats.outUSD)} {t.available}
                       </Text>
@@ -441,9 +442,9 @@ const DashboardScreen = ({ navigation }) => {
                   <View style={styles.capitalItem}>
                     <View style={styles.capitalTopRow}>
                       <View style={[styles.cBadge, { backgroundColor: AMBER + '18' }]}>
-                        <Text style={[styles.cBadgeText, { color: AMBER }, ff('700')]}>🇰🇭 KHR</Text>
+                        <Text style={[styles.cBadgeText, { color: AMBER }, ff('600')]}>🇰🇭 KHR</Text>
                       </View>
-                      <Text style={[styles.cPct, { color: colors.text }, ff('700')]}>{capitalUtil.khrPct}%</Text>
+                      <Text style={[styles.cPct, { color: colors.text }, ff('400')]}>{capitalUtil.khrPct}%</Text>
                       <Text style={[styles.cAvail, { color: colors.textMuted }, ff('400')]}>
                         {fmtKHR(capital.capitalKHR - loanStats.outKHR)} {t.available}
                       </Text>
@@ -466,25 +467,25 @@ const DashboardScreen = ({ navigation }) => {
         <View style={styles.statsRow}>
           <GlassCard style={{ flex: 1 }}>
             <View style={styles.statInner}>
-              <Text style={[styles.statMain, { color: ACCENT }, ff('800')]}>{activeCount + overdueCount}</Text>
+              <Text style={[styles.statMain, { color: ACCENT }, ff('400')]}>{activeCount + overdueCount}</Text>
               <Text style={[styles.statLabel, { color: colors.textMuted }, ff('600')]}>{t.active}</Text>
             </View>
           </GlassCard>
 
-          <GlassCard style={{ flex: 1.5 }}>
+          <GlassCard style={{ flex: 1 }}>
             <View style={styles.statInner}>
               {loanStats.outUSD > 0
-                ? <Text style={[styles.statMain, { color: AMBER }, ff('800')]}>{fmtUSD(loanStats.outUSD)}</Text>
-                : <Text style={[styles.statMain, { color: AMBER }, ff('800')]}>—</Text>
+                ? <Text style={[styles.statMain, { color: AMBER }, ff('400')]}>{fmtUSD(loanStats.outUSD)}</Text>
+                : <Text style={[styles.statMain, { color: AMBER }, ff('400')]}>—</Text>
               }
-              {loanStats.outKHR > 0 && <Text style={[styles.statSub, { color: AMBER + 'BB' }, ff('600')]}>{fmtKHR(loanStats.outKHR)}</Text>}
+              {loanStats.outKHR > 0 && <Text style={[styles.statSub, { color: AMBER + 'BB' }, ff('400')]}>{fmtKHR(loanStats.outKHR)}</Text>}
               <Text style={[styles.statLabel, { color: colors.textMuted }, ff('600')]}>{t.outstanding}</Text>
             </View>
           </GlassCard>
 
           <GlassCard style={{ flex: 1 }}>
             <View style={styles.statInner}>
-              <Text style={[styles.statMain, { color: onTrackPct >= 80 ? GREEN : onTrackPct >= 60 ? AMBER : RED }, ff('800')]}>{onTrackPct}%</Text>
+              <Text style={[styles.statMain, { color: onTrackPct >= 80 ? GREEN : onTrackPct >= 60 ? AMBER : RED }, ff('400')]}>{onTrackPct}%</Text>
               <Text style={[styles.statLabel, { color: colors.textMuted }, ff('600')]}>{t.onTrack}</Text>
             </View>
           </GlassCard>
@@ -506,7 +507,7 @@ const DashboardScreen = ({ navigation }) => {
         {/* ── 7. Portfolio ── */}
         {portfolioLoans.length > 0 && (
           <>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('700')]}>{t.portfolio}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('600')]}>{sectionUp(t.portfolio)}</Text>
             <GlassCard style={styles.card}>
               {portfolioLoans.map((loan, i) => {
                 const isOvd = loan.status === 'overdue';
@@ -519,12 +520,12 @@ const DashboardScreen = ({ navigation }) => {
                     activeOpacity={0.75}
                   >
                     <View style={[styles.loanAvatar, { backgroundColor: dotColor + '20' }]}>
-                      <Text style={[styles.loanAvatarText, { color: dotColor }, ff('700')]}>
+                      <Text style={[styles.loanAvatarText, { color: dotColor }, ff('600')]}>
                         {(loan.borrowerName ?? '?')[0].toUpperCase()}
                       </Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.loanName, { color: colors.text }, ff('600')]} numberOfLines={1}>{loan.borrowerName}</Text>
+                      <Text style={[styles.loanName, { color: colors.text }, ff('400')]} numberOfLines={1}>{loan.borrowerName}</Text>
                       <Text style={[styles.loanMeta, { color: colors.textMuted }, ff('400')]}>{formatCurrency(loan.currentPrincipal, loan.currency)} · {loan.interestRate}%</Text>
                     </View>
                     <View style={[styles.statusPill, { backgroundColor: dotColor + '18' }]}>
@@ -538,7 +539,7 @@ const DashboardScreen = ({ navigation }) => {
         )}
 
         {/* ── 8. Recent Activity ── */}
-        <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('700')]}>{t.recentActivity}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }, ff('600')]}>{sectionUp(t.recentActivity)}</Text>
         <GlassCard style={styles.card}>
           {paymentsLoading ? (
             <View style={{ paddingVertical: 8 }}>
@@ -572,10 +573,10 @@ const DashboardScreen = ({ navigation }) => {
                     <Ionicons name="checkmark" size={15} color={GREEN} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.actName, { color: colors.text }, ff('600')]} numberOfLines={1}>{pay.borrowerName ?? '—'}</Text>
+                    <Text style={[styles.actName, { color: colors.text }, ff('400')]} numberOfLines={1}>{pay.borrowerName ?? '—'}</Text>
                     <Text style={[styles.actDate, { color: colors.textMuted }, ff('400')]}>{pay.date ?? ''}</Text>
                   </View>
-                  <Text style={[styles.actAmount, { color: GREEN }, ff('700')]}>+{formatCurrency(total, pay.loanCurrency ?? pay.currency)}</Text>
+                  <Text style={[styles.actAmount, { color: GREEN }, ff('400')]}>+{formatCurrency(total, pay.loanCurrency ?? pay.currency)}</Text>
                 </TouchableOpacity>
               );
             })
@@ -609,11 +610,11 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
 
   // Generic
-  card:        { marginBottom: 4 },
+  card:        { marginBottom: 8 },
   cardInner:   { padding: 16 },
   sectionTitle:{ fontSize: fs(11), lineHeight: 15, marginTop: 20, marginBottom: 10, marginLeft: 2, letterSpacing: 0 },
   sectionLabel:{ fontSize: fs(12), lineHeight: 17, marginBottom: 4, letterSpacing: 0 },
-  twoCol:      { flexDirection: 'row', gap: 12, marginBottom: 4 },
+  twoCol:      { flexDirection: 'row', gap: 12, marginBottom: 8 },
 
   // ── Health ────────────────────────────────────────────────────────────────
   healthTop:      { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
@@ -665,7 +666,7 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   capDivider:     { height: StyleSheet.hairlineWidth, marginVertical: 14 },
 
   // ── Stats row ─────────────────────────────────────────────────────────────
-  statsRow:   { flexDirection: 'row', gap: 10, marginBottom: 4 },
+  statsRow:   { flexDirection: 'row', gap: 12, marginBottom: 8 },
   statInner:  { padding: 14, alignItems: 'center', justifyContent: 'center', minHeight: 72, gap: 4 },
   statMain:   { fontSize: fs(20), lineHeight: 26 },
   statSub:    { fontSize: fs(13), lineHeight: 18 },
@@ -682,7 +683,7 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   loanAvatarText: { fontSize: fs(15), lineHeight: 20 },
   loanName:       { fontSize: fs(14), lineHeight: 19, marginBottom: 2 },
   loanMeta:       { fontSize: fs(12), lineHeight: 17 },
-  statusPill:     { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  statusPill:     { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, flexShrink: 0 },
   statusPillText: { fontSize: fs(11), lineHeight: 15 },
 
   // ── Recent activity ───────────────────────────────────────────────────────
