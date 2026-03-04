@@ -31,7 +31,7 @@ const GOLD_C  = '#F59E0B';
 const TROY_OZ = 31.1035;   // grams per troy ounce
 const CHI_G   = 3.75;      // grams per chi (Cambodian/Vietnamese unit)
 
-const FX_CACHE   = 'exchange_rates_v2';   // v2: uses {data,time} format
+const FX_CACHE   = 'exchange_rates_v3';   // v3: adds NBC source
 const GOLD_CACHE = 'gold_rates_v3';
 
 // ─── Exchange-rate sources ────────────────────────────────────────────────────
@@ -60,6 +60,32 @@ const FX_SOURCES = [
     badgeColor: '#10B981',
     url: 'https://api.exchangerate-api.com/v4/latest/USD',
     parse: d => ({ KHR: d?.rates?.KHR, KRW: d?.rates?.KRW }),
+  },
+  {
+    id: 'nbc',
+    name: 'Natl. Bank Cambodia',
+    badge: 'NBC',
+    badgeColor: '#DC2626',
+    type: 'html',
+    url: 'https://www.nbc.gov.kh/english/economic_research/exchange_rate.php',
+    headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15' },
+    parse: html => {
+      // Official USD/KHR: "4013 KHR / USD" or inside a font tag
+      const usdMatch = html.match(/(\d{4,5})\s*KHR\s*\/\s*USD/i);
+      const usdKHR = usdMatch ? parseInt(usdMatch[1]) : null;
+
+      // KRW cross rate row: KRW/KHR | unit | buy | sell
+      const krwMatch = html.match(/KRW\/KHR<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>/i);
+      const krwUnit = krwMatch ? parseInt(krwMatch[1]) : 100;
+      const krwBuy  = krwMatch ? parseInt(krwMatch[2]) : null;
+
+      // USD/KRW via cross-rate: usdKHR ÷ (krwBuy / krwUnit)
+      const usdKRW = (usdKHR && krwBuy && krwUnit)
+        ? Math.round(usdKHR / (krwBuy / krwUnit))
+        : null;
+
+      return { KHR: usdKHR, KRW: usdKRW };
+    },
   },
 ];
 
@@ -155,19 +181,19 @@ const T = {
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
-function fetchWithTimeout(url, ms = 9000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
-}
-
 async function fetchSources(sources) {
   const results = await Promise.allSettled(
     sources.map(async (src) => {
-      const res = await fetchWithTimeout(src.url);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 9000);
+      const res = await fetch(src.url, {
+        signal: controller.signal,
+        headers: src.headers ?? {},
+      }).finally(() => clearTimeout(timer));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const parsed = src.parse(data);
+      const body   = src.type === 'html' ? await res.text() : await res.json();
+      const parsed = src.parse(body);
+      if (!parsed) throw new Error('No data');
       return { id: src.id, parsed };
     })
   );
