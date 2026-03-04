@@ -25,7 +25,8 @@ import {
   View,
 } from 'react-native';
 
-const NAVBAR_LOGO = require('../../../assets/images/navbar-logo.png');
+const NAVBAR_LOGO      = require('../../../assets/images/navbar-logo.png');
+const NAVBAR_LOGO_DARK = require('../../../assets/images/navbar-logo-dark.png');
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { auth } from '../../services/firebase';
 import { useTheme } from '../../theme/ThemeContext';
@@ -446,7 +447,7 @@ const SettingsScreen = ({ navigation }) => {
         </GlassCard>
 
         <View style={styles.versionRow}>
-          <Image source={NAVBAR_LOGO} style={styles.versionLogo} resizeMode="contain" />
+          <Image source={isDark ? NAVBAR_LOGO_DARK : NAVBAR_LOGO} style={styles.versionLogo} resizeMode="contain" />
           <Text style={[styles.versionText, { color: colors.textMuted }]}>v1.0.0</Text>
         </View>
       </ScrollView>

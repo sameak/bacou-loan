@@ -696,7 +696,7 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   root:    { flex: 1 },
   header:  { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' },
   greeting:{ fontSize: fs(13), lineHeight: 18 },
-  navLogo: { height: 38, width: Math.round(38 * 256 / 144), marginTop: 2 },
+  navLogo: { height: 38, width: Math.round(38 * 256 / 144), marginTop: 2, alignSelf: 'flex-start' },
   headerIcons: { flexDirection: 'row', gap: 8 },
   headerIcon:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
