@@ -25,6 +25,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  DeviceEventEmitter,
   Dimensions,
   Platform,
   PlatformColor,
@@ -68,6 +69,8 @@ import LoanCalculatorScreen from '../screens/Loans/LoanCalculatorScreen';
 import ReportsScreen from '../screens/Reports/ReportsScreen';
 import ExchangeRatesScreen from '../screens/Rates/ExchangeRatesScreen';
 import AssetsScreen from '../screens/Assets/AssetsScreen';
+import ChatListScreen from '../screens/Chat/ChatListScreen';
+import ChatRoomScreen from '../screens/Chat/ChatRoomScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
 import SessionsScreen from '../screens/Settings/SessionsScreen';
 import SetPINScreen   from '../screens/Settings/SetPINScreen';
@@ -78,6 +81,7 @@ import RemindersScreen  from '../screens/Settings/RemindersScreen';
 import { recordSession } from '../services/sessionService';
 import { schedulePaymentReminders } from '../services/notificationService';
 import { useData } from '../context/DataContext';
+import { TabBarScrollProvider, useTabBar } from '../context/TabBarContext';
 
 const AuthStack     = createNativeStackNavigator();
 const MainStack     = createNativeStackNavigator();
@@ -161,6 +165,16 @@ function LiquidGlassTabBar({ state, navigation }) {
   const tabCount = state.routes.length;
   const tabW     = (screenW - 40) / tabCount; // 40 = left:20 + right:20
 
+  // ── Auto-hide on scroll
+  const { tabVisible } = useTabBar();
+  const hideY = TAB_BAR_HEIGHT + insets.bottom + 20;
+  const tabAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: tabVisible ? (1 - tabVisible.value) * hideY : 0 }],
+  }));
+  useEffect(() => {
+    if (tabVisible) tabVisible.value = withTiming(1, { duration: 200 });
+  }, [state.index]);
+
   // ── Sliding pill (spring physics)
   const pillX   = useSharedValue(state.index * tabW);
   const shimmer = useSharedValue(0);
@@ -235,6 +249,8 @@ function LiquidGlassTabBar({ state, navigation }) {
   const pillColor     = isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.07)';
   const tintColor     = isDark ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.35)';
 
+  const lastTapTimes = useRef({});
+
   const makeTabItems = (showActivePill) => state.routes.map((route, index) => {
     const focused = state.index === index;
     return (
@@ -251,6 +267,14 @@ function LiquidGlassTabBar({ state, navigation }) {
         isDark={isDark}
         showActivePill={showActivePill}
         onPress={() => {
+          const now = Date.now();
+          const isDoubleTap = focused && (now - (lastTapTimes.current[index] ?? 0) < 300);
+          lastTapTimes.current[index] = isDoubleTap ? 0 : now;
+          if (isDoubleTap) {
+            DeviceEventEmitter.emit('tabBarScrollToTop', { index });
+            if (tabVisible) tabVisible.value = withTiming(1, { duration: 350 });
+            return;
+          }
           const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
           if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
         }}
@@ -263,13 +287,13 @@ function LiquidGlassTabBar({ state, navigation }) {
   // ── iOS 26+: real Apple Liquid Glass ────────────────────────────────────────
   if (isLiquidGlassSupported) {
     return (
-      <View style={[tabStyles.wrap, { bottom }]} pointerEvents="box-none">
+      <RAnimated.View style={[tabStyles.wrap, { bottom }, tabAnimStyle]} pointerEvents="box-none">
         <LiquidGlassContainerView spacing={24} style={tabStyles.nativeWrap}>
           <LiquidGlassView style={tabStyles.nativeBar} effect="regular" interactive={false}>
             <View style={tabStyles.row}>{makeTabItems(true)}</View>
           </LiquidGlassView>
         </LiquidGlassContainerView>
-      </View>
+      </RAnimated.View>
     );
   }
 
@@ -277,7 +301,7 @@ function LiquidGlassTabBar({ state, navigation }) {
   // tabBarRoot is a clean wrapper with no shadow/borderRadius so iOS compositing
   // doesn't clip Khmer diacritics that extend above the text bounding box.
   return (
-    <View pointerEvents="box-none" style={[tabStyles.tabBarRoot, { bottom }]}>
+    <RAnimated.View pointerEvents="box-none" style={[tabStyles.tabBarRoot, { bottom }, tabAnimStyle]}>
       {/* Visual glass bar — shadow/borderRadius contained here */}
       <View style={[tabStyles.outerShell, { shadowOpacity: isDark ? 0.35 : 0.12 }]}>
         <View style={tabStyles.innerShell}>
@@ -318,7 +342,7 @@ function LiquidGlassTabBar({ state, navigation }) {
           )}
         </RAnimated.View>
       )}
-    </View>
+    </RAnimated.View>
   );
 }
 
@@ -472,20 +496,22 @@ function MainTabs() {
   }, [loansLoaded]);
 
   return (
-    <Tab.Navigator
-      tabBar={(props) => <LiquidGlassTabBar {...props} />}
-      detachInactiveScreens={false}
-      sceneContainerStyle={{
-        paddingBottom: bottomPad,
-        backgroundColor: isDark ? '#000000' : '#EBEBEB',
-      }}
-      screenOptions={{ headerShown: false, lazy: false, animation: 'fade' }}
-    >
-      <Tab.Screen name="DashboardTab" component={DashboardScreen} />
-      <Tab.Screen name="BorrowersTab" component={BorrowerStackNav} />
-      <Tab.Screen name="LoansTab"     component={LoanStackNav} />
-      <Tab.Screen name="SettingsTab"  component={SettingsStackNav} />
-    </Tab.Navigator>
+    <TabBarScrollProvider>
+      <Tab.Navigator
+        tabBar={(props) => <LiquidGlassTabBar {...props} />}
+        detachInactiveScreens={false}
+        sceneContainerStyle={{
+          paddingBottom: bottomPad,
+          backgroundColor: isDark ? '#000000' : '#EBEBEB',
+        }}
+        screenOptions={{ headerShown: false, lazy: false, animation: 'fade' }}
+      >
+        <Tab.Screen name="DashboardTab" component={DashboardScreen} />
+        <Tab.Screen name="BorrowersTab" component={BorrowerStackNav} />
+        <Tab.Screen name="LoansTab"     component={LoanStackNav} />
+        <Tab.Screen name="SettingsTab"  component={SettingsStackNav} />
+      </Tab.Navigator>
+    </TabBarScrollProvider>
   );
 }
 
@@ -502,6 +528,8 @@ function MainStackNav() {
       <MainStack.Screen name="Reports"        component={ReportsScreen} />
       <MainStack.Screen name="ExchangeRates"  component={ExchangeRatesScreen} />
       <MainStack.Screen name="Assets"         component={AssetsScreen} />
+      <MainStack.Screen name="ChatList"       component={ChatListScreen} />
+      <MainStack.Screen name="ChatRoom"       component={ChatRoomScreen} />
     </MainStack.Navigator>
   );
 }

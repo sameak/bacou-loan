@@ -4,8 +4,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useRef, useState } from 'react';
-import LogoMark from '../../components/LogoMark';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -28,6 +27,8 @@ import { WebView } from 'react-native-webview';
 import { firebaseConfig } from '../../services/firebase';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 
 const DARK_INDIGO = '#312e81';
 
@@ -126,6 +127,9 @@ const T = {
     placeholder: '012-345-678',
     sendCode: 'Send Code',
     terms: 'By continuing, you agree to our Terms of Service and Privacy Policy.',
+    signInFaceId: 'Sign in with Face ID',
+    signInFingerprint: 'Sign in with Fingerprint',
+    orPhone: 'or use phone number',
   },
   km: {
     heading: 'Bacou ប្រាក់កម្ចី',
@@ -134,6 +138,9 @@ const T = {
     placeholder: '012-345-678',
     sendCode: 'ទទួលលេខកូដ',
     terms: 'តាមរយៈការបន្ត អ្នកយល់ព្រមនឹងលក្ខខណ្ឌ និងគោលការណ៍ភាពឯកជន។',
+    signInFaceId: 'ចូលដោយ Face ID',
+    signInFingerprint: 'ចូលដោយស្នាមម្រាម',
+    orPhone: 'ឬប្រើលេខទូរសព្ទ',
   },
 };
 
@@ -154,6 +161,22 @@ const AuthScreen = ({ navigation }) => {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [webViewKey, setWebViewKey] = useState(0);
+  const [savedPhone, setSavedPhone] = useState(null);
+  const [biometricAvailable, setBiometric] = useState(false);
+  const [isFaceId, setIsFaceId] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const [enrolled, phone, types] = await Promise.all([
+        LocalAuthentication.isEnrolledAsync(),
+        SecureStore.getItemAsync('passkey_phone'),
+        LocalAuthentication.supportedAuthenticationTypesAsync(),
+      ]);
+      setBiometric(enrolled);
+      setSavedPhone(phone || null);
+      setIsFaceId(types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION));
+    })();
+  }, []);
 
   const scrollRef = useRef(null);
   const webViewRef = useRef(null);
@@ -199,6 +222,28 @@ const AuthScreen = ({ navigation }) => {
 
     pendingNavRef.current = true;
     webViewRef.current.injectJavaScript(`window.sendOTP('${e164}'); true;`);
+  };
+
+  const handlePasskeyLogin = async () => {
+    if (!savedPhone || !webViewReady || loading) return;
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: language === 'km' ? 'ចូលទៅ Bacou' : 'Sign in to Bacou',
+      disableDeviceFallback: false,
+    });
+    if (!result.success) return;
+    setError('');
+    setLoading(true);
+    fullPhoneRef.current = savedPhone;
+    pendingNavRef.current = true;
+    clearTimeout(otpTimeoutRef.current);
+    otpTimeoutRef.current = setTimeout(() => {
+      if (pendingNavRef.current) {
+        pendingNavRef.current = false;
+        setLoading(false);
+        setError(getErrorMessage('auth/too-many-requests'));
+      }
+    }, 30000);
+    webViewRef.current?.injectJavaScript(`window.sendOTP('${savedPhone}'); true;`);
   };
 
   const handleWebViewMessage = (event) => {
@@ -279,9 +324,8 @@ const AuthScreen = ({ navigation }) => {
         >
           {/* Hero */}
           <View style={styles.hero}>
-            <LogoMark size={88} />
-            <Image source={NAVBAR_LOGO} style={[styles.authLogo, { marginTop: 24 }]} resizeMode="contain" />
-            <Text style={[styles.sub, { marginTop: 12 }]}>{t.sub}</Text>
+            <Image source={NAVBAR_LOGO} style={styles.authLogo} resizeMode="contain" />
+            <Text style={[styles.sub, { marginTop: 16 }]}>{t.sub}</Text>
           </View>
 
           {/* Card */}
@@ -292,6 +336,30 @@ const AuthScreen = ({ navigation }) => {
                   <Ionicons name="alert-circle" size={16} color="#EF4444" />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
+              )}
+
+              {savedPhone && biometricAvailable && (
+                <>
+                  <TouchableOpacity
+                    style={[styles.passkeyBtn, (loading || !webViewReady) && styles.passkeyBtnOff]}
+                    onPress={handlePasskeyLogin}
+                    disabled={loading || !webViewReady}
+                    activeOpacity={0.82}
+                  >
+                    {loading
+                      ? <ActivityIndicator color="#fff" size="small" />
+                      : <>
+                          <Ionicons name={isFaceId ? 'scan-outline' : 'finger-print'} size={22} color="#fff" />
+                          <Text style={styles.passkeyBtnText}>{isFaceId ? t.signInFaceId : t.signInFingerprint}</Text>
+                        </>
+                    }
+                  </TouchableOpacity>
+                  <View style={styles.orRow}>
+                    <View style={[styles.orLine, { backgroundColor: colors.border }]} />
+                    <Text style={[styles.orText, { color: colors.textMuted }]}>{t.orPhone}</Text>
+                    <View style={[styles.orLine, { backgroundColor: colors.border }]} />
+                  </View>
+                </>
               )}
 
               <Text style={[styles.phoneLabel, { color: colors.textMuted }]}>{t.phoneLabel}</Text>
@@ -404,10 +472,10 @@ const makeStyles = (ff) => StyleSheet.create({
   langPillFlag: { fontSize: 18 },
   kav: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  hero: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 80, paddingBottom: 140 },
+  hero: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32, minHeight: 160 },
   authLogo: { height: 56, width: Math.round(56 * 256 / 144) },
   sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 20 },
-  card: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32 },
+  card: { borderTopLeftRadius: 32, borderTopRightRadius: 32 },
   cardInner: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 8 },
   footer: { paddingHorizontal: 24, paddingBottom: 16 },
   errorBanner: {
@@ -425,6 +493,20 @@ const makeStyles = (ff) => StyleSheet.create({
   countryCode: { fontSize: 14, ...ff('700') },
   phoneSep: { width: 1, height: 22 },
   phoneInput: { flex: 1, height: '100%', paddingHorizontal: 14, fontSize: 16, ...ff('500') },
+  passkeyBtn: {
+    height: 58, borderRadius: 16, backgroundColor: DARK_INDIGO,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    marginBottom: 16,
+    ...Platform.select({
+      ios: { shadowColor: DARK_INDIGO, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12 },
+      android: { elevation: 8 },
+    }),
+  },
+  passkeyBtnOff: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
+  passkeyBtnText: { color: '#fff', fontSize: 16, ...ff('700'), lineHeight: 21 },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  orLine: { flex: 1, height: StyleSheet.hairlineWidth },
+  orText: { fontSize: 12, ...ff('400'), lineHeight: 16 },
   sendBtn: {
     height: 58, borderRadius: 16, backgroundColor: DARK_INDIGO,
     alignItems: 'center', justifyContent: 'center',

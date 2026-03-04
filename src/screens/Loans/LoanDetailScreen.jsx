@@ -22,6 +22,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as SMS from 'expo-sms';
 import {
   listenLoan,
   listenSchedule,
@@ -32,6 +33,7 @@ import {
   writeOffLoan,
   deleteLoan,
   refreshOverdueStatuses,
+  createAgreementLink,
 } from '../../services/loanService';
 // editPayment / deletePayment used via RecordPaymentScreen navigate
 import { useTheme } from '../../theme/ThemeContext';
@@ -91,6 +93,14 @@ const T = {
     abbrevP: 'P',
     abbrevI: 'I',
     daysSuffix: 'd',
+    sendLink: 'Send Signing Link',
+    sendLinkSub: 'SMS borrower a link to sign digitally',
+    linkSent: 'SMS app opened',
+    linkError: 'Failed to create link',
+    smsUnavailable: 'SMS is not available on this device',
+    agreementSigned: 'Agreement Signed',
+    agreementPending: 'Awaiting Signature',
+    sendAnother: 'Resend Link',
   },
   km: {
     edit: 'កែប្រែ',
@@ -138,6 +148,14 @@ const T = {
     abbrevP: 'ប្រាក់ដើម',
     abbrevI: 'ការប្រាក់',
     daysSuffix: 'ថ្ងៃ',
+    sendLink: 'ផ្ញើតំណចុះហត្ថលេខា',
+    sendLinkSub: 'SMS ទៅកាន់អ្នកខ្ចីដើម្បីចុះហត្ថលេខា',
+    linkSent: 'បានបើក SMS',
+    linkError: 'មិនអាចបង្កើតតំណ',
+    smsUnavailable: 'SMS មិនអាចប្រើបានលើឧបករណ៍នេះ',
+    agreementSigned: 'បានចុះហត្ថលេខា',
+    agreementPending: 'រង់ចាំហត្ថលេខា',
+    sendAnother: 'ផ្ញើម្ដងទៀត',
   },
 };
 
@@ -158,6 +176,7 @@ const LoanDetailScreen = ({ navigation, route }) => {
   const [markingPaid,   setMarkingPaid]   = useState(false);
   const [writingOff,    setWritingOff]    = useState(false);
   const [deleting,      setDeleting]      = useState(false);
+  const [sendingLink,   setSendingLink]   = useState(false);
 
   // Start all 3 listeners in parallel — no waterfall
   useEffect(() => {
@@ -296,6 +315,26 @@ const LoanDetailScreen = ({ navigation, route }) => {
     );
   };
 
+  const handleSendLink = async () => {
+    const available = await SMS.isAvailableAsync();
+    if (!available) {
+      Toast.show({ text: t.smsUnavailable, type: 'error' });
+      return;
+    }
+    setSendingLink(true);
+    try {
+      const token = await createAgreementLink(loan.id);
+      const url   = `https://bacon-loan.web.app/${token}`;
+      const body  = `Hi ${loan.borrowerName}, please sign your loan agreement here: ${url}`;
+      await SMS.sendSMSAsync([], body);
+      Toast.show({ text: t.linkSent, type: 'success' });
+    } catch (err) {
+      Toast.show({ text: t.linkError, type: 'error' });
+    } finally {
+      setSendingLink(false);
+    }
+  };
+
   if (!loan) {
     return (
       <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB', alignItems: 'center', justifyContent: 'center' }]}>
@@ -413,6 +452,26 @@ const LoanDetailScreen = ({ navigation, route }) => {
                 <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t.totalInterest}</Text>
               </View>
             </View>
+
+            {/* Agreement status */}
+            {loan.agreement && (
+              <View style={[styles.agreementBadge, {
+                backgroundColor: loan.agreement.status === 'signed' ? '#10B98115' : '#F59E0B15',
+                borderColor:     loan.agreement.status === 'signed' ? '#10B98140' : '#F59E0B40',
+              }]}>
+                <Ionicons
+                  name={loan.agreement.status === 'signed' ? 'shield-checkmark-outline' : 'time-outline'}
+                  size={14}
+                  color={loan.agreement.status === 'signed' ? '#10B981' : '#F59E0B'}
+                />
+                <Text style={[styles.agreementText, {
+                  color: loan.agreement.status === 'signed' ? '#10B981' : '#F59E0B',
+                }]}>
+                  {loan.agreement.status === 'signed' ? t.agreementSigned : t.agreementPending}
+                  {loan.agreement.signedAt ? `  ·  ${loan.agreement.signedAt.slice(0, 10)}` : ''}
+                </Text>
+              </View>
+            )}
 
             {/* Notes */}
             {!!loan.notes && (
@@ -618,10 +677,29 @@ const LoanDetailScreen = ({ navigation, route }) => {
           </GlassCard>
         )}
 
+        {/* Send signing link button */}
+        {!isTerminated && (
+          <TouchableOpacity
+            style={[styles.markPaidBtn, { borderColor: ACCENT + '50', marginTop: 20 }]}
+            onPress={handleSendLink}
+            disabled={sendingLink}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="link-outline" size={18} color={ACCENT} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.markPaidText, { color: ACCENT }]}>
+                {loan.agreement?.status === 'signed' ? t.sendAnother : t.sendLink}
+              </Text>
+              <Text style={[styles.sendLinkSub, { color: colors.textMuted }]}>{t.sendLinkSub}</Text>
+            </View>
+            {sendingLink && <Ionicons name="hourglass-outline" size={16} color={ACCENT} />}
+          </TouchableOpacity>
+        )}
+
         {/* Mark paid button */}
         {!isTerminated && (
           <TouchableOpacity
-            style={[styles.markPaidBtn, { borderColor: colors.border }]}
+            style={[styles.markPaidBtn, { borderColor: colors.border, marginTop: 8 }]}
             onPress={handleMarkPaid}
             disabled={markingPaid}
             activeOpacity={0.7}
@@ -741,6 +819,15 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   payMeta: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
   payNotes: { fontSize: fs(11), lineHeight: 21, ...ff('400'), marginTop: 2 },
   payTotal: { fontSize: fs(15), lineHeight: 26, ...ff('400') },
+
+  // Agreement badge
+  agreementBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7,
+    marginTop: 12,
+  },
+  agreementText: { fontSize: fs(12), lineHeight: 22, ...ff('600'), flex: 1 },
+  sendLinkSub:   { fontSize: fs(11), lineHeight: 20, ...ff('400'), marginTop: 1 },
 
   // Mark paid
   markPaidBtn: {

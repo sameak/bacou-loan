@@ -138,7 +138,8 @@ const CreateLoanScreen = ({ navigation, route }) => {
   const { colors, isDark } = useTheme();
   const { language, ff, fi, fs } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(ff, fs), [ff, fs]);
+  const isKhmer = language === 'km';
+  const styles = useMemo(() => makeStyles(ff, fs, isKhmer), [ff, fs, isKhmer]);
   const scrollRef = useRef(null);
 
   // Pre-fill from BorrowerDetail or DashboardScreen FAB
@@ -498,7 +499,7 @@ const CreateLoanScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (ff, fs) => StyleSheet.create({
+const makeStyles = (ff, fs, isKhmer = false) => StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -517,7 +518,7 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   presetIcon: { fontSize: 22 },
   presetTitle: { fontSize: fs(14), lineHeight: 25, letterSpacing: 0, ...ff('700'), marginBottom: 1 },
   presetHint: { fontSize: fs(12), lineHeight: 22, letterSpacing: 0, opacity: 0.8 },
-  label: { fontSize: fs(11), lineHeight: 21, letterSpacing: 0, ...ff('700'), marginBottom: 4, marginTop: 24 },
+  label: { fontSize: isKhmer ? fs(12) : fs(11), lineHeight: 21, letterSpacing: 0, ...ff('700'), marginBottom: 4, marginTop: 24 },
   input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: fs(15), letterSpacing: 0, ...ff('400') },
   multiline: { height: 90, paddingTop: 14, textAlignVertical: 'top' },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },

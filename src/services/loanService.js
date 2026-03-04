@@ -10,6 +10,7 @@
 import {
   collection,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   doc,
@@ -806,6 +807,24 @@ export async function markLoanPaid(loanId) {
     status: 'paid',
     currentPrincipal: 0,
   });
+}
+
+// ── Agreement link ────────────────────────────────────────────────────────────
+
+/**
+ * Create a one-time signing link token for a loan.
+ * Returns the token string (URL path segment).
+ */
+export async function createAgreementLink(loanId) {
+  const arr = new Uint8Array(18);
+  crypto.getRandomValues(arr);
+  const token = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+  await setDoc(doc(db, 'agreementLinks', token), {
+    loanId,
+    createdAt: serverTimestamp(),
+    createdBy: getUid(),
+  });
+  return token;
 }
 
 // ── Currency formatting ───────────────────────────────────────────────────────

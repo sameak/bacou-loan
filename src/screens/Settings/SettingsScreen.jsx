@@ -7,15 +7,17 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { signOut, updateProfile } from 'firebase/auth';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { useTabBarScroll, useTabBar } from '../../context/TabBarContext';
 import {
   Alert,
   ActivityIndicator,
+  DeviceEventEmitter,
   Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -34,6 +36,9 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useAppLock } from '../../context/AppLockContext';
 import GlassCard from '../../components/GlassCard';
 import Toast from '../../components/Toast';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
+import { useFocusEffect } from '@react-navigation/native';
 
 const ACCENT = '#00C2B2';
 
@@ -95,6 +100,16 @@ const T = {
     capitalKHR: 'Capital (KHR ៛)',
     capitalSaved: 'Capital saved',
     capitalHint: 'Enter 0 to hide a currency',
+    passkeyLogin: 'Passkey Login',
+    passkeyEnabled: 'Enabled',
+    passkeySetUp: 'Set up',
+    passkeyEnableTitle: 'Enable Passkey Login',
+    passkeyEnableMsg: 'Use Face ID or fingerprint to sign in next time.',
+    passkeyDisableTitle: 'Remove Passkey',
+    passkeyDisableMsg: 'You will need to enter your phone number next time.',
+    passkeyRemove: 'Remove',
+    passkeyActivated: 'Passkey login enabled',
+    passkeyRemoved: 'Passkey login removed',
   },
   km: {
     title: 'ម៉ឺនុយ',
@@ -145,6 +160,16 @@ const T = {
     capitalKHR: 'ដើមទុន (KHR ៛)',
     capitalSaved: 'បានរក្សាទុកដើមទុន',
     capitalHint: 'បញ្ចូល 0 ដើម្បីលាក់រូបិយប័ណ្ណ',
+    passkeyLogin: 'ចូលដោយ Passkey',
+    passkeyEnabled: 'បើក',
+    passkeySetUp: 'កំណត់',
+    passkeyEnableTitle: 'បើកការចូលដោយ Passkey',
+    passkeyEnableMsg: 'ប្រើ Face ID ឬស្នាមម្រាមដើម្បីចូលលើកក្រោយ។',
+    passkeyDisableTitle: 'លុប Passkey',
+    passkeyDisableMsg: 'អ្នកត្រូវបញ្ចូលលេខទូរសព្ទលើកក្រោយ។',
+    passkeyRemove: 'លុប',
+    passkeyActivated: 'បានបើក Passkey',
+    passkeyRemoved: 'បានលុប Passkey',
   },
 };
 
@@ -180,6 +205,20 @@ const SettingsScreen = ({ navigation }) => {
   const { colors, isDark, themeMode, setThemeMode } = useTheme();
   const { language, setLanguage, fs, ff, fi } = useLanguage();
   const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const scrollHandler = useTabBarScroll();
+  const { tabVisible } = useTabBar();
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('tabBarScrollToTop', ({ index }) => {
+      if (index === 3) scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+    return () => sub.remove();
+  }, []);
+  const headerH = useSharedValue(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const headerAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: tabVisible ? (1 - tabVisible.value) * -headerH.value : 0 }],
+  }));
   const { biometricAvailable, biometricEnabled, pinEnabled, toggleBiometric, removePIN, verifyPIN } = useAppLock();
   const t = T[language] || T.en;
 
@@ -190,7 +229,45 @@ const SettingsScreen = ({ navigation }) => {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
+  const [passkeyEnrolled, setPasskeyEnrolled] = useState(false);
 
+  useFocusEffect(useCallback(() => {
+    SecureStore.getItemAsync('passkey_phone').then(v => setPasskeyEnrolled(!!v));
+  }, []));
+
+  const handlePasskeyRow = async () => {
+    if (passkeyEnrolled) {
+      Alert.alert(t.passkeyDisableTitle, t.passkeyDisableMsg, [
+        { text: t.pinCancel, style: 'cancel' },
+        { text: t.passkeyRemove, style: 'destructive', onPress: async () => {
+          await SecureStore.deleteItemAsync('passkey_phone');
+          setPasskeyEnrolled(false);
+          Toast.show({ text: t.passkeyRemoved, type: 'success' });
+        }},
+      ]);
+      return;
+    }
+    const enrolled = await LocalAuthentication.isEnrolledAsync();
+    if (!enrolled) {
+      Toast.show({ text: language === 'km' ? 'គ្មានជីវមាត្រនៅលើឧបករណ៍នេះ' : 'No biometrics enrolled on this device', type: 'error' });
+      return;
+    }
+    Alert.alert(t.passkeyEnableTitle, t.passkeyEnableMsg, [
+      { text: t.pinCancel, style: 'cancel' },
+      { text: 'Enable', onPress: async () => {
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: t.passkeyEnableTitle,
+          disableDeviceFallback: false,
+        });
+        if (!result.success) return;
+        const phone = auth.currentUser?.phoneNumber;
+        if (!phone) { Toast.show({ text: 'No phone number on account', type: 'error' }); return; }
+        await SecureStore.setItemAsync('passkey_phone', phone);
+        setPasskeyEnrolled(true);
+        Toast.show({ text: t.passkeyActivated, type: 'success' });
+      }},
+    ]);
+  };
 
   // Auto-submit PIN verify when 4 digits entered
   useEffect(() => {
@@ -271,13 +348,15 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
+      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, backgroundColor: isDark ? colors.background : '#EBEBEB' }, headerAnimStyle]} onLayout={(e) => { const h = e.nativeEvent.layout.height; headerH.value = h; setHeaderHeight(h); }}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>{t.title}</Text>
         </View>
       </SafeAreaView>
+      </Animated.View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
+      <Animated.ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingTop: headerHeight + 4, paddingBottom: insets.bottom + 100 }]} onScroll={scrollHandler} scrollEventThrottle={16}>
         {/* Tools row */}
         <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t.tools}</Text>
         <View style={styles.toolsRow}>
@@ -357,6 +436,16 @@ const SettingsScreen = ({ navigation }) => {
         {/* Security */}
         <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{t.security}</Text>
         <GlassCard style={{ marginBottom: 20 }}>
+          <Row
+            label={t.passkeyLogin}
+            colors={colors}
+            isDark={isDark}
+            onPress={handlePasskeyRow}
+            right={passkeyEnrolled
+              ? <Text style={[styles.pinStatus, { color: ACCENT }]}>{t.passkeyEnabled}</Text>
+              : <Text style={[styles.pinStatus, { color: colors.textMuted }]}>{t.passkeySetUp}</Text>
+            }
+          />
           {biometricAvailable && (
             <Row
               label={t.faceId}
@@ -456,7 +545,7 @@ const SettingsScreen = ({ navigation }) => {
           <Image source={isDark ? NAVBAR_LOGO_DARK : NAVBAR_LOGO} style={styles.versionLogo} resizeMode="contain" />
           <Text style={[styles.versionText, { color: colors.textMuted }]}>v1.0.0</Text>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* PIN Verify Before Remove Modal */}
       <Modal visible={verifyingPIN} transparent animationType="fade">

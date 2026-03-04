@@ -4,7 +4,7 @@
  * Settings:
  *   • Enable / Disable payment reminders
  *   • Days before due date (1 | 2 | 3 | 5 | 7)
- *   • Reminder time (HH:MM)
+ *   • Reminder time (HH:MM) — scroll wheel picker
  *
  * All prefs saved to AsyncStorage immediately on change.
  * Calls schedulePaymentReminders() on every save so notifications stay current.
@@ -12,15 +12,14 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useMemo, useState } from 'react';
+import * as Haptics from 'expo-haptics';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -38,8 +37,18 @@ import {
   cancelAllReminders,
 } from '../../services/notificationService';
 
-const ACCENT  = '#8B5CF6';
-const DAYS_OPTIONS = [1, 2, 3, 5, 7];
+const ACCENT       = '#8B5CF6';
+const DAYS_OPTIONS = [0, 1, 2, 3, 5, 7];
+const DAYS_LABEL   = (d, language) => d === 0
+  ? (language === 'km' ? 'ថ្ងៃបង់' : 'Same day')
+  : String(d);
+
+const ITEM_H  = 52;             // height of each wheel row
+const VISIBLE = 5;              // rows visible at once
+const WHEEL_H = ITEM_H * VISIBLE;
+
+const HOURS   = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
 const T = {
   en: {
@@ -56,8 +65,6 @@ const T = {
     day:             'day',
     days:            'days',
     timePickerTitle: 'Set Reminder Time',
-    hour:            'Hour (0–23)',
-    minute:          'Minute (0–59)',
     save:            'Save',
     cancel:          'Cancel',
   },
@@ -75,34 +82,133 @@ const T = {
     day:             'ថ្ងៃ',
     days:            'ថ្ងៃ',
     timePickerTitle: 'កំណត់ម៉ោងរំលឹក',
-    hour:            'ម៉ោង (0–23)',
-    minute:          'នាទី (0–59)',
     save:            'រក្សាទុក',
     cancel:          'បោះបង់',
   },
 };
 
 function fmt12h(timeStr) {
-  // '09:00' → '9:00 AM', '14:30' → '2:30 PM'
   const [hh, mm] = timeStr.split(':').map(Number);
   const period = hh < 12 ? 'AM' : 'PM';
   const h12    = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh;
   return `${h12}:${String(mm).padStart(2, '0')} ${period}`;
 }
 
+// ── Drum-roll scroll wheel ────────────────────────────────────────────────────
+const OPACITIES  = [1, 0.5, 0.22, 0.1];
+const FONT_SIZES = (fs) => [fs(26), fs(21), fs(17), fs(14)];
+const LINE_HTS   = [34, 28, 22, 20];
+
+function WheelPicker({ data, selectedIndex, onIndexChange, colors, isDark, ff, fs }) {
+  const scrollRef    = useRef(null);
+  const hapticRef    = useRef(-1);
+  const momentumRef  = useRef(false);
+  const [localIdx, setLocalIdx] = useState(selectedIndex);
+
+  // Jump to current value when modal opens (component remounts each open via key=)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: selectedIndex * ITEM_H, animated: false });
+    }, 80);
+    return () => clearTimeout(t);
+  }, []);
+
+  const clamp = (y) =>
+    Math.max(0, Math.min(data.length - 1, Math.round(y / ITEM_H)));
+
+  // Live tracking during drag — haptic + visual update
+  const handleScroll = (e) => {
+    const idx = clamp(e.nativeEvent.contentOffset.y);
+    if (idx !== hapticRef.current) {
+      hapticRef.current = idx;
+      setLocalIdx(idx);
+      Haptics.selectionAsync();
+    }
+  };
+
+  // Commit final value — NO programmatic scrollTo here (avoids re-trigger loop)
+  const commit = (y) => {
+    const idx = clamp(y);
+    setLocalIdx(idx);
+    onIndexChange(idx);
+  };
+
+  const fontSizes = useMemo(() => FONT_SIZES(fs), [fs]);
+  const fadeBg    = isDark ? 'rgba(28,28,40,0.88)' : 'rgba(255,255,255,0.88)';
+
+  return (
+    <View style={{ width: 90, height: WHEEL_H, overflow: 'hidden' }}>
+      {/* Selection highlight */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: ITEM_H * 2, left: 4, right: 4, height: ITEM_H,
+          backgroundColor: isDark ? 'rgba(139,92,246,0.20)' : 'rgba(139,92,246,0.12)',
+          borderRadius: 12,
+        }}
+      />
+      {/* Top fade */}
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: ITEM_H * 2, backgroundColor: fadeBg, zIndex: 1 }} />
+      {/* Bottom fade */}
+      <View pointerEvents="none" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: ITEM_H * 2, backgroundColor: fadeBg, zIndex: 1 }} />
+
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_H}
+        decelerationRate="fast"
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
+        onScrollBeginDrag={() => { momentumRef.current = false; }}
+        onMomentumScrollBegin={() => { momentumRef.current = true; }}
+        onScrollEndDrag={(e) => {
+          // Only commit here if no momentum scroll will follow (slow drag)
+          if (!momentumRef.current) commit(e.nativeEvent.contentOffset.y);
+        }}
+        onMomentumScrollEnd={(e) => {
+          momentumRef.current = false;
+          commit(e.nativeEvent.contentOffset.y);
+        }}
+        contentContainerStyle={{ paddingVertical: ITEM_H * 2 }}
+      >
+        {data.map((item, index) => {
+          const dist = Math.min(Math.abs(index - localIdx), 3);
+          return (
+            <View key={index} style={{ height: ITEM_H, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{
+                fontSize: fontSizes[dist],
+                lineHeight: LINE_HTS[dist],
+                letterSpacing: 0,
+                color: colors.text,
+                opacity: OPACITIES[dist],
+                ...ff(dist === 0 ? '600' : '400'),
+              }}>
+                {String(item).padStart(2, '0')}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function RemindersScreen({ navigation }) {
   const { colors, isDark } = useTheme();
-  const { language, ff, fs, fi } = useLanguage();
+  const { language, ff, fs } = useLanguage();
   const t = T[language] || T.en;
   const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
   const { loans } = useData();
 
-  const [enabled,    setEnabled]    = useState(false);
-  const [days,       setDays]       = useState(DEFAULT_PREFS.days);
-  const [time,       setTime]       = useState(DEFAULT_PREFS.time);
+  const [enabled,        setEnabled]        = useState(false);
+  const [days,           setDays]           = useState(DEFAULT_PREFS.days);
+  const [time,           setTime]           = useState(DEFAULT_PREFS.time);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [hourInput,  setHourInput]  = useState('9');
-  const [minInput,   setMinInput]   = useState('00');
+  const [hourVal,        setHourVal]        = useState(9);
+  const [minVal,         setMinVal]         = useState(0);
 
   // ── Load prefs on mount ───────────────────────────────────────────────────
   useEffect(() => {
@@ -148,15 +254,13 @@ export default function RemindersScreen({ navigation }) {
   // ── Time picker ───────────────────────────────────────────────────────────
   const openTimePicker = () => {
     const [hh, mm] = time.split(':');
-    setHourInput(String(parseInt(hh, 10)));
-    setMinInput(mm);
+    setHourVal(parseInt(hh, 10));
+    setMinVal(parseInt(mm, 10));
     setShowTimePicker(true);
   };
 
   const handleSaveTime = async () => {
-    const hh = Math.min(23, Math.max(0, parseInt(hourInput, 10) || 0));
-    const mm = Math.min(59, Math.max(0, parseInt(minInput,  10) || 0));
-    const newTime = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    const newTime = `${String(hourVal).padStart(2, '0')}:${String(minVal).padStart(2, '0')}`;
     setTime(newTime);
     setShowTimePicker(false);
     await savePrefs({ time: newTime });
@@ -216,7 +320,7 @@ export default function RemindersScreen({ navigation }) {
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.pillText, { color: active ? '#fff' : colors.text }, ff(active ? '600' : '400')]}>
-                          {d}
+                          {DAYS_LABEL(d, language)}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -248,7 +352,7 @@ export default function RemindersScreen({ navigation }) {
 
       </ScrollView>
 
-      {/* Time Picker Modal */}
+      {/* ── Time Picker Modal (drum-roll wheels) ── */}
       <Modal visible={showTimePicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: isDark ? colors.surface ?? '#1C1C28' : '#fff' }]}>
@@ -263,42 +367,29 @@ export default function RemindersScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.timeInputRow}>
-              {/* Hour */}
-              <View style={styles.timeInputCol}>
-                <Text style={[styles.timeInputLabel, { color: colors.textMuted }, ff('400')]}>{t.hour}</Text>
-                <View style={[styles.timeInputWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)', borderColor: 'rgba(120,120,128,0.2)' }]}>
-                  <TextInput
-                    style={[styles.timeInput, { color: colors.text }, fi()]}
-                    value={hourInput}
-                    onChangeText={v => setHourInput(v.replace(/[^0-9]/g, ''))}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    placeholder="9"
-                    placeholderTextColor={colors.textMuted}
-                    selectTextOnFocus
-                  />
-                </View>
-              </View>
-
-              <Text style={[styles.timeSep, { color: colors.text }, ff('700')]}>:</Text>
-
-              {/* Minute */}
-              <View style={styles.timeInputCol}>
-                <Text style={[styles.timeInputLabel, { color: colors.textMuted }, ff('400')]}>{t.minute}</Text>
-                <View style={[styles.timeInputWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)', borderColor: 'rgba(120,120,128,0.2)' }]}>
-                  <TextInput
-                    style={[styles.timeInput, { color: colors.text }, fi()]}
-                    value={minInput}
-                    onChangeText={v => setMinInput(v.replace(/[^0-9]/g, ''))}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                    placeholder="00"
-                    placeholderTextColor={colors.textMuted}
-                    selectTextOnFocus
-                  />
-                </View>
-              </View>
+            {/* Wheels */}
+            <View style={styles.wheelRow}>
+              <WheelPicker
+                key={`h-${showTimePicker}`}
+                data={HOURS}
+                selectedIndex={hourVal}
+                onIndexChange={setHourVal}
+                colors={colors}
+                isDark={isDark}
+                ff={ff}
+                fs={fs}
+              />
+              <Text style={[styles.wheelSep, { color: colors.text }, ff('700')]}>:</Text>
+              <WheelPicker
+                key={`m-${showTimePicker}`}
+                data={MINUTES}
+                selectedIndex={minVal}
+                onIndexChange={setMinVal}
+                colors={colors}
+                isDark={isDark}
+                ff={ff}
+                fs={fs}
+              />
             </View>
           </View>
         </View>
@@ -328,7 +419,6 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   rowLabel: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0 },
   rowDesc:  { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, marginTop: 2 },
 
-  // Pills
   pillsRow: { flexDirection: 'row', gap: 6 },
   pill: {
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10,
@@ -336,11 +426,9 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   },
   pillText: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
 
-  // Time row
-  timeRight:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  timeValue:  { fontSize: fs(15), lineHeight: 20, letterSpacing: 0 },
+  timeRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  timeValue: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0 },
 
-  // Info
   infoText: { flex: 1, fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
 
   // Modal
@@ -356,10 +444,7 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   modalTitle:   { fontSize: fs(16), lineHeight: 21, letterSpacing: 0 },
   modalSave:    { fontSize: fs(15), lineHeight: 20, letterSpacing: 0, textAlign: 'right' },
 
-  timeInputRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', padding: 24, gap: 12 },
-  timeInputCol: { alignItems: 'center', gap: 6 },
-  timeInputLabel: { fontSize: fs(12), lineHeight: 16, letterSpacing: 0 },
-  timeInputWrap:  { borderRadius: 10, borderWidth: 1, overflow: 'hidden' },
-  timeInput:      { width: 80, height: 56, textAlign: 'center', fontSize: fs(24), lineHeight: 30, letterSpacing: 0 },
-  timeSep:        { fontSize: fs(30), lineHeight: 36, letterSpacing: 0, marginBottom: 6 },
+  // Wheel picker
+  wheelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 4 },
+  wheelSep: { fontSize: fs(28), lineHeight: 36, letterSpacing: 0, marginTop: -4 },
 });

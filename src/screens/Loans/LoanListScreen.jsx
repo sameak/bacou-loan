@@ -3,9 +3,11 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { useTabBarScroll, useTabBar } from '../../context/TabBarContext';
 import {
-  FlatList,
+  DeviceEventEmitter,
   Platform,
   RefreshControl,
   ScrollView,
@@ -25,6 +27,7 @@ import { Skeleton } from '../../components/Skeleton';
 
 const ACCENT = '#00C2B2';
 const STATUS_COLORS = { active: '#10B981', overdue: '#EF4444', paid: '#9CA3AF', written_off: '#6B7280' };
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 const T = {
   en: {
@@ -67,6 +70,23 @@ const LoanListScreen = ({ navigation }) => {
   const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
   const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const scrollHandler = useTabBarScroll();
+  const { tabVisible } = useTabBar();
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('tabBarScrollToTop', ({ index }) => {
+      if (index === 2) scrollRef.current?.scrollToOffset({ offset: 0, animated: true });
+    });
+    return () => sub.remove();
+  }, []);
+  const fabAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tabVisible ? (1 - tabVisible.value) * 100 : 0 }],
+  }));
+  const headerH = useSharedValue(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const headerAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: tabVisible ? (1 - tabVisible.value) * -headerH.value : 0 }],
+  }));
 
   const { loans, loansLoaded } = useData();
   const [search, setSearch] = useState('');
@@ -143,6 +163,7 @@ const LoanListScreen = ({ navigation }) => {
 
   return (
     <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
+      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, backgroundColor: isDark ? colors.background : '#EBEBEB' }, headerAnimStyle]} onLayout={(e) => { const h = e.nativeEvent.layout.height; headerH.value = h; setHeaderHeight(h); }}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>{t.title}</Text>
@@ -191,9 +212,10 @@ const LoanListScreen = ({ navigation }) => {
           })}
         </ScrollView>
       </SafeAreaView>
+      </Animated.View>
 
       {loading ? (
-        <View style={{ paddingHorizontal: 16, gap: 10, marginTop: 8 }}>
+        <View style={{ paddingHorizontal: 16, gap: 10, marginTop: headerHeight + 8 }}>
           {[1, 2, 3].map(i => (
             <GlassCard key={i}>
               <View style={{ padding: 16, gap: 8 }}>
@@ -205,14 +227,17 @@ const LoanListScreen = ({ navigation }) => {
           ))}
         </View>
       ) : (
-        <FlatList
+        <Animated.FlatList
+          ref={scrollRef}
           data={filtered}
           keyExtractor={item => item.id}
           renderItem={renderItem}
-          contentContainerStyle={[styles.list, filtered.length === 0 && styles.listEmpty, { paddingBottom: insets.bottom + 120 }]}
+          contentContainerStyle={[styles.list, filtered.length === 0 && styles.listEmpty, { paddingTop: headerHeight + 8, paddingBottom: insets.bottom + 120 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT} colors={[ACCENT]} />}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
@@ -225,13 +250,13 @@ const LoanListScreen = ({ navigation }) => {
       )}
 
       {/* FAB */}
-      <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 100 }]}
+      <AnimatedTouchable
+        style={[styles.fab, { bottom: insets.bottom + 100 }, fabAnimStyle]}
         onPress={() => navigation.navigate('CreateLoan')}
         activeOpacity={0.85}
       >
         <Ionicons name="add" size={28} color="#fff" />
-      </TouchableOpacity>
+      </AnimatedTouchable>
     </View>
   );
 };
