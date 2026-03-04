@@ -286,7 +286,6 @@ const SettingsScreen = ({ navigation }) => {
             { icon: 'swap-horizontal-outline', label: t.toolRates,    color: '#F59E0B', screen: 'ExchangeRates' },
             { icon: 'bar-chart-outline',       label: t.toolReports,  color: '#10B981', screen: 'Reports'       },
             { icon: 'cash-outline',            label: t.toolCapital,   color: '#EC4899', screen: 'Capital'    },
-            { icon: 'notifications-outline',   label: t.toolReminders, color: '#8B5CF6', screen: 'Reminders'  },
           ].map(item => (
             <TouchableOpacity
               key={item.screen}
@@ -316,7 +315,6 @@ const SettingsScreen = ({ navigation }) => {
             colors={colors}
             isDark={isDark}
             onPress={() => navigation.navigate('Appearance')}
-            last
             right={
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={[{ fontSize: fs(13), lineHeight: 18, letterSpacing: 0 }, ff('400'), { color: colors.textMuted }]}>
@@ -325,6 +323,14 @@ const SettingsScreen = ({ navigation }) => {
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </View>
             }
+          />
+          <Row
+            label={t.toolReminders}
+            colors={colors}
+            isDark={isDark}
+            onPress={() => navigation.navigate('Reminders')}
+            last
+            right={<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
           />
         </GlassCard>
 
