@@ -31,7 +31,7 @@ const GOLD_C  = '#F59E0B';
 const TROY_OZ = 31.1035;   // grams per troy ounce
 const CHI_G   = 3.75;      // grams per chi (Cambodian/Vietnamese unit)
 
-const FX_CACHE   = 'exchange_rates_v3';   // v3: adds NBC source
+const FX_CACHE   = 'exchange_rates_v4';   // v4: fix NBC regex
 const GOLD_CACHE = 'gold_rates_v3';
 
 // ─── Exchange-rate sources ────────────────────────────────────────────────────
@@ -70,12 +70,19 @@ const FX_SOURCES = [
     url: 'https://www.nbc.gov.kh/english/economic_research/exchange_rate.php',
     headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15' },
     parse: html => {
-      // Official USD/KHR: "4013 KHR / USD" or inside a font tag
-      const usdMatch = html.match(/(\d{4,5})\s*KHR\s*\/\s*USD/i);
+      // Official USD/KHR — NBC wraps the number in <font>: >4013</font> KHR / USD
+      // Try 3 patterns from most to least specific
+      const usdMatch =
+        html.match(/(\d{4,5})<\/font>\s*KHR\s*[/]\s*USD/i) ||
+        html.match(/Official[^<]*Exchange[^<]*Rate[^<]*<[^>]+>(\d{4,5})<\/[^>]+>/i) ||
+        html.match(/(\d{4,5})\s*KHR\s*[/]\s*USD/i);
       const usdKHR = usdMatch ? parseInt(usdMatch[1]) : null;
 
-      // KRW cross rate row: KRW/KHR | unit | buy | sell
-      const krwMatch = html.match(/KRW\/KHR<\/td>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d+)<\/td>/i);
+      // KRW cross rate row: KRW/KHR | unit(100) | buy | sell
+      // Rows may have newlines or extra whitespace between cells
+      const krwMatch = html.match(
+        /KRW\/KHR<\/td>[\s\S]*?<td[^>]*>(\d+)<\/td>[\s\S]*?<td[^>]*>(\d+)<\/td>/i,
+      );
       const krwUnit = krwMatch ? parseInt(krwMatch[1]) : 100;
       const krwBuy  = krwMatch ? parseInt(krwMatch[2]) : null;
 
