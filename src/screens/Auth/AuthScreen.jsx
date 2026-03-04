@@ -22,7 +22,7 @@ import {
   View,
 } from 'react-native';
 
-const NAVBAR_LOGO = require('../../../assets/images/navbar-logo-dark.png');
+const NAVBAR_LOGO = require('../../../assets/images/navbar-logo.png');
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { firebaseConfig } from '../../services/firebase';
@@ -280,9 +280,7 @@ const AuthScreen = ({ navigation }) => {
           {/* Hero */}
           <View style={styles.hero}>
             <LogoMark size={88} />
-            <View style={[styles.authLogoPill, { marginTop: 24 }]}>
-              <Image source={NAVBAR_LOGO} style={styles.authLogo} resizeMode="contain" />
-            </View>
+            <Image source={NAVBAR_LOGO} style={[styles.authLogo, { marginTop: 24 }]} resizeMode="contain" />
             <Text style={[styles.sub, { marginTop: 12 }]}>{t.sub}</Text>
           </View>
 
@@ -407,7 +405,6 @@ const makeStyles = (ff) => StyleSheet.create({
   kav: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   hero: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 80, paddingBottom: 140 },
-  authLogoPill: { borderRadius: 16, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12 }, android: { elevation: 8 } }) },
   authLogo: { height: 56, width: Math.round(56 * 256 / 144) },
   sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 20 },
   card: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32 },

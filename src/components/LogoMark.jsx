@@ -10,16 +10,14 @@
 import React from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 
-const ICON           = require('../../assets/images/icon.png');
-const LOGO_LIGHT     = require('../../assets/images/navbar-logo.png');
-const LOGO_DARK      = require('../../assets/images/navbar-logo-dark.png');
+const ICON      = require('../../assets/images/icon.png');
+const LOGO_TEXT = require('../../assets/images/navbar-logo.png');
 
 const LOGO_RATIO = 256 / 144;
 
 export default function LogoMark({
   size     = 88,
   showLogo = false,
-  isDark   = false,
 }) {
   const radius = Math.round(size * 0.225);
   const logoH  = Math.round(size * 0.45);
@@ -33,9 +31,7 @@ export default function LogoMark({
         resizeMode="cover"
       />
       {showLogo && (
-        <View style={s.logoPill}>
-          <Image source={isDark ? LOGO_DARK : LOGO_LIGHT} style={{ width: logoW, height: logoH }} resizeMode="contain" />
-        </View>
+        <Image source={LOGO_TEXT} style={[s.logoPill, { width: logoW, height: logoH }]} resizeMode="contain" />
       )}
     </View>
   );
