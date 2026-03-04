@@ -29,14 +29,14 @@ export function LanguageProvider({ children, initialLanguage }) {
   const fs = useCallback((size) => language === 'km' ? Math.round(size * 1.1) : size, [language]);
 
   /**
-   * ff(weight) — always uses Koh Santepheap (supports both Latin + Khmer),
-   * so Khmer text renders correctly in all screens regardless of app language.
+   * ff(weight) — system font for English, Koh Santepheap for Khmer.
    * Heavy weights (600+) → Bold variant; others → Regular.
    */
   const ff = useCallback((weight) => {
+    if (language !== 'km') return { fontWeight: String(weight) };
     const heavy = ['600', '700', '800', '900'];
     return { fontFamily: heavy.includes(String(weight)) ? 'KohSantepheap_700Bold' : 'KohSantepheap_400Regular' };
-  }, []);
+  }, [language]);
 
   /**
    * fi() — font for TextInput fields. Always uses Koh Santepheap so user-typed
