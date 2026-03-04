@@ -10,20 +10,20 @@
 import React from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 
-const ICON      = require('../../assets/images/icon.png');
-const LOGO_TEXT = require('../../assets/images/navbar-logo.png');
+const ICON           = require('../../assets/images/icon.png');
+const LOGO_LIGHT     = require('../../assets/images/navbar-logo.png');
+const LOGO_DARK      = require('../../assets/images/navbar-logo-dark.png');
 
-// navbar-logo.png native size: 384×216 (3x of 128×72)
 const LOGO_RATIO = 256 / 144;
 
 export default function LogoMark({
   size     = 88,
   showLogo = false,
-  logoBg   = '#fff',
+  isDark   = false,
 }) {
-  const radius    = Math.round(size * 0.225);
-  const logoH     = Math.round(size * 0.45);
-  const logoW     = Math.round(logoH * LOGO_RATIO);
+  const radius = Math.round(size * 0.225);
+  const logoH  = Math.round(size * 0.45);
+  const logoW  = Math.round(logoH * LOGO_RATIO);
 
   return (
     <View style={showLogo ? s.row : s.center}>
@@ -33,8 +33,8 @@ export default function LogoMark({
         resizeMode="cover"
       />
       {showLogo && (
-        <View style={[s.logoPill, { backgroundColor: logoBg }]}>
-          <Image source={LOGO_TEXT} style={{ width: logoW, height: logoH }} resizeMode="contain" />
+        <View style={s.logoPill}>
+          <Image source={isDark ? LOGO_DARK : LOGO_LIGHT} style={{ width: logoW, height: logoH }} resizeMode="contain" />
         </View>
       )}
     </View>

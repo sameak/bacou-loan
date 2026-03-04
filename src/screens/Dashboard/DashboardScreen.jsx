@@ -25,7 +25,8 @@ import {
   View,
 } from 'react-native';
 
-const NAVBAR_LOGO = require('../../../assets/images/navbar-logo.png');
+const NAVBAR_LOGO       = require('../../../assets/images/navbar-logo.png');
+const NAVBAR_LOGO_DARK  = require('../../../assets/images/navbar-logo-dark.png');
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
@@ -281,9 +282,7 @@ const DashboardScreen = ({ navigation }) => {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { color: colors.textMuted }, ff('400')]}>{t[greetKey]}{userName ? `, ${userName}` : ''}</Text>
-            <View style={[styles.navLogoWrap, isDark && styles.navLogoWrapDark]}>
-              <Image source={NAVBAR_LOGO} style={styles.navLogo} resizeMode="contain" />
-            </View>
+            <Image source={isDark ? NAVBAR_LOGO_DARK : NAVBAR_LOGO} style={styles.navLogo} resizeMode="contain" />
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity
@@ -697,9 +696,7 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   root:    { flex: 1 },
   header:  { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' },
   greeting:{ fontSize: fs(13), lineHeight: 18 },
-  navLogoWrap: { marginTop: 2 },
-  navLogoWrapDark: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
-  navLogo: { height: 38, width: Math.round(38 * 256 / 144) },
+  navLogo: { height: 38, width: Math.round(38 * 256 / 144), borderRadius: 6, marginTop: 2 },
   headerIcons: { flexDirection: 'row', gap: 8 },
   headerIcon:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },

@@ -22,7 +22,7 @@ import {
   View,
 } from 'react-native';
 
-const NAVBAR_LOGO = require('../../../assets/images/navbar-logo.png');
+const NAVBAR_LOGO = require('../../../assets/images/navbar-logo-dark.png');
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { firebaseConfig } from '../../services/firebase';
@@ -407,8 +407,8 @@ const makeStyles = (ff) => StyleSheet.create({
   kav: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   hero: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 80, paddingBottom: 140 },
-  authLogoPill: { backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 16, marginBottom: 20, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 }, android: { elevation: 8 } }) },
-  authLogo: { height: 52, width: Math.round(52 * 256 / 144) },
+  authLogoPill: { borderRadius: 16, overflow: 'hidden', ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12 }, android: { elevation: 8 } }) },
+  authLogo: { height: 56, width: Math.round(56 * 256 / 144) },
   sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 20 },
   card: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32 },
   cardInner: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 8 },
