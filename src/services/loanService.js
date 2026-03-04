@@ -658,6 +658,8 @@ export async function getBorrowerPayments(loans) {
       loanId: loan.id,
       loanCurrency: loan.currency,
       loanOriginalPrincipal: loan.originalPrincipal,
+      borrowerId: loan.borrowerId,
+      borrowerName: loan.borrowerName,
       ...d.data(),
     }));
     allPayments.push(...payments);
