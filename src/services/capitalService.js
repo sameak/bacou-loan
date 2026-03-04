@@ -1,7 +1,8 @@
 /**
- * CAPITAL SERVICE — track the lender's original capital in USD and KHR
+ * CAPITAL SERVICE — shared business capital in USD and KHR
  *
- * Stored in Firestore: users/{uid}  (fields: capitalUSD, capitalKHR)
+ * Stored in Firestore: settings/capital  (single shared document)
+ * All authenticated owners read and write the same document.
  */
 
 import {
@@ -10,28 +11,22 @@ import {
   setDoc,
   onSnapshot,
 } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { db } from './firebase';
 
-function getUid() {
-  return auth.currentUser?.uid;
-}
+const CAPITAL_REF = () => doc(db, 'settings', 'capital');
 
 /**
  * Save/update capital amounts.
  */
 export async function saveCapital({ capitalUSD = 0, capitalKHR = 0 }) {
-  const uid = getUid();
-  if (!uid) throw new Error('Not authenticated');
-  await setDoc(doc(db, 'users', uid), { capitalUSD, capitalKHR }, { merge: true });
+  await setDoc(CAPITAL_REF(), { capitalUSD, capitalKHR }, { merge: true });
 }
 
 /**
  * Fetch capital once.
  */
 export async function getCapital() {
-  const uid = getUid();
-  if (!uid) return { capitalUSD: 0, capitalKHR: 0 };
-  const snap = await getDoc(doc(db, 'users', uid));
+  const snap = await getDoc(CAPITAL_REF());
   if (!snap.exists()) return { capitalUSD: 0, capitalKHR: 0 };
   const { capitalUSD = 0, capitalKHR = 0 } = snap.data();
   return { capitalUSD, capitalKHR };
@@ -42,10 +37,8 @@ export async function getCapital() {
  * Returns unsubscribe function.
  */
 export function listenCapital(callback) {
-  const uid = getUid();
-  if (!uid) return () => {};
   return onSnapshot(
-    doc(db, 'users', uid),
+    CAPITAL_REF(),
     snap => {
       const { capitalUSD = 0, capitalKHR = 0 } = snap.exists() ? snap.data() : {};
       callback({ capitalUSD, capitalKHR });
