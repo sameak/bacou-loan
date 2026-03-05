@@ -8,12 +8,22 @@
     "scheme": "bacou",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "updates": {
+      "url": "https://u.expo.dev/4f85cd30-d0c0-4db2-afde-e3072d9da88d",
+      "enabled": true,
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.bacou.loan",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "Bacou needs access to your photo library to attach loan documents and photos.",
+        "NSPhotoLibraryAddUsageDescription": "Bacou saves loan photos to your photo library.",
         "NSCameraUsageDescription": "Bacou needs camera access to capture loan contract photos.",
         "NSMicrophoneUsageDescription": "Bacou needs microphone access to record video affirmations."
       }
@@ -62,6 +72,7 @@
           }
         }
       ],
+      "expo-updates",
       "expo-font",
       [
         "expo-notifications",
