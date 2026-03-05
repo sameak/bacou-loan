@@ -179,12 +179,9 @@ export async function sendFileMessage(chatId, fileUri, fileName, fileSize, mimeT
 /** Upload image to Storage then send an image message. */
 export async function sendImageMessage(chatId, imageUri) {
   const { uid, name } = getUserInfo();
-  console.log('[IMG] sendImageMessage uid:', uid, 'chatId:', chatId);
   if (!uid) return;
 
-  console.log('[IMG] converting to blob...');
   const blob = await uriToBlob(imageUri);
-  console.log('[IMG] blob size:', blob?.size, 'type:', blob?.type);
   const timestamp = Date.now();
   const storagePath = `chat/${chatId}/${timestamp}.jpg`;
   const storageRef = ref(storage, storagePath);
