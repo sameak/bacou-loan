@@ -30,6 +30,7 @@ import {
   PanResponder,
   Platform,
   PlatformColor,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -376,12 +377,49 @@ function LiquidGlassTabBar({ state, navigation }) {
   });
 
   // ── iOS 26+: real Apple Liquid Glass ────────────────────────────────────────
+  // Uses individual Pressable per tab instead of PanResponder to avoid coordinate
+  // issues caused by LiquidGlassContainerView/LiquidGlassView layout wrappers.
   if (isLiquidGlassSupported) {
     return (
       <RAnimated.View style={[tabStyles.wrap, { bottom }, tabAnimStyle]} pointerEvents="box-none">
         <LiquidGlassContainerView spacing={24} style={tabStyles.nativeWrap}>
           <LiquidGlassView style={tabStyles.nativeBar} effect="regular" interactive={false}>
-            <View style={tabStyles.row} {...rowPan.panHandlers}>{makeTabItems(true)}</View>
+            <View style={tabStyles.row}>
+              {state.routes.map((route, index) => {
+                const focused = state.index === index;
+                return (
+                  <Pressable
+                    key={route.key}
+                    style={({ pressed }) => [tabStyles.item, pressed && { opacity: 0.7 }]}
+                    onPress={() => {
+                      const now = Date.now();
+                      const isDoubleTap = state.index === index && (now - (lastTapTimes.current[index] ?? 0) < 300);
+                      lastTapTimes.current[index] = isDoubleTap ? 0 : now;
+                      if (isDoubleTap) {
+                        DeviceEventEmitter.emit('tabBarScrollToTop', { index });
+                        if (tabVisible) tabVisible.value = withTiming(1, { duration: 350 });
+                      } else {
+                        const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                        if (state.index !== index && !event.defaultPrevented) navigation.navigate(route.name);
+                      }
+                    }}
+                  >
+                    <TabItem
+                      cfg={TAB_CONFIGS[index]}
+                      focused={focused}
+                      activeColor={focused ? ACCENT : (isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.38)')}
+                      inactiveColor={inactiveColor}
+                      label={labels[index]}
+                      language={language}
+                      fs={fs}
+                      ff={ff}
+                      isDark={isDark}
+                      showActivePill={true}
+                    />
+                  </Pressable>
+                );
+              })}
+            </View>
           </LiquidGlassView>
         </LiquidGlassContainerView>
       </RAnimated.View>
