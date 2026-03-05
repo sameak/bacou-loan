@@ -92,7 +92,8 @@ export async function ensureDmChat(otherUid, otherName) {
 }
 
 /** Send a text message to a chat. */
-export async function sendMessage(chatId, text) {
+/** Send a text message, with optional reply-to quote. */
+export async function sendMessage(chatId, text, replyTo = null) {
   const { uid, name } = getUserInfo();
   if (!uid || !text.trim()) return;
 
@@ -111,10 +112,50 @@ export async function sendMessage(chatId, text) {
     senderId: uid,
     senderName: name,
     createdAt: serverTimestamp(),
+    ...(replyTo && { replyTo }),
   });
 
   await updateDoc(chatRef, {
     lastMessage: text.trim(),
+    lastMessageTime: serverTimestamp(),
+    lastMessageBy: uid,
+    ...unreadPatch,
+  });
+}
+
+/** Upload a file to Storage then send a file message. */
+export async function sendFileMessage(chatId, fileUri, fileName, fileSize, mimeType) {
+  const { uid, name } = getUserInfo();
+  if (!uid) return;
+
+  const response = await fetch(fileUri);
+  const blob = await response.blob();
+  const timestamp = Date.now();
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const storageRef = ref(storage, `chat/${chatId}/${timestamp}_${safeName}`);
+  await uploadBytes(storageRef, blob, { contentType: mimeType ?? 'application/octet-stream' });
+  const fileUrl = await getDownloadURL(storageRef);
+
+  const chatRef = doc(db, 'chats', chatId);
+  const chatSnap = await getDoc(chatRef);
+  const members = chatSnap.data()?.members ?? [];
+  const otherMembers = members.filter(m => m !== uid);
+  const unreadPatch = {};
+  otherMembers.forEach(m => { unreadPatch[`unreadCounts.${m}`] = increment(1); });
+
+  await addDoc(collection(db, 'chats', chatId, 'messages'), {
+    type: 'file',
+    fileUrl,
+    fileName,
+    fileSize: fileSize ?? 0,
+    mimeType: mimeType ?? '',
+    senderId: uid,
+    senderName: name,
+    createdAt: serverTimestamp(),
+  });
+
+  await updateDoc(chatRef, {
+    lastMessage: `📎 ${fileName}`,
     lastMessageTime: serverTimestamp(),
     lastMessageBy: uid,
     ...unreadPatch,
