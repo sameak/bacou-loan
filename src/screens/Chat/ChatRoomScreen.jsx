@@ -416,19 +416,24 @@ export default function ChatRoomScreen({ route, navigation }) {
 
   // ── Image pick + send
   async function handleImage() {
+    console.log('[IMG] handleImage start');
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    console.log('[IMG] permission status:', status);
     if (status !== 'granted') { Alert.alert('', t.imagePerm); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: 'images',
       quality: 0.7,
       allowsEditing: false,
     });
+    console.log('[IMG] picker result canceled:', result.canceled, 'asset:', result.assets?.[0]?.uri);
     if (result.canceled || !result.assets?.[0]) return;
     setSending(true);
     try {
+      console.log('[IMG] calling sendImageMessage, uri:', result.assets[0].uri);
       await sendImageMessage(chatId, result.assets[0].uri);
+      console.log('[IMG] sendImageMessage success');
     } catch (e) {
-      console.error('sendImageMessage error:', e?.code, e?.message, e);
+      console.error('[IMG] sendImageMessage error:', e?.code, e?.message, e);
       Alert.alert('Error', e?.message || t.imageError);
     } finally {
       setSending(false);
