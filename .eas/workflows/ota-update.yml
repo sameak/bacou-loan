@@ -1,0 +1,14 @@
+name: OTA Update on Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update:
+    name: Push OTA update
+    type: update
+    params:
+      branch: production
+      message: ${{ github.event.head_commit.message }}
