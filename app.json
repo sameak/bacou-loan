@@ -2,7 +2,7 @@
   "expo": {
     "name": "Bacou",
     "slug": "bacou-loan",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "bacou",
@@ -19,6 +19,7 @@
     },
     "ios": {
       "supportsTablet": false,
+      "buildNumber": "2",
       "bundleIdentifier": "com.bacou.loan",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
