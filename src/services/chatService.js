@@ -123,13 +123,24 @@ export async function sendMessage(chatId, text, replyTo = null) {
   });
 }
 
+/** Convert a local file:// URI to a Blob using XMLHttpRequest (works on iOS & Android). */
+function uriToBlob(uri) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload  = () => resolve(xhr.response);
+    xhr.onerror = () => reject(new Error('uriToBlob failed'));
+    xhr.responseType = 'blob';
+    xhr.open('GET', uri, true);
+    xhr.send(null);
+  });
+}
+
 /** Upload a file to Storage then send a file message. */
 export async function sendFileMessage(chatId, fileUri, fileName, fileSize, mimeType) {
   const { uid, name } = getUserInfo();
   if (!uid) return;
 
-  const response = await fetch(fileUri);
-  const blob = await response.blob();
+  const blob = await uriToBlob(fileUri);
   const timestamp = Date.now();
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
   const storageRef = ref(storage, `chat/${chatId}/${timestamp}_${safeName}`);
@@ -167,8 +178,7 @@ export async function sendImageMessage(chatId, imageUri) {
   const { uid, name } = getUserInfo();
   if (!uid) return;
 
-  const response = await fetch(imageUri);
-  const blob = await response.blob();
+  const blob = await uriToBlob(imageUri);
   const timestamp = Date.now();
   const storagePath = `chat/${chatId}/${timestamp}.jpg`;
   const storageRef = ref(storage, storagePath);
