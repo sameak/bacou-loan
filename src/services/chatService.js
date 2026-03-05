@@ -127,8 +127,11 @@ export async function sendMessage(chatId, text, replyTo = null) {
 function uriToBlob(uri) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.onload  = () => resolve(xhr.response);
-    xhr.onerror = () => reject(new Error('uriToBlob failed'));
+    xhr.onload  = () => {
+      if (xhr.status === 0 || xhr.status === 200) resolve(xhr.response);
+      else reject(new Error(`uriToBlob HTTP ${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error(`uriToBlob network error: ${xhr.status}`));
     xhr.responseType = 'blob';
     xhr.open('GET', uri, true);
     xhr.send(null);

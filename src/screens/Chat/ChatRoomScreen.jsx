@@ -428,7 +428,8 @@ export default function ChatRoomScreen({ route, navigation }) {
     try {
       await sendImageMessage(chatId, result.assets[0].uri);
     } catch (e) {
-      Alert.alert('', t.imageError);
+      console.error('sendImageMessage error:', e?.code, e?.message, e);
+      Alert.alert('Error', e?.message || t.imageError);
     } finally {
       setSending(false);
     }
