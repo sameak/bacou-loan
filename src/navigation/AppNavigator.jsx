@@ -27,6 +27,7 @@ import {
   ActivityIndicator,
   DeviceEventEmitter,
   Dimensions,
+  PanResponder,
   Platform,
   PlatformColor,
   StyleSheet,
@@ -34,6 +35,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import RAnimated, {
   Easing,
   interpolateColor,
@@ -110,7 +112,7 @@ const TAB_BOTTOM_GAP   = 0;    // bar sits flush against the safe-area bottom
 
 const TabItem = React.memo(function TabItem({
   cfg, focused, activeColor, inactiveColor, label, language, fs, ff,
-  onPress, onPressIn, onPressOut, showActivePill, isDark,
+  showActivePill, isDark,
 }) {
   const scale = useSharedValue(focused ? 1.0 : 0.88);
   const prevFocused = useRef(focused);
@@ -125,13 +127,7 @@ const TabItem = React.memo(function TabItem({
   const color = focused ? activeColor : inactiveColor;
 
   return (
-    <TouchableOpacity
-      style={tabStyles.item}
-      onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      activeOpacity={0.8}
-    >
+    <View style={tabStyles.item}>
       {showActivePill && focused && (
         <View
           pointerEvents="none"
@@ -147,7 +143,7 @@ const TabItem = React.memo(function TabItem({
       <Text style={[tabStyles.label, ff('600'), { letterSpacing: 0, color, fontSize: fs(11.5), ...(language !== 'km' && { lineHeight: 16 }) }]}>
         {label}
       </Text>
-    </TouchableOpacity>
+    </View>
   );
 });
 
@@ -197,7 +193,8 @@ function LiquidGlassTabBar({ state, navigation }) {
   }, [state.index, tabW]);
 
   // ── Glass press bubble
-  const [pressedIndex, setPressedIndex] = useState(-1);
+  const [pressedIndex,   setPressedIndex]   = useState(-1);
+  const [dragPreviewIdx, setDragPreviewIdx] = useState(-1);
   const bubbleScale  = useSharedValue(0);
   const iridescence  = useSharedValue(0);
 
@@ -251,8 +248,116 @@ function LiquidGlassTabBar({ state, navigation }) {
 
   const lastTapTimes = useRef({});
 
+  // ── Drag-to-switch refs (stable across renders)
+  const pressStartRef  = useRef({ x: 0, time: 0, idx: 0 });
+  const dragIdxRef     = useRef(-1);
+  const isDraggingRef  = useRef(false);
+  const bubbleTimerRef = useRef(null);
+  // Keep latest values accessible inside the PanResponder without recreating it
+  const handlerCtx = useRef({});
+  handlerCtx.current = {
+    state, navigation, tabW, tabVisible, handlePressIn, handlePressOut,
+    lastTapTimes, pillX, setPressedIndex, setDragPreviewIdx,
+    tabCount: state.routes.length,
+  };
+
+  const rowPan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture:  () => true,
+
+      onPanResponderGrant: (evt) => {
+        const { tabW, tabCount, setDragPreviewIdx } = handlerCtx.current;
+        const x   = evt.nativeEvent.locationX;
+        const idx = Math.max(0, Math.min(tabCount - 1, Math.floor(x / tabW)));
+        pressStartRef.current = { x, time: Date.now(), idx, startPillX: handlerCtx.current.pillX.value };
+        dragIdxRef.current    = idx;
+        isDraggingRef.current = false;
+        setDragPreviewIdx(idx);
+        // Delay bubble so a fast swipe never shows it — cleared in onPanResponderMove if drag starts
+        clearTimeout(bubbleTimerRef.current);
+        bubbleTimerRef.current = setTimeout(() => {
+          if (!isDraggingRef.current) handlerCtx.current.handlePressIn(idx);
+        }, 60);
+      },
+
+      onPanResponderMove: (evt) => {
+        const { tabW, tabCount, pillX, setPressedIndex, setDragPreviewIdx, handlePressOut } = handlerCtx.current;
+        const x  = evt.nativeEvent.locationX;
+        const dx = x - pressStartRef.current.x;
+
+        if (Math.abs(dx) > 8 && !isDraggingRef.current) {
+          isDraggingRef.current = true;
+          // Cancel the bubble timer and dismiss any bubble already visible
+          clearTimeout(bubbleTimerRef.current);
+          handlePressOut();
+        }
+
+        if (isDraggingRef.current) {
+          // ── Pill tracks finger 1:1 from its start position (smooth, no spring)
+          const rawPillX = pressStartRef.current.startPillX + dx;
+          pillX.value = Math.max(0, Math.min((tabCount - 1) * tabW, rawPillX));
+
+          // ── Update visual active tab as finger crosses boundaries
+          const newIdx = Math.max(0, Math.min(tabCount - 1, Math.floor(x / tabW)));
+          if (newIdx !== dragIdxRef.current) {
+            dragIdxRef.current = newIdx;
+            setPressedIndex(newIdx);
+            setDragPreviewIdx(newIdx);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+        }
+      },
+
+      onPanResponderRelease: () => {
+        const { state, navigation, tabW, tabVisible, lastTapTimes, handlePressOut, pillX, setDragPreviewIdx } = handlerCtx.current;
+        clearTimeout(bubbleTimerRef.current);
+        handlePressOut();
+        setDragPreviewIdx(-1);
+
+        if (!isDraggingRef.current) {
+          // ── Treat as tap (same logic as before)
+          const idx = pressStartRef.current.idx;
+          const now = Date.now();
+          const isDoubleTap = state.index === idx && (now - (lastTapTimes.current[idx] ?? 0) < 300);
+          lastTapTimes.current[idx] = isDoubleTap ? 0 : now;
+          if (isDoubleTap) {
+            DeviceEventEmitter.emit('tabBarScrollToTop', { index: idx });
+            if (tabVisible) tabVisible.value = withTiming(1, { duration: 350 });
+          } else {
+            const route = state.routes[idx];
+            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (state.index !== idx && !event.defaultPrevented) navigation.navigate(route.name);
+          }
+        } else {
+          // ── Drag release: spring pill to final tab, then navigate once
+          const finalIdx = dragIdxRef.current;
+          pillX.value = withSpring(finalIdx * tabW, { damping: 20, stiffness: 200, mass: 0.85 });
+          if (finalIdx >= 0 && finalIdx !== state.index) {
+            navigation.navigate(state.routes[finalIdx].name);
+          }
+        }
+
+        isDraggingRef.current = false;
+        dragIdxRef.current    = -1;
+      },
+
+      onPanResponderTerminate: () => {
+        const { handlePressOut, pillX, tabW, state, setDragPreviewIdx } = handlerCtx.current;
+        clearTimeout(bubbleTimerRef.current);
+        handlePressOut();
+        setDragPreviewIdx(-1);
+        // Spring pill back to current focused tab
+        pillX.value = withSpring(state.index * tabW, { damping: 20, stiffness: 200, mass: 0.85 });
+        isDraggingRef.current = false;
+        dragIdxRef.current    = -1;
+      },
+    })
+  ).current;
+
   const makeTabItems = (showActivePill) => state.routes.map((route, index) => {
-    const focused = state.index === index;
+    // During drag, visually highlight the tab under the finger
+    const focused = dragPreviewIdx >= 0 ? dragPreviewIdx === index : state.index === index;
     return (
       <TabItem
         key={route.key}
@@ -266,20 +371,6 @@ function LiquidGlassTabBar({ state, navigation }) {
         ff={ff}
         isDark={isDark}
         showActivePill={showActivePill}
-        onPress={() => {
-          const now = Date.now();
-          const isDoubleTap = focused && (now - (lastTapTimes.current[index] ?? 0) < 300);
-          lastTapTimes.current[index] = isDoubleTap ? 0 : now;
-          if (isDoubleTap) {
-            DeviceEventEmitter.emit('tabBarScrollToTop', { index });
-            if (tabVisible) tabVisible.value = withTiming(1, { duration: 350 });
-            return;
-          }
-          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
-        }}
-        onPressIn={() => handlePressIn(index)}
-        onPressOut={handlePressOut}
       />
     );
   });
@@ -290,7 +381,7 @@ function LiquidGlassTabBar({ state, navigation }) {
       <RAnimated.View style={[tabStyles.wrap, { bottom }, tabAnimStyle]} pointerEvents="box-none">
         <LiquidGlassContainerView spacing={24} style={tabStyles.nativeWrap}>
           <LiquidGlassView style={tabStyles.nativeBar} effect="regular" interactive={false}>
-            <View style={tabStyles.row}>{makeTabItems(true)}</View>
+            <View style={tabStyles.row} {...rowPan.panHandlers}>{makeTabItems(true)}</View>
           </LiquidGlassView>
         </LiquidGlassContainerView>
       </RAnimated.View>
@@ -326,7 +417,7 @@ function LiquidGlassTabBar({ state, navigation }) {
       </View>
 
       {/* 9. Tab items — outside outerShell so iOS shadow compositing doesn't clip Khmer diacritics */}
-      <View style={tabStyles.tabsRow}>{makeTabItems(false)}</View>
+      <View style={tabStyles.tabsRow} {...rowPan.panHandlers}>{makeTabItems(false)}</View>
 
       {/* Glass press bubble — iridescent ring + frosted interior */}
       {pressedIndex >= 0 && (

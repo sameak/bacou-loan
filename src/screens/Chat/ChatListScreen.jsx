@@ -265,32 +265,32 @@ const makeStyles = (ff, fs, km) => StyleSheet.create({
   root:        { flex: 1 },
   header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn:     { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  title:       { flex: 1, textAlign: 'center', fontSize: fs(17), lineHeight: km ? 24 : 22, letterSpacing: 0 },
+  title:       { flex: 1, textAlign: 'center', fontSize: fs(17), letterSpacing: 0 },
   content:     { paddingHorizontal: 16, paddingBottom: 40 },
 
-  sectionTitle:{ fontSize: fs(11), lineHeight: km ? 16 : 15, letterSpacing: 0, marginTop: 20, marginBottom: 8, paddingHorizontal: 4 },
+  sectionTitle:{ fontSize: fs(11), letterSpacing: 0, marginTop: 20, marginBottom: 8, paddingHorizontal: 4 },
 
   groupCard:   { marginBottom: 0 },
   groupRow:    { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
   groupIconWrap:{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   rowTopLine:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  timeLabel:   { fontSize: fs(12), lineHeight: km ? 17 : 16, letterSpacing: 0 },
+  timeLabel:   { fontSize: fs(12), letterSpacing: 0 },
   groupInfo:   { flex: 1, gap: 2 },
   groupName:   { fontSize: fs(15), letterSpacing: 0 },
-  groupMeta:   { fontSize: fs(13), lineHeight: km ? 18 : 17, letterSpacing: 0 },
-  lastMsg:     { fontSize: fs(13), lineHeight: km ? 18 : 17, letterSpacing: 0 },
+  groupMeta:   { fontSize: fs(13), letterSpacing: 0 },
+  lastMsg:     { fontSize: fs(13), letterSpacing: 0 },
 
   dmCard:      { marginTop: 8 },
   dmRow:       { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   dmInfo:      { flex: 1, gap: 2 },
   dmName:      { fontSize: fs(15), letterSpacing: 0 },
-  dmMeta:      { fontSize: fs(13), lineHeight: km ? 18 : 17, letterSpacing: 0 },
+  dmMeta:      { fontSize: fs(13), letterSpacing: 0 },
 
   statusDot:   { position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: 'transparent' },
 
   badge:       { minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
-  badgeText:   { color: '#fff', fontSize: 11, lineHeight: km ? 18 : 14, letterSpacing: 0 },
+  badgeText:   { color: '#fff', fontSize: 11, letterSpacing: 0 },
 
   emptyWrap:   { alignItems: 'center', gap: 10, paddingTop: 40 },
-  emptyText:   { fontSize: fs(14), lineHeight: km ? 20 : 19, letterSpacing: 0 },
+  emptyText:   { fontSize: fs(14), letterSpacing: 0 },
 });

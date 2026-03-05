@@ -175,10 +175,10 @@ function Bubble({ msg, isOwn, isFirst, isLast, isDark, colors, fs, ff, km, onIma
       backgroundColor: isOwn ? 'rgba(255,255,255,0.18)' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
       borderLeftColor: isOwn ? 'rgba(255,255,255,0.6)' : ACCENT,
     }]}>
-      <Text style={[styles.quotedSender, { color: isOwn ? 'rgba(255,255,255,0.85)' : ACCENT }, ff('600'), { fontSize: fs(11), lineHeight: km ? 16 : 15, letterSpacing: 0 }]}>
+      <Text style={[styles.quotedSender, { color: isOwn ? 'rgba(255,255,255,0.85)' : ACCENT }, ff('600'), { fontSize: fs(11), letterSpacing: 0 }]}>
         {msg.replyTo.senderName}
       </Text>
-      <Text numberOfLines={1} style={[styles.quotedText, { color: isOwn ? 'rgba(255,255,255,0.65)' : colors.textMuted }, ff('400'), { fontSize: fs(13), lineHeight: km ? 18 : 17, letterSpacing: 0 }]}>
+      <Text numberOfLines={1} style={[styles.quotedText, { color: isOwn ? 'rgba(255,255,255,0.65)' : colors.textMuted }, ff('400'), { fontSize: fs(13), letterSpacing: 0 }]}>
         {msg.replyTo.type === 'image' ? '📷 Photo' : msg.replyTo.type === 'file' ? `📎 ${msg.replyTo.fileName ?? msg.replyTo.text}` : msg.replyTo.text}
       </Text>
     </View>
@@ -200,7 +200,7 @@ function Bubble({ msg, isOwn, isFirst, isLast, isDark, colors, fs, ff, km, onIma
       <Animated.View style={[styles.bubbleSlide, { alignItems: isOwn ? 'flex-end' : 'flex-start', transform: [{ translateX: pan }] }]}>
         {/* Sender name — only on first bubble of a group */}
         {isFirst && !isOwn && (
-          <Text style={[styles.senderName, { color: ACCENT }, ff('600'), { fontSize: fs(12), lineHeight: km ? 17 : 16, letterSpacing: 0 }]}>
+          <Text style={[styles.senderName, { color: ACCENT }, ff('600'), { fontSize: fs(12), letterSpacing: 0 }]}>
             {msg.senderName}
           </Text>
         )}
@@ -240,7 +240,7 @@ function Bubble({ msg, isOwn, isFirst, isLast, isDark, colors, fs, ff, km, onIma
                 <Ionicons name={fileIcon(msg.mimeType)} size={22} color={isOwn ? '#fff' : ACCENT} />
               </View>
               <View style={styles.fileInfo}>
-                <Text numberOfLines={2} style={[styles.fileName, ff('600'), { color: isOwn ? '#fff' : colors.text, fontSize: fs(13), lineHeight: km ? 18 : 17, letterSpacing: 0 }]}>
+                <Text numberOfLines={2} style={[styles.fileName, ff('600'), { color: isOwn ? '#fff' : colors.text, fontSize: fs(13), letterSpacing: 0 }]}>
                   {msg.fileName || 'File'}
                 </Text>
                 <Text style={[ff('400'), { color: isOwn ? 'rgba(255,255,255,0.65)' : colors.textMuted, fontSize: fs(11), lineHeight: km ? 16 : 15, letterSpacing: 0 }]}>
@@ -265,7 +265,7 @@ function Bubble({ msg, isOwn, isFirst, isLast, isDark, colors, fs, ff, km, onIma
                 }],
           ]}>
             {quotedBlock}
-            <Text style={[styles.bubbleText, ff('400'), { color: isOwn ? '#fff' : colors.text, fontSize: fs(15), lineHeight: km ? 22 : 20, letterSpacing: 0 }]}>
+            <Text style={[styles.bubbleText, ff('400'), { color: isOwn ? '#fff' : colors.text, fontSize: fs(15), letterSpacing: 0 }]}>
               {msg.text}
             </Text>
           </View>
@@ -275,7 +275,7 @@ function Bubble({ msg, isOwn, isFirst, isLast, isDark, colors, fs, ff, km, onIma
         {isLast && (
           <Text style={[
             styles.timeText, { color: colors.textMuted }, ff('400'),
-            { fontSize: fs(11), lineHeight: km ? 16 : 15, letterSpacing: 0 },
+            { fontSize: fs(11), letterSpacing: 0 },
             isOwn ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' },
           ]}>
             {time}
@@ -552,17 +552,17 @@ export default function ChatRoomScreen({ route, navigation }) {
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: colors.text }, ff('700'), { fontSize: fs(16), lineHeight: km ? 22 : 21, letterSpacing: 0 }]} numberOfLines={1}>
+            <Text style={[styles.headerTitle, { color: colors.text }, ff('700'), { fontSize: fs(16), letterSpacing: 0 }]} numberOfLines={1}>
               {chatName}
             </Text>
             {isGroup && memberCount > 0 ? (
-              <Text style={[{ color: colors.textMuted }, ff('400'), { fontSize: fs(12), lineHeight: km ? 17 : 16, letterSpacing: 0 }]}>
+              <Text style={[{ color: colors.textMuted }, ff('400'), { fontSize: fs(12), letterSpacing: 0 }]}>
                 {memberCount} {km ? 'នាក់' : `member${memberCount !== 1 ? 's' : ''}`}
               </Text>
             ) : !isGroup && onlineStatus ? (
               <View style={styles.statusRow}>
                 <View style={[styles.statusDot, { backgroundColor: STATUS_COLOR[onlineStatus] }]} />
-                <Text style={[{ color: STATUS_COLOR[onlineStatus] }, ff('400'), { fontSize: fs(12), lineHeight: km ? 17 : 16, letterSpacing: 0 }]}>
+                <Text style={[{ color: STATUS_COLOR[onlineStatus] }, ff('400'), { fontSize: fs(12), letterSpacing: 0 }]}>
                   {km ? STATUS_LABEL_KM[onlineStatus] : STATUS_LABEL[onlineStatus]}
                 </Text>
               </View>
@@ -591,7 +591,7 @@ export default function ChatRoomScreen({ route, navigation }) {
           onScroll={e => setShowScrollDown(e.nativeEvent.contentOffset.y > 150)}
           ListEmptyComponent={() => (
             <View style={[styles.emptyWrap, styles.emptyFlip]}>
-              <Text style={[styles.emptyText, { color: colors.textMuted }, ff('400'), { fontSize: fs(14), lineHeight: km ? 20 : 19, letterSpacing: 0, textAlign: 'center' }]}>
+              <Text style={[styles.emptyText, { color: colors.textMuted }, ff('400'), { fontSize: fs(14), letterSpacing: 0, textAlign: 'center' }]}>
                 {t.noMessages}
               </Text>
             </View>
@@ -601,7 +601,7 @@ export default function ChatRoomScreen({ route, navigation }) {
               const label = formatDateLabel(item.ts);
               return (
                 <View style={styles.dateSepWrap}>
-                  <Text style={[styles.dateSepText, { color: colors.textMuted }, ff('400'), { fontSize: fs(12), lineHeight: km ? 17 : 16, letterSpacing: 0 }]}>
+                  <Text style={[styles.dateSepText, { color: colors.textMuted }, ff('400'), { fontSize: fs(12), letterSpacing: 0 }]}>
                     {label ?? t.today}
                   </Text>
                 </View>
@@ -651,10 +651,10 @@ export default function ChatRoomScreen({ route, navigation }) {
           }]}>
             <View style={[styles.replyPreviewBar, { backgroundColor: ACCENT }]} />
             <View style={styles.replyPreviewContent}>
-              <Text style={[styles.replyPreviewName, { color: ACCENT }, ff('600'), { fontSize: fs(12), lineHeight: km ? 17 : 16, letterSpacing: 0 }]}>
+              <Text style={[styles.replyPreviewName, { color: ACCENT }, ff('600'), { fontSize: fs(12), letterSpacing: 0 }]}>
                 {t.replyingTo(replyTo.senderName)}
               </Text>
-              <Text numberOfLines={1} style={[{ color: colors.textMuted }, ff('400'), { fontSize: fs(13), lineHeight: km ? 18 : 17, letterSpacing: 0 }]}>
+              <Text numberOfLines={1} style={[{ color: colors.textMuted }, ff('400'), { fontSize: fs(13), letterSpacing: 0 }]}>
                 {replyTo.type === 'image' ? '📷 Photo' : replyTo.type === 'file' ? `📎 ${replyTo.fileName ?? replyTo.text}` : replyTo.text}
               </Text>
             </View>
@@ -668,7 +668,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         {typingLabel && (
           <View style={[styles.typingRow, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
             <TypingDots isDark={isDark} />
-            <Text style={[styles.typingText, { color: colors.textMuted }, ff('400'), { fontSize: fs(12), lineHeight: km ? 17 : 16, letterSpacing: 0 }]}>
+            <Text style={[styles.typingText, { color: colors.textMuted }, ff('400'), { fontSize: fs(12), letterSpacing: 0 }]}>
               {typingLabel}
             </Text>
           </View>
@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
   // Input bar
   inputBar:    { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, gap: 8 },
   imgBtn:      { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  input:       { flex: 1, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 9, maxHeight: 120, fontSize: 15, lineHeight: 20 },
+  input:       { flex: 1, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 9, maxHeight: 120, fontSize: 15 },
   sendBtn:     { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 
   // Image viewer

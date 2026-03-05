@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { onAuthStateChanged } from 'firebase/auth';
 
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { AnimatedGlassProvider } from './src/hooks/useAnimatedGlassTheme';
@@ -15,6 +16,7 @@ import { LanguageProvider } from './src/context/LanguageContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import Toast from './src/components/Toast';
 import storage, { STORAGE_KEYS } from './src/services/storage';
+import { auth } from './src/services/firebase';
 
 // Keep splash screen visible until we're ready
 SplashScreen.preventAutoHideAsync();
@@ -39,6 +41,7 @@ function AppInner() {
 
 export default function App() {
   const [prefs, setPrefs] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
 
   // Load theme + language before rendering providers
   useEffect(() => {
@@ -50,12 +53,21 @@ export default function App() {
     });
   }, []);
 
-  // Hide splash once prefs are loaded
+  // Wait for Firebase auth to resolve before hiding splash
   useEffect(() => {
-    if (prefs) SplashScreen.hideAsync();
-  }, [prefs]);
+    const unsub = onAuthStateChanged(auth, () => {
+      setAuthReady(true);
+      unsub();
+    });
+    return unsub;
+  }, []);
 
-  if (!prefs) return null;
+  // Hide splash once both prefs and auth are ready
+  useEffect(() => {
+    if (prefs && authReady) SplashScreen.hideAsync();
+  }, [prefs, authReady]);
+
+  if (!prefs || !authReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

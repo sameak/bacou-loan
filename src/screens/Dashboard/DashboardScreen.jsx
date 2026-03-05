@@ -288,6 +288,56 @@ const DashboardScreen = ({ navigation }) => {
 
       <Animated.ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingTop: headerHeight + 4 }]} onScroll={scrollHandler} scrollEventThrottle={16}>
 
+        {(!loansLoaded || paymentsLoading) ? (
+          <View style={{ gap: 12, paddingTop: 8 }}>
+            <View style={styles.statsRow}>
+              {[1,2,3].map(i => (
+                <GlassCard key={i} style={styles.statCard}>
+                  <View style={styles.statInner}>
+                    <Skeleton width="60%" height={24} isDark={isDark} />
+                    <Skeleton width="80%" height={12} isDark={isDark} style={{ marginTop: 6 }} />
+                  </View>
+                </GlassCard>
+              ))}
+            </View>
+            <GlassCard style={styles.card}>
+              <View style={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}>
+                <Skeleton width="40%" height={12} isDark={isDark} />
+                <Skeleton width="70%" height={22} isDark={isDark} />
+                <Skeleton width="50%" height={12} isDark={isDark} />
+              </View>
+            </GlassCard>
+            <GlassCard style={styles.card}>
+              <View style={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}>
+                <Skeleton width="35%" height={12} isDark={isDark} />
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 6 }}>
+                  {[60,80,45,90,70,55].map((h, i) => (
+                    <View key={i} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
+                      <Skeleton width="70%" height={h} isDark={isDark} />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </GlassCard>
+            <GlassCard style={styles.card}>
+              <View style={{ paddingHorizontal: 16, paddingVertical: 16, gap: 14 }}>
+                <Skeleton width="45%" height={12} isDark={isDark} />
+                {[1,2,3].map(i => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <Skeleton width={36} height={36} radius={18} isDark={isDark} />
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Skeleton width="55%" height={13} isDark={isDark} />
+                      <Skeleton width="35%" height={11} isDark={isDark} />
+                    </View>
+                    <Skeleton width={60} height={13} isDark={isDark} />
+                  </View>
+                ))}
+              </View>
+            </GlassCard>
+            <View style={{ height: insets.bottom + 120 }} />
+          </View>
+        ) : (
+        <>
         {/* ── 1. Stats row ── */}
         <View style={styles.statsRow}>
           <GlassCard style={styles.statCard}>
@@ -326,23 +376,17 @@ const DashboardScreen = ({ navigation }) => {
                 <Ionicons name="trending-up-outline" size={15} color={ACCENT} />
               </View>
               <Text style={[styles.incomeTitle, { color: colors.textMuted }, ff('400')]}>{t.interest}</Text>
-              {paymentsLoading ? (
-                <Skeleton width="80%" height={22} isDark={isDark} style={{ marginTop: 4 }} />
+              <Text style={[styles.incomeVal, { color: ACCENT }, ff('700')]}>{fmtUSD(incomeData.tiUSD)}</Text>
+              {incomeData.tiKHR > 0 && <Text style={[styles.incomeSub, { color: ACCENT + 'AA' }, ff('400')]}>{fmtKHR(incomeData.tiKHR)}</Text>}
+              {incomeData.changeUSD !== null ? (
+                <View style={styles.changeRow}>
+                  <Ionicons name={incomeData.changeUSD >= 0 ? 'arrow-up' : 'arrow-down'} size={10} color={incomeData.changeUSD >= 0 ? GREEN : RED} />
+                  <Text style={[styles.changeText, { color: incomeData.changeUSD >= 0 ? GREEN : RED }, ff('600')]}>
+                    {Math.abs(incomeData.changeUSD)}% {t.vsLastMonth}
+                  </Text>
+                </View>
               ) : (
-                <>
-                  <Text style={[styles.incomeVal, { color: ACCENT }, ff('700')]}>{fmtUSD(incomeData.tiUSD)}</Text>
-                  {incomeData.tiKHR > 0 && <Text style={[styles.incomeSub, { color: ACCENT + 'AA' }, ff('400')]}>{fmtKHR(incomeData.tiKHR)}</Text>}
-                  {incomeData.changeUSD !== null ? (
-                    <View style={styles.changeRow}>
-                      <Ionicons name={incomeData.changeUSD >= 0 ? 'arrow-up' : 'arrow-down'} size={10} color={incomeData.changeUSD >= 0 ? GREEN : RED} />
-                      <Text style={[styles.changeText, { color: incomeData.changeUSD >= 0 ? GREEN : RED }, ff('600')]}>
-                        {Math.abs(incomeData.changeUSD)}% {t.vsLastMonth}
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text style={[styles.changeText, { color: colors.textMuted }, ff('400')]}>{t.newEarning}</Text>
-                  )}
-                </>
+                <Text style={[styles.changeText, { color: colors.textMuted }, ff('400')]}>{t.newEarning}</Text>
               )}
             </View>
 
@@ -353,15 +397,9 @@ const DashboardScreen = ({ navigation }) => {
                 <Ionicons name="cash-outline" size={15} color={GREEN} />
               </View>
               <Text style={[styles.incomeTitle, { color: colors.textMuted }, ff('400')]}>{t.principal}</Text>
-              {paymentsLoading ? (
-                <Skeleton width="80%" height={22} isDark={isDark} style={{ marginTop: 4 }} />
-              ) : (
-                <>
-                  <Text style={[styles.incomeVal, { color: GREEN }, ff('700')]}>{fmtUSD(incomeData.tpUSD)}</Text>
-                  {incomeData.tpKHR > 0 && <Text style={[styles.incomeSub, { color: GREEN + 'AA' }, ff('400')]}>{fmtKHR(incomeData.tpKHR)}</Text>}
-                  <Text style={[styles.changeText, { color: colors.textMuted }, ff('400')]}>{t.thisMonth}</Text>
-                </>
-              )}
+              <Text style={[styles.incomeVal, { color: GREEN }, ff('700')]}>{fmtUSD(incomeData.tpUSD)}</Text>
+              {incomeData.tpKHR > 0 && <Text style={[styles.incomeSub, { color: GREEN + 'AA' }, ff('400')]}>{fmtKHR(incomeData.tpKHR)}</Text>}
+              <Text style={[styles.changeText, { color: colors.textMuted }, ff('400')]}>{t.thisMonth}</Text>
             </View>
           </View>
         </GlassCard>
@@ -425,16 +463,6 @@ const DashboardScreen = ({ navigation }) => {
         <GlassCard style={styles.card}>
           <Text style={[styles.cardLabel, { color: colors.textMuted }, ff('700')]}>{t.chart6m.toUpperCase()}</Text>
           <View style={styles.chartInner}>
-            {paymentsLoading ? (
-              <View style={styles.chartSkeleton}>
-                {[60, 40, 80, 55, 70, 90].map((h, i) => (
-                  <View key={i} style={styles.chartSkeletonBarWrap}>
-                    <Skeleton width="70%" height={h} isDark={isDark} />
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <>
                 <View style={styles.barsArea}>
                   {chartData.data.map(d => {
                     const pct       = Math.max(4, Math.round((d.usd / chartData.maxUSD) * 100));
@@ -458,8 +486,6 @@ const DashboardScreen = ({ navigation }) => {
                 {chartData.hasKHR && (
                   <Text style={[styles.chartNote, { color: colors.textMuted }, ff('400')]}>{t.khrNote}</Text>
                 )}
-              </>
-            )}
           </View>
         </GlassCard>
 
@@ -546,20 +572,7 @@ const DashboardScreen = ({ navigation }) => {
         {/* ── 8. Recent Activity ── */}
         <GlassCard style={styles.card}>
           <Text style={[styles.cardLabel, { color: colors.textMuted }, ff('700')]}>{t.recentActivity.toUpperCase()}</Text>
-          {paymentsLoading ? (
-            <>
-              {[1, 2, 3].map(i => (
-                <View key={i} style={[styles.listRow, i > 1 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}>
-                  <Skeleton width={36} height={36} radius={18} isDark={isDark} />
-                  <View style={{ flex: 1, gap: 6 }}>
-                    <Skeleton width="55%" height={13} isDark={isDark} />
-                    <Skeleton width="35%" height={11} isDark={isDark} />
-                  </View>
-                  <Skeleton width={60} height={13} isDark={isDark} />
-                </View>
-              ))}
-            </>
-          ) : recentPayments.length === 0 ? (
+          {recentPayments.length === 0 ? (
             <View style={styles.emptyRow}>
               <Ionicons name="time-outline" size={18} color={colors.textMuted} />
               <Text style={[styles.emptyText, { color: colors.textMuted }, ff('400')]}>{t.noActivity}</Text>
@@ -587,6 +600,9 @@ const DashboardScreen = ({ navigation }) => {
             })
           )}
         </GlassCard>
+
+        </>
+        )}
 
         <View style={{ height: insets.bottom + 120 }} />
       </Animated.ScrollView>
@@ -661,8 +677,6 @@ const makeStyles = (ff, fs, km) => StyleSheet.create({
 
   // ── Chart ────────────────────────────────────────────────────────────────────
   chartInner:          { paddingHorizontal: 14, paddingBottom: 14 },
-  chartSkeleton:       { flexDirection: 'row', alignItems: 'flex-end', height: 110, gap: 6 },
-  chartSkeletonBarWrap:{ flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   barsArea:            { flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 4 },
   barGroup:            { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   barCurLabel:         { fontSize: fs(10), textAlign: 'center', marginBottom: 4, letterSpacing: 0 },
