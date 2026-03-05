@@ -42,6 +42,7 @@ const FX_SOURCES = [
     name: 'Currency-API',
     badge: 'CDN',
     badgeColor: '#00C2B2',
+    priority: true,   // show result immediately when this one resolves
     url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
     parse: d => ({ KHR: d?.usd?.khr, KRW: d?.usd?.krw }),
   },
@@ -68,7 +69,7 @@ const FX_SOURCES = [
     badge: 'NBC',
     badgeColor: '#DC2626',
     type: 'html',
-    timeout: 15000,   // government site is slow — give it more time
+    timeout: 7000,
     url: 'https://www.nbc.gov.kh/english/economic_research/exchange_rate.php',
     headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15' },
     parse: html => {
@@ -185,44 +186,63 @@ const T = {
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
-async function fetchSources(sources) {
-  const results = await Promise.allSettled(
-    sources.map(async (src) => {
-      const ms = src.timeout ?? 9000;   // NBC gets its own longer timeout
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), ms);
-      const res = await fetch(src.url, {
-        signal: controller.signal,
-        headers: src.headers ?? {},
-      }).finally(() => clearTimeout(timer));
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const body   = src.type === 'html' ? await res.text() : await res.json();
-      const parsed = src.parse(body);
-      if (!parsed) throw new Error('No data');
-      return { id: src.id, parsed };
-    })
-  );
-  return results.map((r, i) => ({
-    ...sources[i],
-    parsed: r.status === 'fulfilled' ? r.value.parsed : null,
-    error:  r.status === 'rejected',
-  }));
+async function fetchOneSrc(src) {
+  const ms = src.timeout ?? 8000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(src.url, {
+      signal: controller.signal,
+      headers: src.headers ?? {},
+    });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const body   = src.type === 'html' ? await res.text() : await res.json();
+    const parsed = src.parse(body);
+    if (!parsed) throw new Error('No data');
+    return { ...src, parsed, error: false };
+  } catch {
+    clearTimeout(timer);
+    return { ...src, parsed: null, error: true };
+  }
 }
 
-async function loadCached(cacheKey, forceRefresh, fetchFn) {
+/**
+ * Fetch all sources in parallel; call onUpdate as each one resolves so the
+ * UI can show partial results immediately instead of waiting for all.
+ * Returns the final array once everything settles.
+ */
+async function fetchSourcesProgressive(sources, onUpdate) {
+  const results = sources.map(src => ({ ...src, parsed: null, error: false, pending: true }));
+  onUpdate([...results]);   // show skeleton-like pending state immediately
+
+  await Promise.all(
+    sources.map(async (src, i) => {
+      const result = await fetchOneSrc(src);
+      results[i] = { ...result, pending: false };
+      onUpdate([...results]);   // update UI as soon as this source is done
+    })
+  );
+  return results;
+}
+
+async function loadCached(cacheKey, forceRefresh, sources, onUpdate) {
   if (!forceRefresh) {
     try {
       const raw = await AsyncStorage.getItem(cacheKey);
       if (raw) {
         const cached = JSON.parse(raw);
-        if (cached?.date === todayStr() && Array.isArray(cached.data)) return { data: cached.data, time: cached.time };
+        if (cached?.date === todayStr() && Array.isArray(cached.data)) {
+          onUpdate(cached.data);
+          return cached.time;
+        }
       }
     } catch {}
   }
-  const data = await fetchFn();
+  const data = await fetchSourcesProgressive(sources, onUpdate);
   const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   try { await AsyncStorage.setItem(cacheKey, JSON.stringify({ date: todayStr(), data, time })); } catch {}
-  return { data, time };
+  return time;
 }
 
 function numAvg(values) {
@@ -262,24 +282,27 @@ const ExchangeRatesScreen = ({ navigation }) => {
   // ── Load FX ───────────────────────────────────────────────────────────────
   const loadFX = useCallback(async (force = false) => {
     try {
-      const { data, time } = await loadCached(FX_CACHE, force, () => fetchSources(FX_SOURCES));
-      setFxSources(data);
+      const time = await loadCached(FX_CACHE, force, FX_SOURCES, data => {
+        setFxSources(data);
+        setFxLoading(false);   // hide skeleton as soon as first update arrives
+      });
       setFxTime(time);
-    } catch {}
+    } catch { setFxLoading(false); }
   }, []);
 
   useEffect(() => {
-    setFxLoading(true);
-    loadFX(false).finally(() => setFxLoading(false));
+    loadFX(false);
   }, []);
 
   // ── Load Gold (lazy — only on first tab visit) ────────────────────────────
   const loadGold = useCallback(async (force = false) => {
     try {
-      const { data, time } = await loadCached(GOLD_CACHE, force, () => fetchSources(GOLD_SOURCES));
-      setGoldSources(data);
+      const time = await loadCached(GOLD_CACHE, force, GOLD_SOURCES, data => {
+        setGoldSources(data);
+        setGoldLoading(false);
+      });
       setGoldTime(time);
-    } catch {}
+    } catch { setGoldLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -347,7 +370,9 @@ const ExchangeRatesScreen = ({ navigation }) => {
                   </View>
                 </View>
                 <View style={styles.srcRight}>
-                  {isErr ? (
+                  {src.pending ? (
+                    <ActivityIndicator size="small" color={colors.textMuted} />
+                  ) : isErr ? (
                     <Text style={[styles.errText, ff('500')]}>{t.error}</Text>
                   ) : (
                     <View style={styles.rateRow}>
@@ -421,7 +446,9 @@ const ExchangeRatesScreen = ({ navigation }) => {
                     </View>
                   </View>
                   <View style={styles.srcRight}>
-                    {isErr ? (
+                    {src.pending ? (
+                      <ActivityIndicator size="small" color={colors.textMuted} />
+                    ) : isErr ? (
                       <Text style={[styles.errText, ff('500')]}>{t.error}</Text>
                     ) : (
                       <View style={styles.rateRow}>
