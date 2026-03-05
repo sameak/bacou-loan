@@ -258,7 +258,11 @@ const CalendarPopup = ({
   const txtMute = colors?.textMuted|| (isDark ? '#666'    : '#AAA');
   const isKhmer = language === 'km';
   const HEAVY = ['600', '700', '800', '900'];
-  const kf = (w) => isKhmer ? { fontFamily: HEAVY.includes(String(w)) ? 'KohSantepheap_700Bold' : 'KohSantepheap_400Regular' } : { fontWeight: w };
+  const kf = (w) => {
+    if (!isKhmer) return { fontWeight: String(w) };
+    const heavy = ['600','700','800','900'];
+    return { fontFamily: 'Khmer Sangam MN', fontWeight: heavy.includes(String(w)) ? '700' : '500' };
+  };
 
   if (!rendered) return null;
 

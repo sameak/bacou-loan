@@ -125,7 +125,7 @@ export function AppLockProvider({ children }) {
   const unlockBiometric = useCallback(async () => {
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage: 'Authenticate to open Bacou',
-      disableDeviceFallback: true,
+      disableDeviceFallback: false,
     });
     if (result.success) setIsLocked(false);
     return result;

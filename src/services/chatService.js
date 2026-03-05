@@ -30,6 +30,21 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from './firebase';
 
+/** Send Expo push notifications to a list of uids (fetches their tokens from Firestore). */
+async function sendPushToMembers(uids, title, body, data = {}) {
+  if (!uids.length) return;
+  try {
+    const tokenDocs = await Promise.all(uids.map(uid => getDoc(doc(db, 'pushTokens', uid))));
+    const tokens = tokenDocs.map(d => d.data()?.token).filter(t => t?.startsWith('ExponentPushToken'));
+    if (!tokens.length) return;
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Accept-Encoding': 'gzip, deflate' },
+      body: JSON.stringify(tokens.map(to => ({ to, title, body, data, sound: 'default', priority: 'high' }))),
+    });
+  } catch (_) {}
+}
+
 function getUserInfo() {
   const user = auth.currentUser;
   return {
@@ -121,6 +136,8 @@ export async function sendMessage(chatId, text, replyTo = null) {
     lastMessageBy: uid,
     ...unreadPatch,
   });
+
+  sendPushToMembers(otherMembers, name, text.trim(), { chatId });
 }
 
 /** Convert a local file:// URI to a Blob using XMLHttpRequest (works on iOS & Android). */
@@ -174,6 +191,8 @@ export async function sendFileMessage(chatId, fileUri, fileName, fileSize, mimeT
     lastMessageBy: uid,
     ...unreadPatch,
   });
+
+  sendPushToMembers(otherMembers, name, `📎 ${fileName}`, { chatId });
 }
 
 /** Upload image to Storage then send an image message. */
@@ -210,6 +229,8 @@ export async function sendImageMessage(chatId, imageUri) {
     lastMessageBy: uid,
     ...unreadPatch,
   });
+
+  sendPushToMembers(otherMembers, name, '📷 Photo', { chatId });
 }
 
 /** Reset unread count for current user in a chat. */

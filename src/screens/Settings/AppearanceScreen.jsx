@@ -108,7 +108,7 @@ export default function AppearanceScreen({ navigation }) {
   const { colors, isDark, themeMode, setThemeMode } = useTheme();
   const { language, fs, ff } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const styles = useMemo(() => makeStyles(fs, ff, language), [fs, ff, language]);
 
   const isAutomatic    = themeMode === 'system';
   const handleSelect   = (mode) => setThemeMode(mode);
@@ -209,17 +209,19 @@ export default function AppearanceScreen({ navigation }) {
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
-const makeStyles = (fs, ff) => StyleSheet.create({
+const makeStyles = (fs, ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingLeft: 8, paddingRight: 16, paddingTop: 8, paddingBottom: 12,
   },
   backBtn:     { padding: 4 },
-  headerTitle: { flex: 1, fontSize: fs(22), lineHeight: 28, letterSpacing: 0, paddingLeft: 4 },
+  headerTitle: { flex: 1, fontSize: fs(22), lineHeight: km ? 36 : 28, letterSpacing: 0, paddingLeft: 4 },
   content:     { paddingHorizontal: 16, paddingTop: 4 },
 
-  sectionLabel: { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, marginBottom: 8, marginHorizontal: 4 },
+  sectionLabel: { fontSize: fs(12), lineHeight: km ? 21 : 16, letterSpacing: 0, marginBottom: 8, marginHorizontal: 4 },
 
   card: {
     borderRadius: 18,
@@ -234,7 +236,7 @@ const makeStyles = (fs, ff) => StyleSheet.create({
 
   mockupsRow:  { flexDirection: 'row', justifyContent: 'space-evenly', paddingTop: 28, paddingBottom: 20, paddingHorizontal: 16, gap: 20 },
   mockupItem:  { alignItems: 'center', gap: 12 },
-  mockupLabel: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0 },
+  mockupLabel: { fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0 },
   radio: {
     width: 24, height: 24, borderRadius: 12, borderWidth: 2,
     alignItems: 'center', justifyContent: 'center',
@@ -243,6 +245,7 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   divider: { height: StyleSheet.hairlineWidth, marginHorizontal: 16 },
 
   autoRow:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, gap: 12 },
-  autoLabel: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0 },
-  autoSub:   { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, marginTop: 2 },
+  autoLabel: { fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0 },
+  autoSub:   { fontSize: fs(12), lineHeight: km ? 21 : 16, letterSpacing: 0, marginTop: 2 },
 });
+};

@@ -122,6 +122,26 @@ export async function updateSessionSecurity({ pinEnabled, biometricEnabled, biom
   }
 }
 
+/** Real-time online status for a specific user (based on their most-recent lastSeen). */
+export function listenUserOnlineStatus(targetUid, callback) {
+  const q = query(collection(db, 'sessions'), where('uid', '==', targetUid));
+  return onSnapshot(
+    q,
+    snap => {
+      const maxSeen = snap.docs.reduce((max, d) => {
+        const t = d.data().lastSeen?.seconds ?? 0;
+        return t > max ? t : max;
+      }, 0);
+      if (!maxSeen) { callback('offline'); return; }
+      const diff = Date.now() / 1000 - maxSeen;
+      if (diff < 5 * 60)  callback('online');
+      else if (diff < 60 * 60) callback('away');
+      else callback('offline');
+    },
+    () => callback('offline'),
+  );
+}
+
 /** Admin: real-time listener for ALL sessions across all users. */
 export function listenAllSessions(callback, onError) {
   const uid = auth.currentUser?.uid;

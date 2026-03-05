@@ -200,7 +200,7 @@ export default function RemindersScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const { language, ff, fs } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const styles = useMemo(() => makeStyles(fs, ff, language), [fs, ff, language]);
   const { loans } = useData();
 
   const [enabled,        setEnabled]        = useState(false);
@@ -399,13 +399,15 @@ export default function RemindersScreen({ navigation }) {
   );
 }
 
-const makeStyles = (fs, ff) => StyleSheet.create({
+const makeStyles = (fs, ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   safe:   { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingLeft: 8, paddingRight: 16, paddingTop: 8, paddingBottom: 12 },
   backBtn: { padding: 4 },
-  headerTitle: { flex: 1, fontSize: fs(22), lineHeight: 34, letterSpacing: 0, paddingLeft: 4 },
+  headerTitle: { flex: 1, fontSize: fs(22), lineHeight: km ? 44 : 34, letterSpacing: 0, paddingLeft: 4 },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
-  sectionTitle: { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, marginBottom: 8, marginTop: 12 },
+  sectionTitle: { fontSize: fs(12), lineHeight: km ? 21 : 16, letterSpacing: 0, marginBottom: 8, marginTop: 12 },
   card: { marginBottom: 8 },
 
   row: {
@@ -416,20 +418,20 @@ const makeStyles = (fs, ff) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 18, paddingVertical: 14, minHeight: 54, gap: 12,
   },
-  rowLabel: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0 },
-  rowDesc:  { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, marginTop: 2 },
+  rowLabel: { fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0 },
+  rowDesc:  { fontSize: fs(12), lineHeight: km ? 21 : 16, letterSpacing: 0, marginTop: 2 },
 
   pillsRow: { flexDirection: 'row', gap: 6 },
   pill: {
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10,
     borderWidth: 1, borderColor: 'rgba(120,120,128,0.3)',
   },
-  pillText: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
+  pillText: { fontSize: fs(13), lineHeight: km ? 23 : 18, letterSpacing: 0 },
 
   timeRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  timeValue: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0 },
+  timeValue: { fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0 },
 
-  infoText: { flex: 1, fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
+  infoText: { flex: 1, fontSize: fs(13), lineHeight: km ? 23 : 18, letterSpacing: 0 },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
@@ -440,11 +442,12 @@ const makeStyles = (fs, ff) => StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   modalSideBtn: { minWidth: 60 },
-  modalCancel:  { fontSize: fs(15), lineHeight: 20, letterSpacing: 0 },
-  modalTitle:   { fontSize: fs(16), lineHeight: 21, letterSpacing: 0 },
-  modalSave:    { fontSize: fs(15), lineHeight: 20, letterSpacing: 0, textAlign: 'right' },
+  modalCancel:  { fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0 },
+  modalTitle:   { fontSize: fs(16), lineHeight: km ? 27 : 21, letterSpacing: 0 },
+  modalSave:    { fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0, textAlign: 'right' },
 
   // Wheel picker
   wheelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 4 },
-  wheelSep: { fontSize: fs(28), lineHeight: 36, letterSpacing: 0, marginTop: -4 },
+  wheelSep: { fontSize: fs(28), lineHeight: km ? 47 : 36, letterSpacing: 0, marginTop: -4 },
 });
+};

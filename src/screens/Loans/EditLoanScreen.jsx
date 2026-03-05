@@ -108,7 +108,7 @@ const T = {
 // ── ToggleGroup helper ────────────────────────────────────────────────────────
 
 const ToggleGroup = ({ options, value, onChange, colors, isDark }) => {
-  const { ff } = useLanguage();
+  const { ff, language } = useLanguage();
   return (
     <View style={[{ flexDirection: 'row', borderRadius: 12, padding: 3, marginBottom: 4 }, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
       {options.map(opt => {
@@ -120,7 +120,7 @@ const ToggleGroup = ({ options, value, onChange, colors, isDark }) => {
             onPress={() => onChange(opt.value)}
             activeOpacity={0.8}
           >
-            <Text style={[{ fontSize: 13, lineHeight: 18, ...ff('600') }, { color: active ? (isDark ? '#000' : '#fff') : colors.textMuted }]}>
+            <Text style={[{ fontSize: 13, lineHeight: 23, ...ff('600') }, { color: active ? (isDark ? '#000' : '#fff') : colors.textMuted }]}>
               {opt.label}
             </Text>
           </TouchableOpacity>
@@ -138,7 +138,7 @@ const EditLoanScreen = ({ navigation, route }) => {
   const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
 
-  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const styles = useMemo(() => makeStyles(fs, ff, language), [fs, ff, language]);
   const scrollRef = useRef(null);
 
   // Existing fields
@@ -346,7 +346,7 @@ const EditLoanScreen = ({ navigation, route }) => {
             onPress={() => { setShowDatePicker(true); if (errors.date) setErrors(e => ({ ...e, date: null })); }}
             activeOpacity={0.7}
           >
-            <Text style={{ color: startDate ? colors.text : colors.textMuted, fontSize: fs(15), lineHeight: 20 }}>
+            <Text style={{ color: startDate ? colors.text : colors.textMuted, fontSize: fs(15), lineHeight: 26 }}>
               {startDate || 'Select date'}
             </Text>
           </TouchableOpacity>
@@ -416,33 +416,36 @@ const EditLoanScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (fs, ff) => StyleSheet.create({
+const makeStyles = (fs, ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 64, paddingVertical: 4 },
-  headerBtnText: { fontSize: fs(15), lineHeight: 20, ...ff('500') },
-  headerTitle: { fontSize: fs(18), lineHeight: 24, ...ff('700') },
+  headerBtnText: { fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('500') },
+  headerTitle: { fontSize: fs(18), lineHeight: km ? 31 : 24, ...ff('700') },
   content: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 80, gap: 4 },
-  label: { fontSize: fs(11), lineHeight: 15, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 12 },
-  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: fs(15), lineHeight: 20, ...ff('400') },
+  label: { fontSize: fs(11), lineHeight: km ? 20 : 15, ...ff('700'), letterSpacing: 0, marginBottom: 8, marginTop: 12 },
+  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('400') },
   multiline: { height: 90, paddingTop: 14, textAlignVertical: 'top' },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },
-  errText: { fontSize: fs(12), lineHeight: 16, color: '#EF4444', marginTop: 4, marginLeft: 4, ...ff('400') },
+  errText: { fontSize: fs(12), lineHeight: km ? 21 : 16, color: '#EF4444', marginTop: 4, marginLeft: 4, ...ff('400') },
   currencyRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
   currencyBtn: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: fs(13), lineHeight: 18, ...ff('700') },
+  currencyText: { fontSize: fs(13), lineHeight: km ? 23 : 18, ...ff('700') },
   rateWrap: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 14, paddingHorizontal: 16 },
-  rateInput: { flex: 1, fontSize: fs(15), lineHeight: 20, ...ff('400') },
-  rateSuffix: { fontSize: fs(16), lineHeight: 22, ...ff('700'), marginLeft: 8 },
+  rateInput: { flex: 1, fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('400') },
+  rateSuffix: { fontSize: fs(16), lineHeight: km ? 29 : 22, ...ff('700'), marginLeft: 8 },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },
   saveBtn: {
     height: 56, borderRadius: 16, backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
-  saveBtnText: { color: '#fff', fontSize: fs(16), lineHeight: 22, ...ff('700') },
+  saveBtnText: { color: '#fff', fontSize: fs(16), lineHeight: km ? 29 : 22, ...ff('700') },
 });
+};
 
 export default EditLoanScreen;

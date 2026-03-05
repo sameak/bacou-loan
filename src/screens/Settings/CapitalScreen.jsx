@@ -69,8 +69,8 @@ const T = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmtUSD(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
-function fmtKHR(n) { return '៛' + Math.round(n).toLocaleString(); }
+function fmtUSD(n) { return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtKHR(n) { return '៛' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 function fmtDateTime(ts) {
   if (!ts) return '—';
@@ -87,7 +87,7 @@ export default function CapitalScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const { language, ff, fs, fi } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const styles = useMemo(() => makeStyles(fs, ff, language), [fs, ff, language]);
 
   const [capital, setCapital]   = useState({ capitalUSD: 0, capitalKHR: 0 });
   const [history, setHistory]   = useState([]);
@@ -269,16 +269,18 @@ export default function CapitalScreen({ navigation }) {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const makeStyles = (fs, ff) => StyleSheet.create({
+const makeStyles = (fs, ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   safe:  { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingLeft: 8, paddingRight: 16, paddingTop: 8, paddingBottom: 12,
   },
   backBtn:      { padding: 4 },
-  headerTitle:  { flex: 1, fontSize: fs(22), letterSpacing: 0, lineHeight: 34, paddingLeft: 4 },
+  headerTitle:  { flex: 1, fontSize: fs(22), letterSpacing: 0, lineHeight: km ? 44 : 34, paddingLeft: 4 },
   editBtn:      { paddingHorizontal: 8, paddingVertical: 4 },
-  editBtnText:  { fontSize: fs(15), letterSpacing: 0, lineHeight: 20 },
+  editBtnText:  { fontSize: fs(15), letterSpacing: 0, lineHeight: km ? 26 : 20 },
   scroll:  { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
 
@@ -287,25 +289,26 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   currentRow:   { flexDirection: 'row', alignItems: 'center', padding: 20 },
   currentCol:   { flex: 1 },
   currentDivider: { width: 1, height: 44, marginHorizontal: 16 },
-  currLabel:    { fontSize: fs(13), letterSpacing: 0, lineHeight: 24, marginBottom: 6 },
-  currValue:    { fontSize: fs(22), letterSpacing: 0, lineHeight: 34 },
-  currNotSet:   { fontSize: fs(14), letterSpacing: 0, lineHeight: 19 },
+  currLabel:    { fontSize: fs(13), letterSpacing: 0, lineHeight: km ? 31 : 24, marginBottom: 6 },
+  currValue:    { fontSize: fs(22), letterSpacing: 0, lineHeight: km ? 44 : 34 },
+  currNotSet:   { fontSize: fs(14), letterSpacing: 0, lineHeight: km ? 25 : 19 },
 
   // Edit form
   inputWrap:    { borderRadius: 10, borderWidth: 1, overflow: 'hidden' },
-  input:        { height: 48, paddingHorizontal: 14, fontSize: fs(15), lineHeight: 20, letterSpacing: 0 },
-  hint:         { fontSize: fs(12), letterSpacing: 0, lineHeight: 16, textAlign: 'center' },
+  input:        { height: 48, paddingHorizontal: 14, fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0 },
+  hint:         { fontSize: fs(12), letterSpacing: 0, lineHeight: km ? 21 : 16, textAlign: 'center' },
   btnRow:       { flexDirection: 'row', gap: 10, marginTop: 4 },
   btn:          { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  btnText:      { fontSize: fs(15), letterSpacing: 0, lineHeight: 20 },
+  btnText:      { fontSize: fs(15), letterSpacing: 0, lineHeight: km ? 26 : 20 },
 
   // History
-  sectionTitle: { fontSize: fs(11), letterSpacing: 0, lineHeight: 15, marginBottom: 10, marginTop: 8, paddingHorizontal: 2 },
-  emptyText:    { fontSize: fs(13), letterSpacing: 0, lineHeight: 18 },
+  sectionTitle: { fontSize: fs(11), letterSpacing: 0, lineHeight: km ? 20 : 15, marginBottom: 10, marginTop: 8, paddingHorizontal: 2 },
+  emptyText:    { fontSize: fs(13), letterSpacing: 0, lineHeight: km ? 23 : 18 },
   historyCard:  { marginBottom: 10 },
   historyInner: { flexDirection: 'row', alignItems: 'center', padding: 14 },
   avatarDot:    { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  historyName:  { fontSize: fs(14), letterSpacing: 0, lineHeight: 19 },
-  historyTime:  { fontSize: fs(11), letterSpacing: 0, lineHeight: 15, marginTop: 1 },
-  historyAmt:   { fontSize: fs(14), letterSpacing: 0, lineHeight: 19 },
+  historyName:  { fontSize: fs(14), letterSpacing: 0, lineHeight: km ? 25 : 19 },
+  historyTime:  { fontSize: fs(11), letterSpacing: 0, lineHeight: km ? 20 : 15, marginTop: 1 },
+  historyAmt:   { fontSize: fs(14), letterSpacing: 0, lineHeight: km ? 25 : 19 },
 });
+};

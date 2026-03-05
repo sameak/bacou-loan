@@ -92,7 +92,7 @@ export default function SessionsScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const { language, fs, ff } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const styles = useMemo(() => makeStyles(ff, language), [ff, language]);
 
   const [sessions,          setSessions]          = useState([]);
   const [loading,           setLoading]           = useState(true);
@@ -235,23 +235,26 @@ export default function SessionsScreen({ navigation }) {
   );
 }
 
-const makeStyles = (ff) => StyleSheet.create({
+const makeStyles = (ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   root:      { flex: 1 },
   header:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 4, paddingBottom: 12, gap: 4 },
   backBtn:   { padding: 4 },
-  title:     { ...ff('800'), lineHeight: 30, letterSpacing: 0 },
-  headerSub: { marginTop: 1, lineHeight: 18, ...ff('400') },
+  title:     { ...ff('800'), lineHeight: km ? 39 : 30, letterSpacing: 0 },
+  headerSub: { marginTop: 1, lineHeight: km ? 23 : 18, ...ff('400') },
   content:   { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 },
-  sectionTitle: { ...ff('700'), lineHeight: 15, marginBottom: 8 },
+  sectionTitle: { ...ff('700'), lineHeight: km ? 20 : 15, marginBottom: 8 },
   center:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   row:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   iconWrap:  { width: 42, height: 42, borderRadius: 13, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   info:      { flex: 1 },
   nameRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 },
-  deviceName:{ ...ff('400'), lineHeight: 20 },
+  deviceName:{ ...ff('400'), lineHeight: km ? 26 : 20 },
   badge:     { backgroundColor: ACCENT, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeText: { color: '#fff', ...ff('700'), lineHeight: 15 },
-  meta:      { marginTop: 2, lineHeight: 18, ...ff('400') },
+  badgeText: { color: '#fff', ...ff('700'), lineHeight: km ? 20 : 15 },
+  meta:      { marginTop: 2, lineHeight: km ? 23 : 18, ...ff('400') },
   removeBtn: { padding: 6, flexShrink: 0 },
 });
+};

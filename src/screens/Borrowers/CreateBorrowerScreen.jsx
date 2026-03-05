@@ -82,7 +82,7 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
   const { colors, isDark } = useTheme();
   const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const styles = useMemo(() => makeStyles(fs, ff, language), [fs, ff, language]);
   const scrollRef = useRef(null);
 
   const prefill = route?.params?.prefill ?? {};
@@ -270,21 +270,23 @@ const CreateBorrowerScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (fs, ff) => StyleSheet.create({
+const makeStyles = (fs, ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 64, paddingVertical: 4 },
-  headerBtnText: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('400') },
-  headerTitle: { fontSize: fs(18), lineHeight: 29, letterSpacing: 0, ...ff('600') },
+  headerBtnText: { fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0, ...ff('400') },
+  headerTitle: { fontSize: fs(18), lineHeight: km ? 38 : 29, letterSpacing: 0, ...ff('600') },
   content: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 80 },
-  label: { fontSize: fs(11), lineHeight: 15, letterSpacing: 0, ...ff('600'), marginBottom: 8, marginTop: 4 },
-  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('400'), marginBottom: 4 },
+  label: { fontSize: fs(11), lineHeight: km ? 20 : 15, letterSpacing: 0, ...ff('600'), marginBottom: 8, marginTop: 4 },
+  input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0, ...ff('400'), marginBottom: 4 },
   multiline: { height: 90, paddingTop: 14 },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },
-  errText: { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, color: '#EF4444', marginBottom: 8, marginLeft: 4 },
+  errText: { fontSize: fs(12), lineHeight: km ? 21 : 16, letterSpacing: 0, color: '#EF4444', marginBottom: 8, marginLeft: 4 },
   // Photo
   photoSection: { alignItems: 'center', marginBottom: 24 },
   photoBtn: { position: 'relative', marginBottom: 8 },
@@ -295,18 +297,19 @@ const makeStyles = (fs, ff) => StyleSheet.create({
     width: 28, height: 28, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
   },
-  photoHint: { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, ...ff('400') },
+  photoHint: { fontSize: fs(12), lineHeight: km ? 21 : 16, letterSpacing: 0, ...ff('400') },
   // Social
   socialRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, overflow: 'hidden' },
   socialIcon: { width: 52, height: 52, alignItems: 'center', justifyContent: 'center' },
-  socialInput: { flex: 1, height: 52, paddingHorizontal: 12, lineHeight: 20, letterSpacing: 0, ...ff('400') },
+  socialInput: { flex: 1, height: 52, paddingHorizontal: 12, lineHeight: km ? 26 : 20, letterSpacing: 0, ...ff('400') },
   // Footer
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },
   saveBtn: {
     height: 56, borderRadius: 16, backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
-  saveBtnText: { color: '#fff', fontSize: fs(16), lineHeight: 21, letterSpacing: 0, ...ff('600') },
+  saveBtnText: { color: '#fff', fontSize: fs(16), lineHeight: km ? 27 : 21, letterSpacing: 0, ...ff('600') },
 });
+};
 
 export default CreateBorrowerScreen;

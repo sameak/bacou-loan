@@ -72,27 +72,27 @@ const T = {
     today: 'Today',
     inDays: n => `in ${n}d`,
     overdueDays: n => `${n}d overdue`,
-    chartMonths: ['J','F','M','A','M','J','J','A','S','O','N','D'],
+    chartMonths: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
   },
   km: {
     morning: 'អរុណសួស្ដី', afternoon: 'ទិវាសួស្ដី', evening: 'សាយ័ណ្ហសួស្ដី',
     thisMonth: 'ខែនេះ',
-    interest: 'ការប្រាក់', principal: 'ដើមទុន',
+    interest: 'ការប្រាក់', principal: 'ប្រាក់ដើម',
     vsLastMonth: 'ធៀបខែមុន', newEarning: 'ដំបូង',
     chart6m: 'ការប្រាក់ ៦ ខែ', khrNote: '+ ការប្រាក់រៀលក្នុងរបាយការណ៍',
-    myCapital: 'ដើមទុន', available: 'នៅសល់',
+    myCapital: 'ប្រាក់ដើម', available: 'នៅសល់',
     lent: 'បានផ្ដល់', total: 'សរុប',
-    active: 'កម្ចីសរុប', onTrack: 'ទៀងទាត់', outstanding: 'ដែលបានផ្តល់',
+    active: 'កម្ចីសរុប', onTrack: 'ទៀងទាត់', outstanding: 'កម្ចីរដែលបានផ្តល់',
     overdueAlert: (n, amt) => `${n} ហួសកំណត់ · ${amt} ប្រយ័ត្ន`,
     portfolio: 'បញ្ជីប្រាក់កម្ចី',
     recentActivity: 'សកម្មភាពថ្មីៗ', noActivity: 'មិនទាន់មានការបង់',
     statusActive: 'ដំណើរការ', statusOverdue: 'ហួសកំណត់',
-    upcomingPayments: 'ការទូទាត់ខាងមុខ',
+    upcomingPayments: 'កាលបរិច្ឆេតបង់ដែលជិតមកដល់',
     allOnTrack: 'ការទូទាត់ទាំងអស់ទន្ទ្រាន',
     today: 'ថ្ងៃនេះ',
     inDays: n => `${n} ថ្ងៃ`,
     overdueDays: n => `ហួស ${n} ថ្ងៃ`,
-    chartMonths: ['១','២','៣','៤','៥','៦','៧','៨','៩','១០','១១','១២'],
+    chartMonths: ['មករា','កុម្ភៈ','មីនា','មេសា','ឧសភា','មិថុនា','កក្កដា','សីហា','កញ្ញា','តុលា','វិច្ឆិកា','ធ្នូ'],
   },
 };
 
@@ -102,7 +102,7 @@ const DashboardScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { language, ff, fs } = useLanguage();
   const t = T[language] || T.en;
-  const isKhmer = language === 'km';
+  const isKhmer = true;
   const styles = useMemo(() => makeStyles(ff, fs, isKhmer), [ff, fs, isKhmer]);
   const scrollHandler = useTabBarScroll();
   const { tabVisible } = useTabBar();
@@ -162,11 +162,11 @@ const DashboardScreen = ({ navigation }) => {
       }),
     ).then(() => {
       setUpcoming(rows.sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? '')).slice(0, 5));
-    });
+    }).catch(() => {});
   }, [loansLoaded]);
 
-  const fmtUSD = n => '$' + Math.round(n).toLocaleString('en-US');
-  const fmtKHR = n => '៛' + Math.round(n).toLocaleString();
+  const fmtUSD = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtKHR = n => '៛' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const navLoan     = id => navigation.navigate('Tabs', { screen: 'LoansTab', params: { screen: 'LoanDetail', params: { loanId: id } } });
   const navLoanList = f  => navigation.navigate('Tabs', { screen: 'LoansTab', params: { screen: 'LoanList',   params: { initialFilter: f } } });
@@ -607,57 +607,57 @@ const DashboardScreen = ({ navigation }) => {
 const makeStyles = (ff, fs, km) => StyleSheet.create({
   root:        { flex: 1 },
   header:      { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center' },
-  greeting:    { fontSize: km ? fs(14) : fs(13), lineHeight: km ? 19 : 18, letterSpacing: 0 },
+  greeting:    { fontSize: fs(13), letterSpacing: 0 },
   navLogo:     { height: 38, width: Math.round(38 * 256 / 144), marginTop: 2, alignSelf: 'flex-start' },
   headerIcons: { flexDirection: 'row', gap: 8 },
   headerIcon:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   badge:       { position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
-  badgeText:   { color: '#fff', fontSize: 10, lineHeight: 14, letterSpacing: 0 },
+  badgeText:   { color: '#fff', fontSize: 10, letterSpacing: 0 },
   content:     { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
 
   // ── Card base ────────────────────────────────────────────────────────────────
   card:      { marginTop: 12 },
-  cardLabel: { fontSize: km ? fs(11) : fs(10), lineHeight: km ? 15 : 14, letterSpacing: 0, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 },
+  cardLabel: { fontSize: fs(11), letterSpacing: 0, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 },
 
   // ── Stats row ────────────────────────────────────────────────────────────────
   statsRow:  { flexDirection: 'row', gap: 10 },
   statCard:  { flex: 1 },
   statInner: { paddingVertical: 16, paddingHorizontal: 10, alignItems: 'center', gap: 4 },
-  statVal:   { fontSize: km ? fs(22) : fs(20), lineHeight: km ? 28 : 26, letterSpacing: 0 },
-  statSub:   { fontSize: km ? fs(11) : fs(10), lineHeight: km ? 15 : 14, letterSpacing: 0 },
-  statLbl:   { fontSize: km ? fs(11) : fs(10), lineHeight: km ? 15 : 14, letterSpacing: 0, textAlign: 'center' },
+  statVal:   { fontSize: fs(22), letterSpacing: 0 },
+  statSub:   { fontSize: fs(11), letterSpacing: 0 },
+  statLbl:   { fontSize: fs(11), letterSpacing: 0, textAlign: 'center' },
 
   // ── This Month ───────────────────────────────────────────────────────────────
   twoCol:        { flexDirection: 'row' },
   incomeCell:    { flex: 1, paddingHorizontal: 16, paddingBottom: 16, gap: 3 },
   colDivider:    { width: StyleSheet.hairlineWidth, marginBottom: 16 },
   incomeIconWrap:{ width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  incomeTitle:   { fontSize: km ? fs(12) : fs(11), lineHeight: km ? 17 : 15, letterSpacing: 0 },
-  incomeVal:     { fontSize: km ? fs(22) : fs(20), lineHeight: km ? 28 : 26, letterSpacing: 0 },
-  incomeSub:     { fontSize: km ? fs(12) : fs(11), lineHeight: km ? 17 : 15, letterSpacing: 0 },
+  incomeTitle:   { fontSize: fs(12), letterSpacing: 0 },
+  incomeVal:     { fontSize: fs(22), letterSpacing: 0 },
+  incomeSub:     { fontSize: fs(12), letterSpacing: 0 },
   changeRow:     { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1 },
-  changeText:    { fontSize: km ? fs(12) : fs(11), lineHeight: km ? 17 : 15, letterSpacing: 0 },
+  changeText:    { fontSize: fs(12), letterSpacing: 0 },
 
   // ── Alert ────────────────────────────────────────────────────────────────────
   alertBanner: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, borderWidth: 1, gap: 10 },
   alertDot:    { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  alertText:   { flex: 1, fontSize: km ? fs(14) : fs(13), lineHeight: km ? 19 : 18, letterSpacing: 0 },
+  alertText:   { flex: 1, fontSize: fs(13), letterSpacing: 0 },
 
   // ── Shared list rows ─────────────────────────────────────────────────────────
   listRow:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
-  rowName:   { fontSize: fs(14), lineHeight: 19, letterSpacing: 0, marginBottom: 2 },
-  rowMeta:   { fontSize: km ? fs(13) : fs(12), lineHeight: km ? 18 : 17, letterSpacing: 0 },
+  rowName:   { fontSize: fs(14), letterSpacing: 0, marginBottom: 2 },
+  rowMeta:   { fontSize: fs(13), letterSpacing: 0 },
   rowRight:  { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
-  rowAmt:    { fontSize: km ? fs(15) : fs(14), lineHeight: km ? 20 : 19, letterSpacing: 0 },
+  rowAmt:    { fontSize: fs(14), letterSpacing: 0 },
   chip:      { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  chipText:  { fontSize: km ? fs(11) : fs(10), lineHeight: km ? 15 : 14, letterSpacing: 0 },
+  chipText:  { fontSize: fs(11), letterSpacing: 0 },
   dotWrap:   { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   dot:       { width: 7, height: 7, borderRadius: 3.5 },
   avatar:    { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  avatarText:{ fontSize: km ? fs(15) : fs(14), lineHeight: km ? 20 : 19, letterSpacing: 0 },
+  avatarText:{ fontSize: fs(14), letterSpacing: 0 },
   actIcon:   { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   emptyRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 16, justifyContent: 'center' },
-  emptyText: { fontSize: km ? fs(14) : fs(13), lineHeight: km ? 19 : 18, letterSpacing: 0 },
+  emptyText: { fontSize: fs(13), letterSpacing: 0 },
 
   // ── Chart ────────────────────────────────────────────────────────────────────
   chartInner:          { paddingHorizontal: 14, paddingBottom: 14 },
@@ -665,24 +665,24 @@ const makeStyles = (ff, fs, km) => StyleSheet.create({
   chartSkeletonBarWrap:{ flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   barsArea:            { flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 4 },
   barGroup:            { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  barCurLabel:         { fontSize: km ? fs(10) : fs(9), lineHeight: km ? 14 : 13, textAlign: 'center', marginBottom: 4, letterSpacing: 0 },
+  barCurLabel:         { fontSize: fs(10), textAlign: 'center', marginBottom: 4, letterSpacing: 0 },
   barTrack:            { width: '100%', flex: 1, justifyContent: 'flex-end' },
   barFill:             { width: '78%', alignSelf: 'center', minHeight: 4 },
-  barMonthLabel:       { fontSize: km ? fs(12) : fs(11), lineHeight: km ? 17 : 15, marginTop: 6, textAlign: 'center', letterSpacing: 0 },
-  chartNote:           { fontSize: km ? fs(12) : fs(11), lineHeight: km ? 17 : 15, textAlign: 'center', marginTop: 10, letterSpacing: 0 },
+  barMonthLabel:       { fontSize: fs(12), marginTop: 6, textAlign: 'center', letterSpacing: 0 },
+  chartNote:           { fontSize: fs(12), textAlign: 'center', marginTop: 10, letterSpacing: 0 },
 
   // ── Capital ──────────────────────────────────────────────────────────────────
   capitalInner:  { paddingHorizontal: 16, paddingBottom: 16 },
   capitalItem:   { gap: 10 },
   capitalTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cBadge:        { borderRadius: 7, paddingHorizontal: 8, paddingVertical: 3 },
-  cBadgeText:    { fontSize: km ? fs(13) : fs(12), lineHeight: km ? 18 : 17, letterSpacing: 0 },
-  cPct:          { fontSize: km ? fs(15) : fs(14), lineHeight: km ? 20 : 19, letterSpacing: 0 },
-  cAvail:        { fontSize: km ? fs(13) : fs(12), lineHeight: km ? 18 : 17, letterSpacing: 0, marginLeft: 'auto' },
+  cBadgeText:    { fontSize: fs(12), letterSpacing: 0 },
+  cPct:          { fontSize: fs(14), letterSpacing: 0 },
+  cAvail:        { fontSize: fs(12), letterSpacing: 0, marginLeft: 'auto' },
   utilTrack:     { height: 6, borderRadius: 3, overflow: 'hidden' },
   utilFill:      { height: '100%', borderRadius: 3 },
   capitalSubRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  capitalSub:    { fontSize: km ? fs(12) : fs(11), lineHeight: km ? 17 : 15, letterSpacing: 0 },
+  capitalSub:    { fontSize: fs(11), letterSpacing: 0 },
   capDivider:    { height: StyleSheet.hairlineWidth, marginVertical: 14 },
 
   // ── FAB ──────────────────────────────────────────────────────────────────────

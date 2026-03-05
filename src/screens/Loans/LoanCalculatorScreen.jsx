@@ -124,7 +124,7 @@ const T = {
 };
 
 // ── ToggleGroup ────────────────────────────────────────────────────────────────
-const ToggleGroup = ({ options, value, onChange, colors, isDark, ff }) => (
+const ToggleGroup = ({ options, value, onChange, colors, isDark, ff, language }) => (
   <View style={[
     { flexDirection: 'row', borderRadius: 12, padding: 3, marginBottom: 4 },
     { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' },
@@ -142,7 +142,7 @@ const ToggleGroup = ({ options, value, onChange, colors, isDark, ff }) => (
           activeOpacity={0.8}
         >
           <Text style={[
-            { fontSize: 13, lineHeight: 18, ...ff('600') },
+            { fontSize: 13, lineHeight: 23, ...ff('600') },
             { color: active ? (isDark ? '#000' : '#fff') : colors.textMuted },
           ]}>
             {opt.label}
@@ -231,7 +231,7 @@ const LoanCalculatorScreen = ({ navigation }) => {
   const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
   const isKhmer = language === 'km';
-  const styles = useMemo(() => makeStyles(fs, ff, isKhmer), [fs, ff, isKhmer]);
+  const styles = useMemo(() => makeStyles(fs, ff, language, isKhmer), [fs, ff, language, isKhmer]);
 
   const [currency, setCurrency] = useState('USD');
   const [principal, setPrincipal] = useState('');
@@ -399,7 +399,7 @@ const LoanCalculatorScreen = ({ navigation }) => {
               { value: 'interest_only',          label: t.interestOnly },
               { value: 'principal_and_interest',  label: t.principalAndInterest },
             ]}
-            value={repaymentType} onChange={setRepaymentType} colors={colors} isDark={isDark} ff={ff}
+            value={repaymentType} onChange={setRepaymentType} colors={colors} isDark={isDark} ff={ff} language={language}
           />
 
           {/* ── Interest basis ─────────────────────────────────────────────── */}
@@ -409,7 +409,7 @@ const LoanCalculatorScreen = ({ navigation }) => {
               { value: 'flat',     label: t.flat },
               { value: 'reducing', label: t.reducing },
             ]}
-            value={interestBasis} onChange={setInterestBasis} colors={colors} isDark={isDark} ff={ff}
+            value={interestBasis} onChange={setInterestBasis} colors={colors} isDark={isDark} ff={ff} language={language}
           />
 
           {/* ── Rate ───────────────────────────────────────────────────────── */}
@@ -433,7 +433,7 @@ const LoanCalculatorScreen = ({ navigation }) => {
               { value: 'weekly',  label: t.weekly },
               { value: 'monthly', label: t.monthly },
             ]}
-            value={frequency} onChange={setFrequency} colors={colors} isDark={isDark} ff={ff}
+            value={frequency} onChange={setFrequency} colors={colors} isDark={isDark} ff={ff} language={language}
           />
 
           {/* ── Schedule mode ──────────────────────────────────────────────── */}
@@ -443,7 +443,7 @@ const LoanCalculatorScreen = ({ navigation }) => {
               { value: 'fixed', label: t.fixed },
               { value: 'open',  label: t.open },
             ]}
-            value={scheduleMode} onChange={setScheduleMode} colors={colors} isDark={isDark} ff={ff}
+            value={scheduleMode} onChange={setScheduleMode} colors={colors} isDark={isDark} ff={ff} language={language}
           />
 
           {/* ── Periods ────────────────────────────────────────────────────── */}
@@ -480,7 +480,7 @@ const LoanCalculatorScreen = ({ navigation }) => {
             onPress={() => setShowDatePicker(true)}
             activeOpacity={0.7}
           >
-            <Text style={[{ color: colors.text }, { fontSize: fs(15), lineHeight: 20, ...ff('400') }]}>
+            <Text style={[{ color: colors.text }, { fontSize: fs(15), lineHeight: 26, ...ff('400') }]}>
               {startDate}
             </Text>
           </TouchableOpacity>
@@ -617,7 +617,9 @@ const LoanCalculatorScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
+const makeStyles = (fs, ff, language, isKhmer = false) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
 
   header: {
@@ -626,49 +628,49 @@ const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn:     { width: 56, paddingVertical: 4 },
-  headerBtnText: { fontSize: fs(15), lineHeight: 20, ...ff('500') },
-  headerTitle:   { fontSize: fs(18), lineHeight: 24, ...ff('700'), letterSpacing: 0 },
+  headerBtnText: { fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('500') },
+  headerTitle:   { fontSize: fs(18), lineHeight: km ? 31 : 24, ...ff('700'), letterSpacing: 0 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 16, width: 56, justifyContent: 'flex-end' },
 
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 60, gap: 4 },
 
   label: {
-    fontSize: fs(11), lineHeight: 15, ...ff('700'),
+    fontSize: fs(11), lineHeight: km ? 20 : 15, ...ff('700'),
     letterSpacing: 0, marginBottom: 8, marginTop: 12,
   },
   input: {
     height: 52, borderRadius: 14, paddingHorizontal: 16,
-    fontSize: fs(15), lineHeight: 20, ...ff('400'),
+    fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('400'),
   },
   rateWrap: {
     flexDirection: 'row', alignItems: 'center',
     height: 52, borderRadius: 14, paddingHorizontal: 16,
   },
-  rateInput:  { flex: 1, fontSize: fs(15), lineHeight: 20, ...ff('400') },
-  rateSuffix: { fontSize: fs(16), lineHeight: 22 },
+  rateInput:  { flex: 1, fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('400') },
+  rateSuffix: { fontSize: fs(16), lineHeight: km ? 29 : 22 },
 
   currencyRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
   currencyBtn: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: fs(13), lineHeight: 18 },
+  currencyText: { fontSize: fs(13), lineHeight: km ? 23 : 18 },
 
   emptyResults: { alignItems: 'center', gap: 12, paddingVertical: 40, marginTop: 16 },
-  emptyText: { fontSize: fs(14), lineHeight: 20, ...ff('400'), textAlign: 'center', letterSpacing: 0 },
+  emptyText: { fontSize: fs(14), lineHeight: km ? 26 : 20, ...ff('400'), textAlign: 'center', letterSpacing: 0 },
 
   // Capturable results wrapper
   resultsCapture: { borderRadius: 16, padding: 16, marginTop: 4, gap: 0 },
   paramsStrip: {
     borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 4,
   },
-  paramText: { fontSize: fs(12), lineHeight: 17, ...ff('400'), letterSpacing: 0 },
+  paramText: { fontSize: fs(12), lineHeight: km ? 22 : 17, ...ff('400'), letterSpacing: 0 },
 
   summaryRow:    { flexDirection: 'row', gap: 10, marginBottom: 10 },
   summaryInner:  { padding: 16 },
-  summaryLabel:  { fontSize: fs(12), lineHeight: 16, ...ff('500'), letterSpacing: 0, marginBottom: 6 },
-  summaryValue:  { fontSize: fs(17), lineHeight: 22, ...ff('800'), letterSpacing: 0 },
-  summaryValueLg:{ fontSize: fs(22), lineHeight: 28, ...ff('800'), letterSpacing: 0 },
+  summaryLabel:  { fontSize: fs(12), lineHeight: km ? 21 : 16, ...ff('500'), letterSpacing: 0, marginBottom: 6 },
+  summaryValue:  { fontSize: fs(17), lineHeight: km ? 29 : 22, ...ff('800'), letterSpacing: 0 },
+  summaryValueLg:{ fontSize: fs(22), lineHeight: km ? 36 : 28, ...ff('800'), letterSpacing: 0 },
 
   captureFooter: {
-    textAlign: 'center', fontSize: fs(11), lineHeight: 15,
+    textAlign: 'center', fontSize: fs(11), lineHeight: km ? 20 : 15,
     ...ff('400'), letterSpacing: 0, marginTop: 14,
   },
 
@@ -678,12 +680,13 @@ const makeStyles = (fs, ff, isKhmer = false) => StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10,
   },
   tableHead: { borderBottomWidth: StyleSheet.hairlineWidth },
-  thCell: { fontSize: fs(11), lineHeight: 15, ...ff('700'), letterSpacing: 0 },
-  tdCell: { fontSize: fs(12), lineHeight: 16, ...ff('400') },
+  thCell: { fontSize: fs(11), lineHeight: km ? 20 : 15, ...ff('700'), letterSpacing: 0 },
+  tdCell: { fontSize: fs(12), lineHeight: km ? 21 : 16, ...ff('400') },
   cellNum:   { width: 26, textAlign: 'right' },
   cellDate:  { flex: 1, paddingLeft: 10 },
   cellAmt:   { width: 68, textAlign: 'right' },
   cellTotal: { width: 76, textAlign: 'right' },
 });
+};
 
 export default LoanCalculatorScreen;

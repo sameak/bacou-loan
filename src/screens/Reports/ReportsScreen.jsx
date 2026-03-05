@@ -87,8 +87,8 @@ const T = {
 // buildReportHtml — generates PDF-ready HTML from report data
 // ---------------------------------------------------------------------------
 function buildReportHtml({ portfolioStats, overviewTotals, filteredGroups, periodLabel, monthLabel }, t) {
-  const fmtUSD = n => '$' + Math.round(n).toLocaleString('en-US');
-  const fmtKHR = n => '៛' + Math.round(n).toLocaleString();
+  const fmtUSD = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtKHR = n => '៛' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtNet = n => (n >= 0 ? fmtUSD(n) : '−' + fmtUSD(Math.abs(n)));
   const fmtNetK = n => (n >= 0 ? fmtKHR(n) : '−' + fmtKHR(Math.abs(n)));
 
@@ -231,7 +231,7 @@ const ReportsScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const { language, ff, fs } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(ff, fs), [ff, fs]);
+  const styles = useMemo(() => makeStyles(ff, fs, language), [ff, fs, language]);
 
   const { loans, loansLoaded } = useData();
   const [payments, setPayments]     = useState([]);
@@ -247,8 +247,8 @@ const ReportsScreen = ({ navigation }) => {
       .catch(() => setLoading(false));
   }, [loansLoaded]);
 
-  const fmtUSD = n => '$' + Math.round(n).toLocaleString('en-US');
-  const fmtKHR = n => '៛' + Math.round(n).toLocaleString();
+  const fmtUSD = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtKHR = n => '៛' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const monthLabel = key => {
     const [yr, mo] = key.split('-').map(Number);
@@ -614,23 +614,25 @@ const ReportsScreen = ({ navigation }) => {
 // ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
-const makeStyles = (ff, fs) => StyleSheet.create({
+const makeStyles = (ff, fs, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 8, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backBtn: { width: 40, alignItems: 'center', paddingVertical: 4 },
-  headerTitle: { fontSize: fs(18), lineHeight: 30 },
+  headerTitle: { fontSize: fs(18), lineHeight: km ? 39 : 30 },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
-  loadingText: { fontSize: fs(14), lineHeight: 26 },
+  loadingText: { fontSize: fs(14), lineHeight: km ? 34 : 26 },
   list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 48 },
 
   // Year bar
   yearBar: { marginTop: 16 },
   yearBarContent: { paddingHorizontal: 0, gap: 8, flexDirection: 'row' },
   yearPill: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
-  yearPillText: { fontSize: fs(13), lineHeight: 24 },
+  yearPillText: { fontSize: fs(13), lineHeight: km ? 31 : 24 },
 
   // Overview grid
   overviewGrid: {
@@ -643,10 +645,10 @@ const makeStyles = (ff, fs) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
     borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 6,
   },
-  overviewTagText: { fontSize: fs(10), lineHeight: 20 },
-  overviewMain: { fontSize: fs(18), lineHeight: 30 },
-  overviewSub: { fontSize: fs(13), lineHeight: 24 },
-  overviewHint: { fontSize: fs(11), lineHeight: 21, marginTop: 4 },
+  overviewTagText: { fontSize: fs(10), lineHeight: km ? 26 : 20 },
+  overviewMain: { fontSize: fs(18), lineHeight: km ? 39 : 30 },
+  overviewSub: { fontSize: fs(13), lineHeight: km ? 31 : 24 },
+  overviewHint: { fontSize: fs(11), lineHeight: km ? 27 : 21, marginTop: 4 },
 
   // Month cards
   monthCard: { marginBottom: 12 },
@@ -655,10 +657,10 @@ const makeStyles = (ff, fs) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', marginBottom: 12,
   },
-  monthLabel: { fontSize: fs(15), lineHeight: 26, flexShrink: 1, marginRight: 8 },
+  monthLabel: { fontSize: fs(15), lineHeight: km ? 34 : 26, flexShrink: 1, marginRight: 8 },
   monthPills: { flexDirection: 'row', gap: 6, flexShrink: 1, justifyContent: 'flex-end', flexWrap: 'wrap' },
   pill: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  pillText: { fontSize: fs(11), lineHeight: 21 },
+  pillText: { fontSize: fs(11), lineHeight: km ? 27 : 21 },
 
   divider: { height: StyleSheet.hairlineWidth, marginVertical: 10 },
   dividerDouble: { height: StyleSheet.hairlineWidth, marginVertical: 10 },
@@ -667,27 +669,28 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   metricRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   metricDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   metricDotPlaceholder: { width: 8, height: 8, flexShrink: 0 },
-  metricLabel: { flex: 1, fontSize: fs(13), lineHeight: 24, letterSpacing: 0 },
+  metricLabel: { flex: 1, fontSize: fs(13), lineHeight: km ? 31 : 24, letterSpacing: 0 },
   metricVals: { alignItems: 'flex-end', gap: 2, flexShrink: 0, minWidth: 80 },
-  metricVal: { fontSize: fs(13), lineHeight: 24, letterSpacing: 0 },
-  metricValSub: { fontSize: fs(11), lineHeight: 21, letterSpacing: 0 },
+  metricVal: { fontSize: fs(13), lineHeight: km ? 31 : 24, letterSpacing: 0 },
+  metricValSub: { fontSize: fs(11), lineHeight: km ? 27 : 21, letterSpacing: 0 },
 
   // Total Received row
   totalRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, marginTop: 2 },
-  totalLabel: { flex: 1, fontSize: fs(13), lineHeight: 24, letterSpacing: 0, marginLeft: 16 },
-  totalVal: { fontSize: fs(15), lineHeight: 26, letterSpacing: 0 },
-  totalValSub: { fontSize: fs(12), lineHeight: 23, letterSpacing: 0 },
+  totalLabel: { flex: 1, fontSize: fs(13), lineHeight: km ? 31 : 24, letterSpacing: 0, marginLeft: 16 },
+  totalVal: { fontSize: fs(15), lineHeight: km ? 34 : 26, letterSpacing: 0 },
+  totalValSub: { fontSize: fs(12), lineHeight: km ? 30 : 23, letterSpacing: 0 },
 
   // Net Flow row
   netRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
   netIcon: { marginRight: 6, flexShrink: 0 },
-  netLabel: { flex: 1, fontSize: fs(13), lineHeight: 24, letterSpacing: 0 },
-  netVal: { fontSize: fs(14), lineHeight: 26, letterSpacing: 0 },
-  netValSub: { fontSize: fs(11), lineHeight: 21, letterSpacing: 0 },
+  netLabel: { flex: 1, fontSize: fs(13), lineHeight: km ? 31 : 24, letterSpacing: 0 },
+  netVal: { fontSize: fs(14), lineHeight: km ? 34 : 26, letterSpacing: 0 },
+  netValSub: { fontSize: fs(11), lineHeight: km ? 27 : 21, letterSpacing: 0 },
 
   // Empty state
   emptyWrap: { alignItems: 'center', justifyContent: 'center', gap: 14, paddingTop: 80 },
-  emptyText: { fontSize: fs(15), lineHeight: 26, letterSpacing: 0 },
+  emptyText: { fontSize: fs(15), lineHeight: km ? 34 : 26, letterSpacing: 0 },
 });
+};
 
 export default ReportsScreen;

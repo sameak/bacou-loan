@@ -94,7 +94,7 @@ const WheelItem = React.memo(function WheelItem({
       fontSize: fSize,
       color:    isCenter ? accentColor : mutedColor,
       ...(isKhmer
-        ? { fontFamily: isCenter ? 'KohSantepheap_700Bold' : 'KohSantepheap_400Regular' }
+        ? { fontFamily: 'Khmer Sangam MN', fontWeight: isCenter ? '700' : '500' }
         : { fontWeight: isCenter ? '700' : '400' }),
     };
   });
@@ -407,7 +407,11 @@ export const DatePickerModal = function DatePickerModal({
 
   const isKhmer = language === 'km';
   const HEAVY = ['600', '700', '800', '900'];
-  const kf = (w) => isKhmer ? { fontFamily: HEAVY.includes(String(w)) ? 'KohSantepheap_700Bold' : 'KohSantepheap_400Regular' } : { fontWeight: w };
+  const kf = (w) => {
+    if (!isKhmer) return { fontWeight: String(w) };
+    const heavy = ['600','700','800','900'];
+    return { fontFamily: 'Khmer Sangam MN', fontWeight: heavy.includes(String(w)) ? '700' : '500' };
+  };
 
   const L = {
     done:   language === 'ko' ? '확인'  : language === 'km' ? 'បញ្ជាក់' : 'Done',

@@ -25,29 +25,31 @@ export function LanguageProvider({ children, initialLanguage }) {
     await storage.set(STORAGE_KEYS.LANGUAGE, lang);
   }, []);
 
-  /** fs(size) — same size for all languages; lineHeight ratios stay consistent so Khmer diacritics don't clip */
+  /** fs(size) — same size for all languages */
   const fs = useCallback((size) => size, []);
 
   /**
-   * ff(weight) — system font for English, Koh Santepheap for Khmer.
-   * Heavy weights (600+) → Bold variant; others → Regular.
+   * lh(lineHeight) — returns Khmer-adjusted lineHeight.
+   * Khmer Sangam MN needs ~1.65× ratio vs ~1.35× for English.
+   * Pass the English lineHeight value; Khmer gets ×1.25 boost.
+   * e.g. lh(19) → 19 (en) or 24 (km)
    */
-  const ff = useCallback((weight) => {
-    if (language !== 'km') return { fontWeight: String(weight) };
-    const heavy = ['600', '700', '800', '900'];
-    return { fontFamily: heavy.includes(String(weight)) ? 'KohSantepheap_700Bold' : 'KohSantepheap_400Regular' };
+  const lh = useCallback((lineHeight) => {
+    return language === 'km' ? Math.round(lineHeight * 1.25) : lineHeight;
   }, [language]);
 
-  /**
-   * fi() — font for TextInput fields. Always uses Koh Santepheap so user-typed
-   * Khmer text renders correctly regardless of the app's display language.
-   */
-  const fi = useCallback(() => ({ fontFamily: 'KohSantepheap_400Regular' }), []);
+  /** ff(weight) — system font for all languages; iOS system font handles Khmer glyphs natively with correct metrics */
+  const ff = useCallback((weight) => {
+    return { fontWeight: String(weight) };
+  }, []);
+
+  /** fi() — no special font override needed; system font handles Khmer input correctly */
+  const fi = useCallback(() => ({}), []);
 
   if (!loaded) return null;
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, fs, ff, fi }}>
+    <LanguageContext.Provider value={{ language, setLanguage, fs, ff, fi, lh }}>
       {children}
     </LanguageContext.Provider>
   );

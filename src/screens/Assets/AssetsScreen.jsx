@@ -133,8 +133,8 @@ function monthsElapsed(startDateStr) {
   return Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth());
 }
 
-function fmtUSD(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
-function fmtKHR(n) { return '៛' + Math.round(n).toLocaleString(); }
+function fmtUSD(n) { return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtKHR(n) { return '៛' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmt(currency, n) { return currency === 'KHR' ? fmtKHR(n) : fmtUSD(n); }
 
 // ── Blank form ────────────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ const BLANK = { name: '', currency: 'USD', principal: '', monthlyReturn: '', tot
 
 // ── ToggleGroup ───────────────────────────────────────────────────────────────
 
-function ToggleGroup({ options, value, onChange, ff, fs, colors, isDark }) {
+function ToggleGroup({ options, value, onChange, ff, fs, colors, isDark, language }) {
   return (
     <View style={{ flexDirection: 'row', gap: 8 }}>
       {options.map(opt => {
@@ -160,7 +160,7 @@ function ToggleGroup({ options, value, onChange, ff, fs, colors, isDark }) {
               borderColor: active ? ACCENT : 'rgba(120,120,128,0.22)',
             }}
           >
-            <Text style={[{ fontSize: fs(13), letterSpacing: 0, lineHeight: 18, color: active ? '#fff' : colors.text }, ff(active ? '600' : '400')]}>
+            <Text style={[{ fontSize: fs(13), letterSpacing: 0, lineHeight: 23, color: active ? '#fff' : colors.text }, ff(active ? '600' : '400')]}>
               {opt.label}
             </Text>
           </TouchableOpacity>
@@ -172,7 +172,7 @@ function ToggleGroup({ options, value, onChange, ff, fs, colors, isDark }) {
 
 // ── Investment card ───────────────────────────────────────────────────────────
 
-function InvestmentCard({ inv, t, ff, fs, colors, onPress }) {
+function InvestmentCard({ inv, t, ff, fs, colors, onPress, language }) {
   const elapsed   = monthsElapsed(inv.startDate);
   const total     = Number(inv.totalPeriods) || 0;
   const done      = Math.min(elapsed, total);
@@ -187,14 +187,14 @@ function InvestmentCard({ inv, t, ff, fs, colors, onPress }) {
         <View style={{ padding: 16 }}>
           {/* Name + status badge */}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-            <Text style={[{ flex: 1, fontSize: fs(15), letterSpacing: 0, lineHeight: 20, color: colors.text }, ff('400')]} numberOfLines={1}>
+            <Text style={[{ flex: 1, fontSize: fs(15), letterSpacing: 0, lineHeight: 26, color: colors.text }, ff('400')]} numberOfLines={1}>
               {inv.name}
             </Text>
             <View style={{
               paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
               backgroundColor: isMatured ? 'rgba(107,114,128,0.15)' : 'rgba(16,185,129,0.15)',
             }}>
-              <Text style={[{ fontSize: fs(11), letterSpacing: 0, lineHeight: 15, color: isMatured ? '#6B7280' : GREEN }, ff('600')]}>
+              <Text style={[{ fontSize: fs(11), letterSpacing: 0, lineHeight: 20, color: isMatured ? '#6B7280' : GREEN }, ff('600')]}>
                 {isMatured ? t.matured : t.active}
               </Text>
             </View>
@@ -203,26 +203,26 @@ function InvestmentCard({ inv, t, ff, fs, colors, onPress }) {
           {/* Three columns: invested | monthly | gain */}
           <View style={{ flexDirection: 'row', marginBottom: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={[{ fontSize: fs(11), letterSpacing: 0, lineHeight: 15, color: colors.subtext ?? '#8E8E93' }, ff('400')]}>
+              <Text style={[{ fontSize: fs(11), letterSpacing: 0, lineHeight: 20, color: colors.subtext ?? '#8E8E93' }, ff('400')]}>
                 {t.invested}
               </Text>
-              <Text style={[{ fontSize: fs(15), letterSpacing: 0, lineHeight: 20, color: colors.text }, ff('700')]}>
+              <Text style={[{ fontSize: fs(15), letterSpacing: 0, lineHeight: 26, color: colors.text }, ff('700')]}>
                 {fmt(inv.currency, inv.principal ?? 0)}
               </Text>
             </View>
             <View style={{ flex: 1, alignItems: 'center' }}>
-              <Text style={[{ fontSize: fs(11), letterSpacing: 0, lineHeight: 15, color: colors.subtext ?? '#8E8E93' }, ff('400')]}>
+              <Text style={[{ fontSize: fs(11), letterSpacing: 0, lineHeight: 20, color: colors.subtext ?? '#8E8E93' }, ff('400')]}>
                 {t.monthly}
               </Text>
-              <Text style={[{ fontSize: fs(15), letterSpacing: 0, lineHeight: 20, color: ACCENT }, ff('700')]}>
+              <Text style={[{ fontSize: fs(15), letterSpacing: 0, lineHeight: 26, color: ACCENT }, ff('700')]}>
                 {fmt(inv.currency, inv.monthlyReturn ?? 0)}
               </Text>
             </View>
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <Text style={[{ fontSize: fs(11), letterSpacing: 0, lineHeight: 15, color: colors.subtext ?? '#8E8E93' }, ff('400')]}>
+              <Text style={[{ fontSize: fs(11), letterSpacing: 0, lineHeight: 20, color: colors.subtext ?? '#8E8E93' }, ff('400')]}>
                 {t.netGain}
               </Text>
-              <Text style={[{ fontSize: fs(15), letterSpacing: 0, lineHeight: 20, color: profit >= 0 ? GREEN : RED }, ff('700')]}>
+              <Text style={[{ fontSize: fs(15), letterSpacing: 0, lineHeight: 26, color: profit >= 0 ? GREEN : RED }, ff('700')]}>
                 {profit >= 0 ? '+' : ''}{fmt(inv.currency, profit)}
               </Text>
             </View>
@@ -232,7 +232,7 @@ function InvestmentCard({ inv, t, ff, fs, colors, onPress }) {
           <View style={{ height: 5, backgroundColor: 'rgba(120,120,128,0.15)', borderRadius: 3, overflow: 'hidden', marginBottom: 5 }}>
             <View style={{ width: `${Math.round(pct * 100)}%`, height: '100%', backgroundColor: isMatured ? '#6B7280' : ACCENT, borderRadius: 3 }} />
           </View>
-          <Text style={[{ fontSize: fs(11), letterSpacing: 0, lineHeight: 15, color: colors.subtext ?? '#8E8E93' }, ff('400')]}>
+          <Text style={[{ fontSize: fs(11), letterSpacing: 0, lineHeight: 20, color: colors.subtext ?? '#8E8E93' }, ff('400')]}>
             {t.progress(done, total)}
           </Text>
         </View>
@@ -248,7 +248,7 @@ export default function AssetsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { language, ff, fs } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const styles = useMemo(() => makeStyles(fs, ff, language), [fs, ff, language]);
 
   const { loans } = useData();
   const [investments, setInvestments] = useState([]);
@@ -475,6 +475,7 @@ export default function AssetsScreen({ navigation }) {
               fs={fs}
               colors={colors}
               onPress={() => openEdit(inv)}
+              language={language}
             />
           ))
         )}
@@ -528,7 +529,7 @@ export default function AssetsScreen({ navigation }) {
                 options={[{ label: 'USD ($)', value: 'USD' }, { label: 'KHR (៛)', value: 'KHR' }]}
                 value={form.currency}
                 onChange={v => set('currency', v)}
-                ff={ff} fs={fs} colors={colors} isDark={isDark}
+                ff={ff} fs={fs} colors={colors} isDark={isDark} language={language}
               />
 
               {/* Amount Invested */}
@@ -570,7 +571,7 @@ export default function AssetsScreen({ navigation }) {
                 style={[styles.input, styles.dateRow, { borderColor: 'rgba(120,120,128,0.25)', backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)' }]}
                 onPress={() => setShowDatePicker(true)}
               >
-                <Text style={[{ fontSize: fs(15), letterSpacing: 0, lineHeight: 20, color: colors.text }, ff('400')]}>
+                <Text style={[{ fontSize: fs(15), letterSpacing: 0, lineHeight: 26, color: colors.text }, ff('400')]}>
                   {form.startDate}
                 </Text>
                 <Ionicons name="calendar-outline" size={18} color={colors.subtext ?? '#8E8E93'} />
@@ -631,11 +632,13 @@ export default function AssetsScreen({ navigation }) {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const makeStyles = (fs, ff) => StyleSheet.create({
+const makeStyles = (fs, ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   safe:   { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingLeft: 8, paddingRight: 20, paddingTop: 8, paddingBottom: 12 },
   backBtn: { padding: 4, marginRight: 4 },
-  headerTitle: { fontSize: fs(28), letterSpacing: 0, lineHeight: 34 },
+  headerTitle: { fontSize: fs(28), letterSpacing: 0, lineHeight: km ? 44 : 34 },
   scroll:  { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 4 },
 
@@ -645,24 +648,24 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   summaryRow:   { flexDirection: 'row', alignItems: 'center' },
   summaryCol:   { flex: 1 },
   summaryDivider: { width: 1, height: 40, marginHorizontal: 16 },
-  summaryLabel: { fontSize: fs(12), letterSpacing: 0, lineHeight: 16, marginBottom: 4 },
-  summaryValue: { fontSize: fs(22), letterSpacing: 0, lineHeight: 28 },
+  summaryLabel: { fontSize: fs(12), letterSpacing: 0, lineHeight: km ? 21 : 16, marginBottom: 4 },
+  summaryValue: { fontSize: fs(22), letterSpacing: 0, lineHeight: km ? 36 : 28 },
 
   // Section header
   sectionHeader:   { flexDirection: 'row', alignItems: 'center', marginBottom: 10, paddingHorizontal: 2 },
-  sectionTitle:    { flex: 1, fontSize: fs(11), letterSpacing: 0, lineHeight: 15 },
+  sectionTitle:    { flex: 1, fontSize: fs(11), letterSpacing: 0, lineHeight: km ? 20 : 15 },
   sectionAddBtn:   {},
 
   // Loan portfolio card
   card:     { marginBottom: 20 },
   cardInner: { padding: 16 },
   statRow:   { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
-  statLabel: { fontSize: fs(15), letterSpacing: 0, lineHeight: 20 },
-  statSub:   { fontSize: fs(11), letterSpacing: 0, lineHeight: 15, marginTop: 1 },
-  statValue: { fontSize: fs(18), letterSpacing: 0, lineHeight: 23 },
+  statLabel: { fontSize: fs(15), letterSpacing: 0, lineHeight: km ? 26 : 20 },
+  statSub:   { fontSize: fs(11), letterSpacing: 0, lineHeight: km ? 20 : 15, marginTop: 1 },
+  statValue: { fontSize: fs(18), letterSpacing: 0, lineHeight: km ? 30 : 23 },
   divider:   { height: 1, marginVertical: 4 },
 
-  emptyText: { fontSize: fs(13), letterSpacing: 0, lineHeight: 18, textAlign: 'center' },
+  emptyText: { fontSize: fs(13), letterSpacing: 0, lineHeight: km ? 23 : 18, textAlign: 'center' },
 
   // FAB
   fab: {
@@ -681,15 +684,16 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   },
   handle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  sheetTitle:  { flex: 1, fontSize: fs(18), letterSpacing: 0, lineHeight: 23 },
-  fieldLabel:  { fontSize: fs(13), letterSpacing: 0, lineHeight: 18, marginTop: 14, marginBottom: 6 },
+  sheetTitle:  { flex: 1, fontSize: fs(18), letterSpacing: 0, lineHeight: km ? 30 : 23 },
+  fieldLabel:  { fontSize: fs(13), letterSpacing: 0, lineHeight: km ? 23 : 18, marginTop: 14, marginBottom: 6 },
   input: {
     borderWidth: 1, borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 11,
-    fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('400'),
+    fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0, ...ff('400'),
   },
   dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   btnRow:  { flexDirection: 'row', gap: 12, marginTop: 24, marginBottom: 8 },
   btn:     { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  btnText: { fontSize: fs(15), letterSpacing: 0, lineHeight: 20 },
+  btnText: { fontSize: fs(15), letterSpacing: 0, lineHeight: km ? 26 : 20 },
 });
+};

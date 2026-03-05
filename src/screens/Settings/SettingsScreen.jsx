@@ -183,7 +183,8 @@ function formatSignInTime(timeStr) {
 }
 
 const Row = ({ label, right, onPress, colors, last, isDark }) => {
-  const { fs, ff } = useLanguage();
+  const { language, fs, ff } = useLanguage();
+  const km = true;
   return (
     <TouchableOpacity
       style={[
@@ -194,7 +195,7 @@ const Row = ({ label, right, onPress, colors, last, isDark }) => {
       activeOpacity={onPress ? 0.7 : 1}
       disabled={!onPress}
     >
-      <Text style={[{ fontSize: fs(15), lineHeight: 20, ...ff('400'), flex: 1 }, { color: colors.text }]}>{label}</Text>
+      <Text style={[{ fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('400'), flex: 1 }, { color: colors.text }]}>{label}</Text>
       {right}
     </TouchableOpacity>
   );
@@ -204,7 +205,7 @@ const SettingsScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { colors, isDark, themeMode, setThemeMode } = useTheme();
   const { language, setLanguage, fs, ff, fi } = useLanguage();
-  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const styles = useMemo(() => makeStyles(fs, ff, language), [fs, ff, language]);
   const scrollHandler = useTabBarScroll();
   const { tabVisible } = useTabBar();
   const scrollRef = useRef(null);
@@ -396,7 +397,7 @@ const SettingsScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('Appearance')}
             right={
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={[{ fontSize: fs(13), lineHeight: 18, letterSpacing: 0 }, ff('400'), { color: colors.textMuted }]}>
+                <Text style={[{ fontSize: fs(13), lineHeight: 23, letterSpacing: 0 }, ff('400'), { color: colors.textMuted }]}>
                   {themeMode === 'system' ? t.themeAuto : themeMode === 'light' ? t.themeLight : t.themeDark}
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -654,10 +655,12 @@ const SettingsScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (fs, ff) => StyleSheet.create({
+const makeStyles = (fs, ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  title: { fontSize: fs(28), lineHeight: 40, ...ff('800'), letterSpacing: 0 },
+  title: { fontSize: fs(28), lineHeight: km ? 52 : 40, ...ff('800'), letterSpacing: 0 },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 },
   // Theme segment
   themeSegmentWrap: { flexDirection: 'row', padding: 8, gap: 6 },
@@ -665,38 +668,38 @@ const makeStyles = (fs, ff) => StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 5, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5,
   },
-  themeSegmentLabel: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
+  themeSegmentLabel: { fontSize: fs(13), lineHeight: km ? 23 : 18, letterSpacing: 0 },
   // Tools row (2×2 grid)
   toolsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   toolsCardWrap: { width: '48%' },
   toolsCard: {},
   toolsCardInner: { alignItems: 'center', paddingVertical: 14, paddingHorizontal: 8, gap: 8 },
   toolsIconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  toolsLabel: { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, textAlign: 'center' },
-  sectionTitle: { fontSize: fs(12), lineHeight: 16, ...ff('700'), letterSpacing: 0, marginBottom: 8 },
+  toolsLabel: { fontSize: fs(12), lineHeight: km ? 21 : 16, letterSpacing: 0, textAlign: 'center' },
+  sectionTitle: { fontSize: fs(12), lineHeight: km ? 21 : 16, ...ff('700'), letterSpacing: 0, marginBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 14, minHeight: 52 },
-  rowLabel: { fontSize: fs(15), lineHeight: 20, ...ff('400'), flex: 1 },
-  sessionText: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
-  pinStatus:   { fontSize: fs(13), lineHeight: 18, ...ff('400') },
+  rowLabel: { fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('400'), flex: 1 },
+  sessionText: { fontSize: fs(13), lineHeight: km ? 23 : 18, ...ff('400') },
+  pinStatus:   { fontSize: fs(13), lineHeight: km ? 23 : 18, ...ff('400') },
   versionRow: { alignItems: 'center', marginTop: 12, gap: 4 },
   versionLogo: { height: 28, width: Math.round(28 * 256 / 144), opacity: 0.55 },
-  versionText: { fontSize: fs(11), lineHeight: 15, ...ff('400') },
+  versionText: { fontSize: fs(11), lineHeight: km ? 20 : 15, ...ff('400') },
   // PIN verify modal
   pinModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
   pinModalSheet: { width: '88%', borderRadius: 28, paddingBottom: 32, overflow: 'hidden' },
   pinModalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
   pinModalClose: { padding: 4 },
-  pinModalTitle: { flex: 1, textAlign: 'center', fontSize: fs(17), lineHeight: 22, ...ff('700'), marginRight: 30 },
+  pinModalTitle: { flex: 1, textAlign: 'center', fontSize: fs(17), lineHeight: km ? 29 : 22, ...ff('700'), marginRight: 30 },
   pinDots: { flexDirection: 'row', gap: 18, justifyContent: 'center', marginVertical: 28 },
   pinDot: { width: 13, height: 13, borderRadius: 6.5 },
-  pinErrorText: { textAlign: 'center', fontSize: fs(13), lineHeight: 18, marginBottom: 12, marginTop: -12 },
+  pinErrorText: { textAlign: 'center', fontSize: fs(13), lineHeight: km ? 23 : 18, marginBottom: 12, marginTop: -12 },
   pinKeypad: { flexDirection: 'row', flexWrap: 'wrap', width: 288, alignSelf: 'center', justifyContent: 'center' },
   pinKeySlot: { width: 96, height: 80, justifyContent: 'center', alignItems: 'center' },
   pinKeyBtn: { width: 72, height: 72, borderRadius: 36, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
-  pinKeyText: { fontSize: fs(26), lineHeight: 34 },
+  pinKeyText: { fontSize: fs(26), lineHeight: km ? 44 : 34 },
 
   nameRight: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 180 },
-  nameValue: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
+  nameValue: { fontSize: fs(13), lineHeight: km ? 23 : 18, ...ff('400') },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32 },
   modalHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
@@ -705,11 +708,12 @@ const makeStyles = (fs, ff) => StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   modalSideBtn: { minWidth: 60 },
-  modalCancel: { fontSize: fs(15), lineHeight: 20, ...ff('400') },
-  modalTitle: { fontSize: fs(16), lineHeight: 21, ...ff('700') },
-  modalSave: { fontSize: fs(15), lineHeight: 20, ...ff('700'), textAlign: 'right' },
+  modalCancel: { fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('400') },
+  modalTitle: { fontSize: fs(16), lineHeight: km ? 27 : 21, ...ff('700') },
+  modalSave: { fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('700'), textAlign: 'right' },
   inputWrap: { borderRadius: 12, overflow: 'hidden' },
-  nameInput: { height: 50, paddingHorizontal: 14, fontSize: fs(15), lineHeight: 20, ...ff('400') },
+  nameInput: { height: 50, paddingHorizontal: 14, fontSize: fs(15), lineHeight: km ? 26 : 20, ...ff('400') },
 });
+};
 
 export default SettingsScreen;

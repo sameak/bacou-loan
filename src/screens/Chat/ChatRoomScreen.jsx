@@ -13,7 +13,9 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
+import * as Sharing from 'expo-sharing';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,7 +24,6 @@ import {
   FlatList,
   Image,
   Keyboard,
-  Linking,
   Modal,
   PanResponder,
   Platform,
@@ -122,9 +123,21 @@ function fileIcon(mimeType) {
   return 'document-outline';
 }
 
+// ── Small avatar for group messages ───────────────────────────────────────────
+
+function MsgAvatar({ name }) {
+  const { ff } = useLanguage();
+  const initials = (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  return (
+    <View style={styles.msgAvatar}>
+      <Text style={[styles.msgAvatarText, ff('700')]}>{initials}</Text>
+    </View>
+  );
+}
+
 // ── Bubble ────────────────────────────────────────────────────────────────────
 
-function Bubble({ msg, isOwn, isDark, colors, fs, ff, km, onImagePress, onReply }) {
+function Bubble({ msg, isOwn, isFirst, isLast, isDark, colors, fs, ff, km, onImagePress, onFilePress, onReply }) {
   const pan = useRef(new Animated.Value(0)).current;
   const onReplyRef = useRef(onReply);
   useEffect(() => { onReplyRef.current = onReply; }, [onReply]);
@@ -151,15 +164,17 @@ function Bubble({ msg, isOwn, isDark, colors, fs, ff, km, onImagePress, onReply 
   const iconScale   = pan.interpolate({ inputRange: [0, 50], outputRange: [0.4, 1], extrapolate: 'clamp' });
   const time = formatTime(msg.createdAt);
 
-  // Quoted reply block (shown inside bubble)
+  // Dynamic corner radius — creates the "chain" effect for grouped messages
+  const corners = isOwn
+    ? { borderTopRightRadius: isFirst ? 18 : 6, borderBottomRightRadius: isLast ? 4 : 6 }
+    : { borderTopLeftRadius: isFirst ? 18 : 6, borderBottomLeftRadius: isLast ? 4 : 6 };
+
+  // Quoted reply block
   const quotedBlock = msg.replyTo ? (
-    <View style={[
-      styles.quoted,
-      {
-        backgroundColor: isOwn ? 'rgba(255,255,255,0.18)' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
-        borderLeftColor: isOwn ? 'rgba(255,255,255,0.6)' : ACCENT,
-      },
-    ]}>
+    <View style={[styles.quoted, {
+      backgroundColor: isOwn ? 'rgba(255,255,255,0.18)' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+      borderLeftColor: isOwn ? 'rgba(255,255,255,0.6)' : ACCENT,
+    }]}>
       <Text style={[styles.quotedSender, { color: isOwn ? 'rgba(255,255,255,0.85)' : ACCENT }, ff('600'), { fontSize: fs(11), lineHeight: km ? 16 : 15, letterSpacing: 0 }]}>
         {msg.replyTo.senderName}
       </Text>
@@ -170,15 +185,21 @@ function Bubble({ msg, isOwn, isDark, colors, fs, ff, km, onImagePress, onReply 
   ) : null;
 
   return (
-    <View style={styles.bubbleRow} {...panResponder.panHandlers}>
-      {/* Reply icon — fades in from left as user swipes */}
+    <View style={[styles.bubbleRow, { marginBottom: isLast ? 10 : 3 }]} {...panResponder.panHandlers}>
+      {/* Reply hint icon */}
       <Animated.View style={[styles.replyHintIcon, { opacity: iconOpacity, transform: [{ scale: iconScale }] }]}>
         <Ionicons name="return-up-back" size={18} color={ACCENT} />
       </Animated.View>
 
-      {/* Bubble + sender name + timestamp — slides right */}
+      {/* Avatar column (other-person messages only) */}
+      {!isOwn && (
+        isLast ? <MsgAvatar name={msg.senderName} /> : <View style={styles.avatarGap} />
+      )}
+
+      {/* Bubble content */}
       <Animated.View style={[styles.bubbleSlide, { alignItems: isOwn ? 'flex-end' : 'flex-start', transform: [{ translateX: pan }] }]}>
-        {!isOwn && (
+        {/* Sender name — only on first bubble of a group */}
+        {isFirst && !isOwn && (
           <Text style={[styles.senderName, { color: ACCENT }, ff('600'), { fontSize: fs(12), lineHeight: km ? 17 : 16, letterSpacing: 0 }]}>
             {msg.senderName}
           </Text>
@@ -188,7 +209,7 @@ function Bubble({ msg, isOwn, isDark, colors, fs, ff, km, onImagePress, onReply 
           <>
             {quotedBlock}
             <TouchableOpacity onPress={() => onImagePress(msg.imageUrl)} activeOpacity={0.88} style={{ position: 'relative' }}>
-              <Image source={{ uri: msg.imageUrl }} style={styles.imgThumb} resizeMode="cover" />
+              <Image source={{ uri: msg.imageUrl }} style={[styles.imgThumb, corners]} resizeMode="cover" />
               <View style={styles.imgOverlay}>
                 <Ionicons name="expand-outline" size={16} color="rgba(255,255,255,0.9)" />
               </View>
@@ -196,41 +217,51 @@ function Bubble({ msg, isOwn, isDark, colors, fs, ff, km, onImagePress, onReply 
           </>
         ) : msg.type === 'file' ? (
           <TouchableOpacity
-            onPress={() => msg.fileUrl && Linking.openURL(msg.fileUrl)}
+            onPress={() => msg.fileUrl && onFilePress(msg)}
             activeOpacity={0.82}
             style={[
               styles.fileBubble,
+              corners,
               isOwn
-                ? { backgroundColor: ACCENT }
-                : { backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' },
+                ? { backgroundColor: ACCENT, shadowColor: ACCENT, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 }
+                : {
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+                  },
             ]}
           >
             {quotedBlock}
             <View style={styles.fileRow}>
-              <View style={[styles.fileIconWrap, { backgroundColor: isOwn ? 'rgba(255,255,255,0.20)' : (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)') }]}>
+              <View style={[styles.fileIconWrap, {
+                backgroundColor: isOwn ? 'rgba(255,255,255,0.22)' : (isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.10)'),
+              }]}>
                 <Ionicons name={fileIcon(msg.mimeType)} size={22} color={isOwn ? '#fff' : ACCENT} />
               </View>
               <View style={styles.fileInfo}>
                 <Text numberOfLines={2} style={[styles.fileName, ff('600'), { color: isOwn ? '#fff' : colors.text, fontSize: fs(13), lineHeight: km ? 18 : 17, letterSpacing: 0 }]}>
-                  {msg.fileName}
+                  {msg.fileName || 'File'}
                 </Text>
-                {msg.fileSize > 0 && (
-                  <Text style={[ff('400'), { color: isOwn ? 'rgba(255,255,255,0.7)' : colors.textMuted, fontSize: fs(11), lineHeight: km ? 16 : 15, letterSpacing: 0 }]}>
-                    {fmtSize(msg.fileSize)}
-                  </Text>
-                )}
+                <Text style={[ff('400'), { color: isOwn ? 'rgba(255,255,255,0.65)' : colors.textMuted, fontSize: fs(11), lineHeight: km ? 16 : 15, letterSpacing: 0 }]}>
+                  {msg.fileSize > 0 ? fmtSize(msg.fileSize) : 'Tap to open'}
+                </Text>
               </View>
-              <Ionicons name="open-outline" size={18} color={isOwn ? 'rgba(255,255,255,0.8)' : ACCENT} />
+              <View style={[styles.fileOpenBtn, { backgroundColor: isOwn ? 'rgba(255,255,255,0.18)' : (isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.10)') }]}>
+                <Ionicons name="arrow-down-outline" size={16} color={isOwn ? '#fff' : ACCENT} />
+              </View>
             </View>
           </TouchableOpacity>
         ) : (
           <View style={[
             styles.bubble,
+            corners,
             isOwn
               ? [styles.bubbleOwn, { backgroundColor: ACCENT }]
               : [styles.bubbleOther, {
-                  backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)',
-                  borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
+                  shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
                 }],
           ]}>
             {quotedBlock}
@@ -240,13 +271,16 @@ function Bubble({ msg, isOwn, isDark, colors, fs, ff, km, onImagePress, onReply 
           </View>
         )}
 
-        <Text style={[
-          styles.timeText, { color: colors.textMuted }, ff('400'),
-          { fontSize: fs(11), lineHeight: km ? 16 : 15, letterSpacing: 0 },
-          isOwn ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' },
-        ]}>
-          {time}
-        </Text>
+        {/* Timestamp — only on last bubble of a group */}
+        {isLast && (
+          <Text style={[
+            styles.timeText, { color: colors.textMuted }, ff('400'),
+            { fontSize: fs(11), lineHeight: km ? 16 : 15, letterSpacing: 0 },
+            isOwn ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' },
+          ]}>
+            {time}
+          </Text>
+        )}
       </Animated.View>
     </View>
   );
@@ -307,7 +341,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const { colors, isDark } = useTheme();
   const { language, fs, ff } = useLanguage();
   const t = T[language] || T.en;
-  const km = language === 'km';
+  const km = true;
   const insets = useSafeAreaInsets();
 
   const myUid = auth.currentUser?.uid;
@@ -452,7 +486,36 @@ export default function ChatRoomScreen({ route, navigation }) {
     }
   }
 
-  // ── Date separators
+  // ── Open file (download to cache then open with native app)
+  async function handleFileOpen(msg) {
+    if (!msg.fileUrl) return;
+    try {
+      const ext = (msg.fileName ?? '').split('.').pop() || 'bin';
+      const localUri = FileSystem.cacheDirectory + `chat_${msg.id ?? Date.now()}.${ext}`;
+      const info = await FileSystem.getInfoAsync(localUri);
+      if (!info.exists) {
+        const dl = await FileSystem.downloadAsync(msg.fileUrl, localUri);
+        if (dl.status !== 200) throw new Error(`Download failed: HTTP ${dl.status}`);
+      }
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(localUri, {
+          mimeType: msg.mimeType || 'application/octet-stream',
+          dialogTitle: msg.fileName || 'Open file',
+        });
+      } else {
+        Alert.alert('', 'Sharing not available on this device.');
+      }
+    } catch (e) {
+      console.error('handleFileOpen error:', e);
+      Alert.alert('Error', e?.message || t.fileError);
+    }
+  }
+
+  // ── Date separators + grouping (isFirst / isLast)
+  // messages[] is ordered newest→oldest (desc). inverted FlatList shows index-0 at bottom.
+  // isLast  = visual bottom of group (newest in group) → items[i-1] is different sender or date
+  // isFirst = visual top of group  (oldest in group)  → items[i+1] is different sender or date
   const messagesWithDates = useMemo(() => {
     const items = [];
     for (let i = 0; i < messages.length; i++) {
@@ -466,6 +529,16 @@ export default function ChatRoomScreen({ route, navigation }) {
         const nDay = next.createdAt?.seconds ? new Date(next.createdAt.seconds * 1000).toDateString() : '';
         if (cDay !== nDay) items.push({ _type: 'date', _key: `date_${i}`, ts: curr.createdAt });
       }
+    }
+    // Compute isFirst / isLast for each msg item
+    for (let i = 0; i < items.length; i++) {
+      if (items[i]._type !== 'msg') continue;
+      const prev = items[i - 1]; // newer (shown below in inverted list)
+      const next = items[i + 1]; // older (shown above in inverted list)
+      const prevMsg = prev?._type === 'msg' ? prev : null;
+      const nextMsg = next?._type === 'msg' ? next : null;
+      items[i].isLast  = !prevMsg || prevMsg.senderId !== items[i].senderId;
+      items[i].isFirst = !nextMsg || nextMsg.senderId !== items[i].senderId;
     }
     return items;
   }, [messages]);
@@ -538,12 +611,15 @@ export default function ChatRoomScreen({ route, navigation }) {
               <Bubble
                 msg={item}
                 isOwn={item.senderId === myUid}
+                isFirst={item.isFirst}
+                isLast={item.isLast}
                 isDark={isDark}
                 colors={colors}
                 fs={fs}
                 ff={ff}
                 km={km}
                 onImagePress={uri => setImageViewerUri(uri)}
+                onFilePress={handleFileOpen}
                 onReply={msg => setReplyTo({ id: msg.id, senderName: msg.senderName, text: msg.text, type: msg.type, imageUrl: msg.imageUrl })}
               />
             );
@@ -663,32 +739,38 @@ const styles = StyleSheet.create({
   emptyText:   {},
 
   // Bubble row (outer, handles swipe gesture)
-  bubbleRow:   { marginBottom: 8 },
+  bubbleRow:   { flexDirection: 'row', alignItems: 'flex-end' },
   bubbleSlide: { flex: 1 },
+
+  // Avatar for other-person messages
+  msgAvatar:     { width: 28, height: 28, borderRadius: 14, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center', marginRight: 6, marginBottom: 2, flexShrink: 0 },
+  msgAvatarText: { color: '#fff', fontSize: 11, letterSpacing: 0 },
+  avatarGap:     { width: 34, flexShrink: 0 }, // 28px avatar + 6px gap
 
   // Reply hint icon (left side, fades in on swipe)
   replyHintIcon: { position: 'absolute', left: 0, top: '50%', marginTop: -9, zIndex: 1 },
 
-  senderName:  { marginBottom: 3, paddingLeft: 2 },
-  bubble:      { borderRadius: 16, paddingHorizontal: 13, paddingVertical: 9, maxWidth: '80%' },
-  bubbleOwn:   { borderBottomRightRadius: 4 },
+  senderName:  { marginBottom: 4, paddingLeft: 2 },
+  bubble:      { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, maxWidth: '80%' },
+  bubbleOwn:   { borderBottomRightRadius: 4, shadowColor: ACCENT, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
   bubbleOther: { borderWidth: 1, borderBottomLeftRadius: 4 },
   bubbleText:  {},
-  timeText:    { marginTop: 3, paddingHorizontal: 2 },
+  timeText:    { marginTop: 4, paddingHorizontal: 4 },
 
   // Quoted block inside bubble
-  quoted:      { flexDirection: 'row', borderLeftWidth: 3, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5, marginBottom: 6, gap: 0, maxWidth: 260 },
+  quoted:      { flexDirection: 'row', borderLeftWidth: 3, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, marginBottom: 7, maxWidth: 260 },
   quotedSender:{},
   quotedText:  {},
 
-  imgThumb:    { width: 200, height: 160, borderRadius: 12 },
-  imgOverlay:  { position: 'absolute', bottom: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 6, padding: 4 },
+  imgThumb:    { width: 220, height: 170, borderRadius: 14 },
+  imgOverlay:  { position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.40)', borderRadius: 8, padding: 5 },
 
-  fileBubble:  { borderRadius: 16, borderBottomRightRadius: 4, paddingHorizontal: 12, paddingVertical: 10, maxWidth: '80%' },
+  fileBubble:  { borderRadius: 18, paddingHorizontal: 12, paddingVertical: 11, maxWidth: '80%', minWidth: 200 },
   fileRow:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  fileIconWrap:{ width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  fileIconWrap:{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   fileInfo:    { flex: 1, gap: 2 },
   fileName:    {},
+  fileOpenBtn: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 
   dateSepWrap: { alignItems: 'center', marginVertical: 10 },
   dateSepText: {},

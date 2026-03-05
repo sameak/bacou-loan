@@ -49,6 +49,8 @@ const T = {
     notesPlaceholder: 'Payment notes...',
     accruedInfo: (days, amount, currency) => `Accrued over ${days} days: ${formatCurrency(amount, currency)}`,
     errDate: 'Enter date',
+    errNegative: 'Amounts cannot be negative',
+    errZero: 'Enter a payment amount greater than 0',
     selectDate: 'Select date',
     periodLabel: 'Period',
     saved: 'Payment recorded',
@@ -78,6 +80,8 @@ const T = {
     notesPlaceholder: 'កំណត់ចំណាំ...',
     accruedInfo: (days, amount, currency) => `ប្រូងក្នុង ${days} ថ្ងៃ: ${formatCurrency(amount, currency)}`,
     errDate: 'បញ្ចូលកាលបរិច្ឆេទ',
+    errNegative: 'ចំនួនទឹកប្រាក់មិនអាចជាអវិជ្ជមាន',
+    errZero: 'បញ្ចូលចំនួនទឹកប្រាក់ច្រើនជាងសូន្យ',
     selectDate: 'ជ្រើសថ្ងៃ',
     periodLabel: 'ដំណាក់',
     saved: 'បានកត់ត្រាការបង់',
@@ -108,7 +112,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
   const { language, ff, fi } = useLanguage();
   const t = T[language] || T.en;
 
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const styles = useMemo(() => makeStyles(ff, language), [ff, language]);
   const scrollRef = useRef(null);
 
   const isOpen = loan.scheduleMode === 'open';
@@ -180,6 +184,10 @@ const RecordPaymentScreen = ({ navigation, route }) => {
   const validate = () => {
     const e = {};
     if (!paymentDate.match(/^\d{4}-\d{2}-\d{2}$/)) e.date = t.errDate;
+    const principal = parseFloat(principalRaw) || 0;
+    const interest  = parseFloat(interestRaw)  || 0;
+    if (principal < 0 || interest < 0) e.amount = t.errNegative ?? 'Amounts cannot be negative';
+    if (principal + interest <= 0) e.amount = t.errZero ?? 'Enter a payment amount greater than 0';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -244,7 +252,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
   const numInput = (raw, setRaw, placeholder = '0') => (
     <TextInput
       style={[inputStyle, fi()]}
-      value={raw ? parseInt(String(raw).replace(/,/g, ''), 10).toLocaleString() : ''}
+      value={raw ? (() => { const n = parseFloat(String(raw).replace(/,/g, '')); return isNaN(n) ? raw : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); })() : ''}
       onChangeText={v => {
         const r = v.replace(/,/g, '');
         if (r === '' || /^\d*\.?\d*$/.test(r)) setRaw(r);
@@ -311,6 +319,7 @@ const RecordPaymentScreen = ({ navigation, route }) => {
           {/* Interest paid */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.interestPaid}</Text>
           {numInput(interestRaw, setInterestRaw)}
+          {errors.amount ? <Text style={styles.errText}>{errors.amount}</Text> : null}
 
           {/* Date */}
           <Text style={[styles.label, { color: colors.textMuted }]}>{t.date}</Text>
@@ -428,7 +437,9 @@ const RecordPaymentScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (ff) => StyleSheet.create({
+const makeStyles = (ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -478,5 +489,6 @@ const makeStyles = (ff) => StyleSheet.create({
   periodDate: { fontSize: 13 },
   periodAmount: { fontSize: 15, ...ff('700') },
 });
+};
 
 export default RecordPaymentScreen;

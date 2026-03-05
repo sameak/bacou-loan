@@ -6,8 +6,10 @@
  */
 
 import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 
 // ── Notification handler (show alert + sound when app is in foreground) ────────
@@ -76,8 +78,8 @@ export async function schedulePaymentReminders(loans) {
 
       const fmtAmt =
         loan.currency === 'KHR'
-          ? '៛' + Math.round(p.totalDue ?? 0).toLocaleString()
-          : '$' + Math.round(p.totalDue ?? 0).toLocaleString('en-US');
+          ? '៛' + Number(p.totalDue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          : '$' + Number(p.totalDue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
       try {
         await Notifications.scheduleNotificationAsync({
@@ -98,4 +100,34 @@ export async function schedulePaymentReminders(loans) {
 /** Cancel all scheduled payment reminders */
 export async function cancelAllReminders() {
   await Notifications.cancelAllScheduledNotificationsAsync();
+}
+
+/**
+ * Get this device's Expo push token and save it to Firestore under pushTokens/{uid}.
+ * Called once after login so other users can send push notifications to this device.
+ */
+export async function registerForPushNotifications(uid) {
+  if (!uid) return null;
+  if (!Device.isDevice) return null; // simulators don't support push
+  try {
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    let finalStatus = existing;
+    if (existing !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') return null;
+
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+
+    await setDoc(doc(db, 'pushTokens', uid), {
+      token,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    return token;
+  } catch (_) {
+    return null;
+  }
 }

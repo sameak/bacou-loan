@@ -55,9 +55,21 @@ function getOnlineStatus(lastSeen) {
   return 'offline';
 }
 
+function formatRelativeTime(ts) {
+  if (!ts?.seconds) return '';
+  const diff = Math.floor(Date.now() / 1000 - ts.seconds);
+  if (diff < 60)         return 'now';
+  if (diff < 3600)       return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400)      return `${Math.floor(diff / 3600)}h`;
+  if (diff < 86400 * 6)  return `${Math.floor(diff / 86400)}d`;
+  const d = new Date(ts.seconds * 1000);
+  return `${d.getDate()}/${d.getMonth() + 1}`;
+}
+
 const STATUS_COLOR = { online: '#10B981', away: '#F59E0B', offline: '#9CA3AF' };
 
 function Initials({ name, size = 38, isDark }) {
+  const { ff } = useLanguage();
   const initials = (name || '?')
     .split(' ')
     .slice(0, 2)
@@ -70,7 +82,7 @@ function Initials({ name, size = 38, isDark }) {
       backgroundColor: isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.15)',
       alignItems: 'center', justifyContent: 'center',
     }}>
-      <Text style={{ color: ACCENT, fontSize: size * 0.38, fontWeight: '700', letterSpacing: 0 }}>
+      <Text style={{ color: ACCENT, fontSize: size * 0.38, ...ff('700'), letterSpacing: 0 }}>
         {initials}
       </Text>
     </View>
@@ -81,7 +93,7 @@ export default function ChatListScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const { language, fs, ff } = useLanguage();
   const t = T[language] || T.en;
-  const isKhmer = language === 'km';
+  const isKhmer = true;
   const styles = useMemo(() => makeStyles(ff, fs, isKhmer), [ff, fs, isKhmer]);
 
   const myUid = auth.currentUser?.uid;
@@ -126,6 +138,12 @@ export default function ChatListScreen({ navigation }) {
     return chat?.lastMessage ?? '';
   }
 
+  function getLastTimeForDm(otherUid) {
+    const cid = dmChatId(myUid, otherUid);
+    const chat = chats.find(c => c.id === cid);
+    return chat?.lastMessageTime ?? null;
+  }
+
   return (
     <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
@@ -161,7 +179,12 @@ export default function ChatListScreen({ navigation }) {
                   <Ionicons name="chatbubbles" size={22} color={ACCENT} />
                 </View>
                 <View style={styles.groupInfo}>
-                  <Text style={[styles.groupName, { color: colors.text }, ff('600')]}>{t.groupChat}</Text>
+                  <View style={styles.rowTopLine}>
+                    <Text style={[styles.groupName, { color: colors.text }, ff('600')]}>{t.groupChat}</Text>
+                    {groupChat?.lastMessageTime ? (
+                      <Text style={[styles.timeLabel, { color: colors.textMuted }, ff('400')]}>{formatRelativeTime(groupChat.lastMessageTime)}</Text>
+                    ) : null}
+                  </View>
                   <Text style={[styles.groupMeta, { color: colors.textMuted }, ff('400')]}>
                     {memberCount > 0 ? t.members(memberCount) : t.tapToChat}
                   </Text>
@@ -185,9 +208,10 @@ export default function ChatListScreen({ navigation }) {
           </>
         )}
         renderItem={({ item: user }) => {
-          const status = getOnlineStatus(user.lastSeen);
-          const unread = getUnreadForDm(user.uid);
+          const status  = getOnlineStatus(user.lastSeen);
+          const unread  = getUnreadForDm(user.uid);
           const lastMsg = getLastMessageForDm(user.uid);
+          const lastTs  = getLastTimeForDm(user.uid);
           return (
             <GlassCard style={styles.dmCard}>
               <TouchableOpacity
@@ -206,8 +230,13 @@ export default function ChatListScreen({ navigation }) {
                   <View style={[styles.statusDot, { backgroundColor: STATUS_COLOR[status] }]} />
                 </View>
                 <View style={styles.dmInfo}>
-                  <Text style={[styles.dmName, { color: colors.text }, ff('600')]}>{user.name}</Text>
-                  <Text style={[styles.dmMeta, { color: colors.textMuted }, ff('400')]} numberOfLines={1}>
+                  <View style={styles.rowTopLine}>
+                    <Text style={[styles.dmName, { color: colors.text }, ff('600')]}>{user.name}</Text>
+                    {lastTs ? (
+                      <Text style={[styles.timeLabel, { color: colors.textMuted }, ff('400')]}>{formatRelativeTime(lastTs)}</Text>
+                    ) : null}
+                  </View>
+                  <Text style={[styles.dmMeta, { color: unread > 0 ? colors.text : colors.textMuted }, unread > 0 ? ff('600') : ff('400')]} numberOfLines={1}>
                     {lastMsg || t.noMessages}
                   </Text>
                 </View>
@@ -244,21 +273,23 @@ const makeStyles = (ff, fs, km) => StyleSheet.create({
   groupCard:   { marginBottom: 0 },
   groupRow:    { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
   groupIconWrap:{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  rowTopLine:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  timeLabel:   { fontSize: fs(12), lineHeight: km ? 17 : 16, letterSpacing: 0 },
   groupInfo:   { flex: 1, gap: 2 },
-  groupName:   { fontSize: fs(15), lineHeight: km ? 21 : 20, letterSpacing: 0 },
+  groupName:   { fontSize: fs(15), letterSpacing: 0 },
   groupMeta:   { fontSize: fs(13), lineHeight: km ? 18 : 17, letterSpacing: 0 },
   lastMsg:     { fontSize: fs(13), lineHeight: km ? 18 : 17, letterSpacing: 0 },
 
   dmCard:      { marginTop: 8 },
   dmRow:       { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   dmInfo:      { flex: 1, gap: 2 },
-  dmName:      { fontSize: fs(15), lineHeight: km ? 21 : 20, letterSpacing: 0 },
+  dmName:      { fontSize: fs(15), letterSpacing: 0 },
   dmMeta:      { fontSize: fs(13), lineHeight: km ? 18 : 17, letterSpacing: 0 },
 
   statusDot:   { position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: 'transparent' },
 
   badge:       { minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
-  badgeText:   { color: '#fff', fontSize: 11, lineHeight: 14, letterSpacing: 0 },
+  badgeText:   { color: '#fff', fontSize: 11, lineHeight: km ? 18 : 14, letterSpacing: 0 },
 
   emptyWrap:   { alignItems: 'center', gap: 10, paddingTop: 40 },
   emptyText:   { fontSize: fs(14), lineHeight: km ? 20 : 19, letterSpacing: 0 },

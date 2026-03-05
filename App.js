@@ -4,8 +4,6 @@
 
 import 'react-native-url-polyfill/auto';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useFonts } from 'expo-font';
-import { KohSantepheap_400Regular, KohSantepheap_700Bold } from '@expo-google-fonts/koh-santepheap';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -41,9 +39,8 @@ function AppInner() {
 
 export default function App() {
   const [prefs, setPrefs] = useState(null);
-  const [fontsLoaded] = useFonts({ KohSantepheap_400Regular, KohSantepheap_700Bold });
 
-  // Load theme + language in parallel before rendering providers
+  // Load theme + language before rendering providers
   useEffect(() => {
     Promise.all([
       storage.get(STORAGE_KEYS.THEME_MODE, 'system'),
@@ -53,14 +50,12 @@ export default function App() {
     });
   }, []);
 
-  // Hide splash only when both prefs and fonts are ready
+  // Hide splash once prefs are loaded
   useEffect(() => {
-    if (prefs && fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [prefs, fontsLoaded]);
+    if (prefs) SplashScreen.hideAsync();
+  }, [prefs]);
 
-  if (!prefs || !fontsLoaded) return null;
+  if (!prefs) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

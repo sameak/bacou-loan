@@ -150,7 +150,7 @@ const AuthScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const t = T[language] || T.en;
 
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const styles = useMemo(() => makeStyles(ff, language), [ff, language]);
 
   const [phone, setPhone] = useState('');
   const [countryCodeIdx, setCountryCodeIdx] = useState(0);
@@ -463,7 +463,9 @@ const AuthScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (ff) => StyleSheet.create({
+const makeStyles = (ff, language) => {
+const km = true;
+return StyleSheet.create({
   root: { flex: 1 },
   hiddenWebView: { position: 'absolute', left: -350, top: 0, width: 300, height: 300 },
   topSafe: { backgroundColor: 'transparent' },
@@ -474,7 +476,7 @@ const makeStyles = (ff) => StyleSheet.create({
   scrollContent: { flexGrow: 1 },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32, minHeight: 160 },
   authLogo: { height: 56, width: Math.round(56 * 256 / 144) },
-  sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 20 },
+  sub: { fontSize: 14, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: km ? 26 : 20 },
   card: { borderTopLeftRadius: 32, borderTopRightRadius: 32 },
   cardInner: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 8 },
   footer: { paddingHorizontal: 24, paddingBottom: 16 },
@@ -484,7 +486,7 @@ const makeStyles = (ff) => StyleSheet.create({
     paddingVertical: 12, paddingHorizontal: 14, marginBottom: 16,
     borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)',
   },
-  errorText: { flex: 1, fontSize: 13, color: '#EF4444', ...ff('500'), lineHeight: 18 },
+  errorText: { flex: 1, fontSize: 13, color: '#EF4444', ...ff('500'), lineHeight: km ? 23 : 18 },
   phoneLabel: { fontSize: 11, ...ff('700'), letterSpacing: 0, marginBottom: 8 },
   phoneBox: { flexDirection: 'row', alignItems: 'center', height: 58, borderRadius: 16, borderWidth: 2, borderColor: 'transparent', marginBottom: 12, overflow: 'hidden' },
   phoneBoxFocused: { borderColor: 'rgba(99,102,241,0.35)' },
@@ -503,10 +505,10 @@ const makeStyles = (ff) => StyleSheet.create({
     }),
   },
   passkeyBtnOff: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
-  passkeyBtnText: { color: '#fff', fontSize: 16, ...ff('700'), lineHeight: 21 },
+  passkeyBtnText: { color: '#fff', fontSize: 16, ...ff('700'), lineHeight: km ? 27 : 21 },
   orRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   orLine: { flex: 1, height: StyleSheet.hairlineWidth },
-  orText: { fontSize: 12, ...ff('400'), lineHeight: 16 },
+  orText: { fontSize: 12, ...ff('400'), lineHeight: km ? 21 : 16 },
   sendBtn: {
     height: 58, borderRadius: 16, backgroundColor: DARK_INDIGO,
     alignItems: 'center', justifyContent: 'center',
@@ -517,7 +519,7 @@ const makeStyles = (ff) => StyleSheet.create({
   },
   sendBtnOff: { opacity: 0.35, shadowOpacity: 0, elevation: 0 },
   sendBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
-  terms: { fontSize: 11, textAlign: 'center', lineHeight: 16, marginTop: 20 },
+  terms: { fontSize: 11, textAlign: 'center', lineHeight: km ? 21 : 16, marginTop: 20 },
   menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' },
   menuCard: { position: 'absolute', right: 16, borderRadius: 16, overflow: 'hidden', minWidth: 170, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.18, shadowRadius: 28 }, android: { elevation: 10 } }) },
   menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
@@ -531,5 +533,6 @@ const makeStyles = (ff) => StyleSheet.create({
   pickerName: { flex: 1, fontSize: 15, ...ff('500') },
   pickerDialCode: { fontSize: 14, ...ff('700') },
 });
+};
 
 export default AuthScreen;

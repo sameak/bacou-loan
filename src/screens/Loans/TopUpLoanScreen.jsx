@@ -70,7 +70,7 @@ const TopUpLoanScreen = ({ navigation, route }) => {
   const { language, ff, fi } = useLanguage();
   const t = T[language] || T.en;
 
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const styles = useMemo(() => makeStyles(ff, language), [ff, language]);
   const scrollRef = useRef(null);
 
   const [amount, setAmount] = useState('');
@@ -213,7 +213,9 @@ const TopUpLoanScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (ff) => StyleSheet.create({
+const makeStyles = (ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -250,5 +252,6 @@ const makeStyles = (ff) => StyleSheet.create({
   },
   saveBtnText: { color: '#fff', fontSize: 16, ...ff('700') },
 });
+};
 
 export default TopUpLoanScreen;

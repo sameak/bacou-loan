@@ -53,7 +53,7 @@ const OTPScreen = ({ navigation, route }) => {
   const { language, ff } = useLanguage();
   const t = T[language] || T.en;
 
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const styles = useMemo(() => makeStyles(ff, language), [ff, language]);
 
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -171,7 +171,9 @@ const OTPScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (ff) => StyleSheet.create({
+const makeStyles = (ff, language) => {
+const km = true;
+return StyleSheet.create({
   root: { flex: 1 },
   topSafe: { backgroundColor: 'transparent' },
   backBtn: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
@@ -184,7 +186,7 @@ const makeStyles = (ff) => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginBottom: 20,
   },
   heading: { fontSize: 28, ...ff('800'), color: '#fff', marginBottom: 8 },
-  sub: { fontSize: 14, color: 'rgba(255,255,255,0.6)', textAlign: 'center', lineHeight: 20 },
+  sub: { fontSize: 14, color: 'rgba(255,255,255,0.6)', textAlign: 'center', lineHeight: km ? 26 : 20 },
   card: { flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32 },
   cardInner: { paddingHorizontal: 24, paddingTop: 32 },
   errorBanner: {
@@ -212,6 +214,7 @@ const makeStyles = (ff) => StyleSheet.create({
   resendBtn: { alignItems: 'center', paddingVertical: 14 },
   resendText: { fontSize: 14, ...ff('600') },
 });
+};
 
 // Expose DARK_INDIGO for AuthScreen reuse
 OTPScreen.DARK_INDIGO = DARK_INDIGO;

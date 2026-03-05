@@ -79,7 +79,7 @@ import CapitalScreen    from '../screens/Settings/CapitalScreen';
 import AppearanceScreen from '../screens/Settings/AppearanceScreen';
 import RemindersScreen  from '../screens/Settings/RemindersScreen';
 import { recordSession } from '../services/sessionService';
-import { schedulePaymentReminders } from '../services/notificationService';
+import { schedulePaymentReminders, registerForPushNotifications } from '../services/notificationService';
 import { useData } from '../context/DataContext';
 import { TabBarScrollProvider, useTabBar } from '../context/TabBarContext';
 
@@ -551,7 +551,10 @@ export default function AppNavigator() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => {
       setUser(u);
-      if (u) recordSession();
+      if (u) {
+        recordSession();
+        registerForPushNotifications(u.uid);
+      }
     });
     return unsub;
   }, []);

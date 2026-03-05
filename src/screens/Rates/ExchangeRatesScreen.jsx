@@ -262,7 +262,7 @@ const ExchangeRatesScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const { language, ff, fs } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(ff, fs), [ff, fs]);
+  const styles = useMemo(() => makeStyles(ff, fs, language), [ff, fs, language]);
 
   const [activeTab, setActiveTab] = useState('exchange');
 
@@ -654,7 +654,9 @@ const ExchangeRatesScreen = ({ navigation }) => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const makeStyles = (ff, fs) => StyleSheet.create({
+const makeStyles = (ff, fs, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
 
   // Header
@@ -665,8 +667,8 @@ const makeStyles = (ff, fs) => StyleSheet.create({
   },
   backBtn:     { width: 40, alignItems: 'center', paddingVertical: 4 },
   refreshBtn:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: fs(17), lineHeight: 28, letterSpacing: 0 },
-  headerSub:   { fontSize: fs(11), lineHeight: 15, letterSpacing: 0, marginTop: 1 },
+  headerTitle: { fontSize: fs(17), lineHeight: km ? 36 : 28, letterSpacing: 0 },
+  headerSub:   { fontSize: fs(11), lineHeight: km ? 20 : 15, letterSpacing: 0, marginTop: 1 },
 
   // Tab bar
   tabBar: {
@@ -678,13 +680,13 @@ const makeStyles = (ff, fs) => StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: 9, borderRadius: 12, borderWidth: 1,
   },
-  tabLabel: { fontSize: fs(13), lineHeight: 24, letterSpacing: 0 },
+  tabLabel: { fontSize: fs(13), lineHeight: km ? 31 : 24, letterSpacing: 0 },
 
   // Legend
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   legendDot:  { width: 7, height: 7, borderRadius: 4 },
-  legendText: { fontSize: fs(11), lineHeight: 15, letterSpacing: 0 },
+  legendText: { fontSize: fs(11), lineHeight: km ? 20 : 15, letterSpacing: 0 },
 
   // Content
   content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 },
@@ -695,41 +697,42 @@ const makeStyles = (ff, fs) => StyleSheet.create({
 
   // Pair header
   pairHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  pairFlag:   { fontSize: 28, lineHeight: 34 },
-  pairCode:   { fontSize: fs(18), lineHeight: 29, letterSpacing: 0 },
-  pairName:   { fontSize: fs(12), lineHeight: 17, letterSpacing: 0 },
+  pairFlag:   { fontSize: 28, lineHeight: km ? 44 : 34 },
+  pairCode:   { fontSize: fs(18), lineHeight: km ? 38 : 29, letterSpacing: 0 },
+  pairName:   { fontSize: fs(12), lineHeight: km ? 22 : 17, letterSpacing: 0 },
   basePill:   { borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 },
-  basePillText: { fontSize: fs(11), lineHeight: 15, letterSpacing: 0 },
+  basePillText: { fontSize: fs(11), lineHeight: km ? 20 : 15, letterSpacing: 0 },
 
   divider: { height: StyleSheet.hairlineWidth, marginBottom: 10 },
 
   // Source rows
   srcRow:   { flexDirection: 'row', alignItems: 'center', paddingVertical: 11 },
   srcLeft:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  srcName:  { fontSize: fs(13), lineHeight: 18, letterSpacing: 0, flexShrink: 1 },
+  srcName:  { fontSize: fs(13), lineHeight: km ? 23 : 18, letterSpacing: 0, flexShrink: 1 },
   badge:    { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  badgeText:{ fontSize: fs(10), lineHeight: 14, letterSpacing: 0 },
+  badgeText:{ fontSize: fs(10), lineHeight: km ? 18 : 14, letterSpacing: 0 },
   srcRight: { flexShrink: 0, alignItems: 'flex-end' },
   rateRow:  { flexDirection: 'row', alignItems: 'center', gap: 1 },
-  rateSymbol: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
-  rateVal:  { fontSize: fs(17), lineHeight: 22, letterSpacing: 0 },
-  errText:  { fontSize: fs(12), lineHeight: 17, letterSpacing: 0, color: '#EF4444' },
+  rateSymbol: { fontSize: fs(13), lineHeight: km ? 23 : 18, letterSpacing: 0 },
+  rateVal:  { fontSize: fs(17), lineHeight: km ? 29 : 22, letterSpacing: 0 },
+  errText:  { fontSize: fs(12), lineHeight: km ? 22 : 17, letterSpacing: 0, color: '#EF4444' },
 
   // Average row
   avgRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10 },
-  avgLabel: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
-  avgVal:   { fontSize: fs(18), lineHeight: 23, letterSpacing: 0 },
+  avgLabel: { fontSize: fs(13), lineHeight: km ? 23 : 18, letterSpacing: 0 },
+  avgVal:   { fontSize: fs(18), lineHeight: km ? 30 : 23, letterSpacing: 0 },
 
   // Conversions card
   convHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 },
-  convTitle:  { fontSize: fs(14), lineHeight: 19, letterSpacing: 0, flex: 1 },
-  convNote:   { fontSize: fs(11), lineHeight: 15, letterSpacing: 0 },
+  convTitle:  { fontSize: fs(14), lineHeight: km ? 25 : 19, letterSpacing: 0, flex: 1 },
+  convNote:   { fontSize: fs(11), lineHeight: km ? 20 : 15, letterSpacing: 0 },
   convRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 11 },
-  convLabel:  { fontSize: fs(13), lineHeight: 18, letterSpacing: 0, flex: 1 },
-  convVal:    { fontSize: fs(16), lineHeight: 21, letterSpacing: 0 },
+  convLabel:  { fontSize: fs(13), lineHeight: km ? 23 : 18, letterSpacing: 0, flex: 1 },
+  convVal:    { fontSize: fs(16), lineHeight: km ? 27 : 21, letterSpacing: 0 },
 
   // Skeleton
   skBone: { borderRadius: 6, marginBottom: 4 },
 });
+};
 
 export default ExchangeRatesScreen;

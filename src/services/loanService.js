@@ -831,15 +831,14 @@ export async function createAgreementLink(loanId) {
 
 export function formatCurrency(amount, currency) {
   const n = Number(amount ?? 0);
-  const decimals = n % 1 === 0 ? 0 : 2;
   if (currency === 'KHR') {
-    return '៛' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return '៛' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   if (currency === 'KRW') {
-    return '₩' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return '₩' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   if (currency === 'USD') {
-    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
+    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-  return currency + ' ' + n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
+  return currency + ' ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

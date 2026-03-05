@@ -69,7 +69,7 @@ const LoanListScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const styles = useMemo(() => makeStyles(fs, ff, language), [fs, ff, language]);
   const scrollHandler = useTabBarScroll();
   const { tabVisible } = useTabBar();
   const scrollRef = useRef(null);
@@ -108,11 +108,11 @@ const LoanListScreen = ({ navigation }) => {
   }, [loans, search, statusFilter]);
 
   const FILTERS = [
-    { key: 'all',          label: t.filterAll,          color: ACCENT },
-    { key: 'active',       label: t.filterActive,       color: '#10B981' },
-    { key: 'overdue',      label: t.filterOverdue,      color: '#EF4444' },
-    { key: 'paid',         label: t.filterPaid,         color: '#9CA3AF' },
-    { key: 'written_off',  label: t.filterWrittenOff,   color: '#6B7280' },
+    { key: 'all', label: t.filterAll, color: ACCENT },
+    { key: 'active', label: t.filterActive, color: '#10B981' },
+    { key: 'overdue', label: t.filterOverdue, color: '#EF4444' },
+    { key: 'paid', label: t.filterPaid, color: '#9CA3AF' },
+    { key: 'written_off', label: t.filterWrittenOff, color: '#6B7280' },
   ];
 
   const renderItem = ({ item: loan }) => {
@@ -164,54 +164,54 @@ const LoanListScreen = ({ navigation }) => {
   return (
     <View style={[styles.root, { backgroundColor: isDark ? colors.background : '#EBEBEB' }]}>
       <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, backgroundColor: isDark ? colors.background : '#EBEBEB' }, headerAnimStyle]} onLayout={(e) => { const h = e.nativeEvent.layout.height; headerH.value = h; setHeaderHeight(h); }}>
-      <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>{t.title}</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('LoanCalculator')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="calculator-outline" size={24} color={colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-        <View style={[styles.searchWrap, { backgroundColor: isDark ? colors.surface : '#fff', borderColor: colors.border }]}>
-          <Ionicons name="search-outline" size={18} color={colors.textMuted} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }, fi()]}
-            value={search}
-            onChangeText={setSearch}
-            placeholder={t.search}
-            placeholderTextColor={colors.textMuted}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+        <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.text }]}>{t.title}</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('LoanCalculator')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="calculator-outline" size={24} color={colors.textMuted} />
             </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Status filter chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {FILTERS.map(f => {
-            const active = statusFilter === f.key;
-            return (
-              <TouchableOpacity
-                key={f.key}
-                style={[styles.filterChip, { backgroundColor: active ? f.color : f.color + '18', borderColor: f.color + '40' }]}
-                onPress={() => setStatusFilter(f.key)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.filterChipText, { color: active ? '#fff' : f.color }]}>{f.label}</Text>
+          </View>
+          <View style={[styles.searchWrap, { backgroundColor: isDark ? colors.surface : '#fff', borderColor: colors.border }]}>
+            <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }, fi()]}
+              value={search}
+              onChangeText={setSearch}
+              placeholder={t.search}
+              placeholderTextColor={colors.textMuted}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
               </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </SafeAreaView>
+            )}
+          </View>
+
+          {/* Status filter chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {FILTERS.map(f => {
+              const active = statusFilter === f.key;
+              return (
+                <TouchableOpacity
+                  key={f.key}
+                  style={[styles.filterChip, { backgroundColor: active ? f.color : f.color + '18', borderColor: f.color + '40' }]}
+                  onPress={() => setStatusFilter(f.key)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.filterChipText, { color: active ? '#fff' : f.color }]}>{f.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </SafeAreaView>
       </Animated.View>
 
       {loading ? (
@@ -261,43 +261,46 @@ const LoanListScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (fs, ff) => StyleSheet.create({
-  root: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4,
-  },
-  title: { fontSize: fs(28), lineHeight: 40, ...ff('600'), letterSpacing: 0 },
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: 16, marginTop: 8, marginBottom: 4,
-    paddingHorizontal: 14, height: 44, borderRadius: 14, borderWidth: 1,
-  },
-  searchInput: { flex: 1, fontSize: fs(15), lineHeight: 20, ...ff('400') },
-  filterRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
-  filterChipText: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
-  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100, gap: 8 },
-  listEmpty: { flexGrow: 1, justifyContent: 'center' },
-  cardWrap: {},
-  loanRow: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
-  loanMain: { flex: 1 },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
-  borrowerName: { flex: 1, fontSize: fs(14), lineHeight: 19, ...ff('400') },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  statusText: { fontSize: fs(11), lineHeight: 21, ...ff('600') },
-  principal: { fontSize: fs(16), lineHeight: 21, ...ff('400'), marginBottom: 4 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  meta: { fontSize: fs(13), lineHeight: 18, ...ff('400') },
-  accruingText: { fontSize: fs(12), lineHeight: 16, color: '#F59E0B', ...ff('600') },
-  emptyWrap: { alignItems: 'center', gap: 10, paddingBottom: 80 },
-  emptyText: { fontSize: fs(17), lineHeight: 22, ...ff('600') },
-  emptyHint: { fontSize: fs(14), lineHeight: 19, ...ff('400') },
-  fab: {
-    position: 'absolute', right: 24,
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center',
-  },
-});
+const makeStyles = (fs, ff, language) => {
+  const km = true;
+  return StyleSheet.create({
+    root: { flex: 1 },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4,
+    },
+    title: { fontSize: fs(28), lineHeight: km ? 50 : 40, ...ff('600'), letterSpacing: 0 },
+    searchWrap: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      marginHorizontal: 16, marginTop: 8, marginBottom: 4,
+      paddingHorizontal: 14, height: 44, borderRadius: 14, borderWidth: 1,
+    },
+    searchInput: { flex: 1, height: '100%', fontSize: fs(15), ...ff('400') },
+    filterRow: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
+    filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+    filterChipText: { fontSize: fs(13), lineHeight: km ? 22 : 18, ...ff('400') },
+    list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100, gap: 8 },
+    listEmpty: { flexGrow: 1, justifyContent: 'center' },
+    cardWrap: {},
+    loanRow: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
+    loanMain: { flex: 1 },
+    topRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+    borrowerName: { flex: 1, fontSize: fs(14), ...ff('400') },
+    statusBadge: { paddingHorizontal: 8, paddingVertical: km ? 4 : 2, borderRadius: 8 },
+    statusText: { fontSize: fs(11), lineHeight: km ? 19 : 21, ...ff('600') },
+    principal: { fontSize: fs(16), lineHeight: km ? 28 : 21, ...ff('400'), marginBottom: 4 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+    meta: { fontSize: fs(13), lineHeight: km ? 22 : 18, ...ff('400') },
+    accruingText: { fontSize: fs(12), lineHeight: km ? 21 : 16, color: '#F59E0B', ...ff('600') },
+    emptyWrap: { alignItems: 'center', gap: 10, paddingBottom: 80 },
+    emptyText: { fontSize: fs(17), lineHeight: km ? 30 : 22, ...ff('600') },
+    emptyHint: { fontSize: fs(14), lineHeight: km ? 24 : 19, ...ff('400') },
+    fab: {
+      position: 'absolute', right: 24,
+      width: 56, height: 56, borderRadius: 28,
+      backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center',
+    },
+  });
+};
 
 export default LoanListScreen;

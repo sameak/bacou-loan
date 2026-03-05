@@ -45,7 +45,7 @@ export default function SetPINScreen({ navigation }) {
   const [pin,      setPin]      = useState('');
   const [error,    setError]    = useState(false);
 
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const styles = useMemo(() => makeStyles(ff, language), [ff, language]);
 
   const handleKey = useCallback(async (key) => {
     if (key === '⌫') { setPin(p => p.slice(0, -1)); return; }
@@ -161,7 +161,9 @@ export default function SetPINScreen({ navigation }) {
   );
 }
 
-const makeStyles = (ff) => StyleSheet.create({
+const makeStyles = (ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   root:        { flex: 1 },
   header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 4, paddingBottom: 8, gap: 4 },
   backBtn:     { padding: 4 },
@@ -170,7 +172,7 @@ const makeStyles = (ff) => StyleSheet.create({
   body:      { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 56 },
   steps:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
   stepPill:  { height: 6, borderRadius: 3 },
-  subtitle:  { marginBottom: 36, textAlign: 'center', lineHeight: 22, paddingHorizontal: 32 },
+  subtitle:  { marginBottom: 36, textAlign: 'center', lineHeight: km ? 29 : 22, paddingHorizontal: 32 },
 
   dots:    { flexDirection: 'row', gap: 18, marginBottom: 44 },
   dot:     { width: 13, height: 13, borderRadius: 6.5 },
@@ -187,3 +189,4 @@ const makeStyles = (ff) => StyleSheet.create({
   },
   keyText: { fontSize: 26, ...ff('400') },
 });
+};

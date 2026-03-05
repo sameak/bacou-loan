@@ -38,6 +38,7 @@ import {
 // editPayment / deletePayment used via RecordPaymentScreen navigate
 import { useTheme } from '../../theme/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useData } from '../../context/DataContext';
 import GlassCard from '../../components/GlassCard';
 import Toast from '../../components/Toast';
 import { Skeleton, SkeletonRow } from '../../components/Skeleton';
@@ -164,8 +165,9 @@ const LoanDetailScreen = ({ navigation, route }) => {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { language, fs, ff } = useLanguage();
+  const { borrowers } = useData();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const styles = useMemo(() => makeStyles(fs, ff, language), [fs, ff, language]);
 
   const [loan, setLoan] = useState(null);
   const [schedule, setSchedule] = useState([]);
@@ -326,7 +328,9 @@ const LoanDetailScreen = ({ navigation, route }) => {
       const token = await createAgreementLink(loan.id);
       const url   = `https://bacon-loan.web.app/${token}`;
       const body  = `Hi ${loan.borrowerName}, please sign your loan agreement here: ${url}`;
-      await SMS.sendSMSAsync([], body);
+      const borrower = borrowers.find(b => b.id === loan.borrowerId);
+      const recipients = borrower?.phone ? [borrower.phone] : [];
+      await SMS.sendSMSAsync(recipients, body);
       Toast.show({ text: t.linkSent, type: 'success' });
     } catch (err) {
       Toast.show({ text: t.linkError, type: 'error' });
@@ -748,77 +752,79 @@ const LoanDetailScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (fs, ff) => StyleSheet.create({
+const makeStyles = (fs, ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontSize: fs(18), lineHeight: 29, ...ff('600'), textAlign: 'center', marginHorizontal: 8 },
+  headerTitle: { flex: 1, fontSize: fs(18), ...ff('600'), textAlign: 'center', marginHorizontal: 8 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, width: 90, justifyContent: 'flex-end' },
   editBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     borderWidth: 1.5, borderRadius: 8,
     paddingHorizontal: 10, paddingVertical: 5,
   },
-  editBtnText: { fontSize: fs(13), lineHeight: 24, ...ff('600') },
-  topUpText: { fontSize: fs(15), lineHeight: 26, ...ff('600') },
+  editBtnText: { fontSize: fs(13), lineHeight: km ? 31 : 24, ...ff('600') },
+  topUpText: { fontSize: fs(15), lineHeight: km ? 34 : 26, ...ff('600') },
   content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 120 },
 
   // Summary card
   summaryCard: { padding: 20 },
   summaryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  statusText: { fontSize: fs(12), lineHeight: 22, ...ff('600') },
-  currency: { fontSize: fs(13), lineHeight: 24, ...ff('400') },
-  principalValue: { fontSize: fs(32), lineHeight: 40, ...ff('400'), marginBottom: 2 },
-  principalLabel: { fontSize: fs(13), lineHeight: 24, ...ff('400'), marginBottom: 16 },
+  statusText: { fontSize: fs(12), lineHeight: km ? 29 : 22, ...ff('600') },
+  currency: { fontSize: fs(13), lineHeight: km ? 31 : 24, ...ff('400') },
+  principalValue: { fontSize: fs(32), lineHeight: km ? 52 : 40, ...ff('400'), marginBottom: 2 },
+  principalLabel: { fontSize: fs(13), lineHeight: km ? 31 : 24, ...ff('400'), marginBottom: 16 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  chipText: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
+  chipText: { fontSize: fs(12), lineHeight: km ? 29 : 22, ...ff('400') },
   accrualBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, padding: 10, marginBottom: 12 },
-  accrualText: { fontSize: fs(12), lineHeight: 22, color: '#F59E0B', ...ff('400'), flex: 1 },
+  accrualText: { fontSize: fs(12), lineHeight: km ? 29 : 22, color: '#F59E0B', ...ff('400'), flex: 1 },
   progressSection: { marginBottom: 16 },
   progressBg: { height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
   progressFill: { height: '100%', borderRadius: 3 },
-  progressLabel: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
+  progressLabel: { fontSize: fs(12), lineHeight: km ? 29 : 22, ...ff('400') },
   statsRow: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 14 },
   stat: { flex: 1, alignItems: 'center' },
   statBorder: { borderLeftWidth: StyleSheet.hairlineWidth, borderRightWidth: StyleSheet.hairlineWidth },
-  statValue: { fontSize: fs(14), lineHeight: 25, ...ff('400'), marginBottom: 2 },
-  statLabel: { fontSize: fs(11), lineHeight: 21, ...ff('400') },
+  statValue: { fontSize: fs(14), lineHeight: km ? 33 : 25, ...ff('400'), marginBottom: 2 },
+  statLabel: { fontSize: fs(11), lineHeight: km ? 27 : 21, ...ff('400') },
 
   // Notes
   notesSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 14, marginTop: 4 },
-  notesLabel: { fontSize: fs(10), lineHeight: 20, ...ff('600'), letterSpacing: 0, marginBottom: 4 },
-  notesText: { fontSize: fs(14), lineHeight: 26, ...ff('400') },
+  notesLabel: { fontSize: fs(10), lineHeight: km ? 26 : 20, ...ff('600'), letterSpacing: 0, marginBottom: 4 },
+  notesText: { fontSize: fs(14), lineHeight: km ? 34 : 26, ...ff('400') },
 
   // Audit
   auditSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, marginTop: 10, gap: 2 },
-  auditText: { fontSize: fs(11), lineHeight: 21, ...ff('400'), letterSpacing: 0 },
+  auditText: { fontSize: fs(11), lineHeight: km ? 27 : 21, ...ff('400'), letterSpacing: 0 },
 
   // Tab bar
   tabBar: { flexDirection: 'row', borderRadius: 12, padding: 3, marginBottom: 10 },
   tab: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' },
-  tabLabel: { fontSize: fs(13), lineHeight: 24, ...ff('600') },
+  tabLabel: { fontSize: fs(13), lineHeight: km ? 31 : 24, ...ff('600') },
 
   // Schedule
   periodRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   periodNum: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  periodNumText: { fontSize: fs(12), lineHeight: 22, ...ff('400'), textAlign: 'center' },
+  periodNumText: { fontSize: fs(12), lineHeight: km ? 29 : 22, ...ff('400'), textAlign: 'center' },
   periodInfo: { flex: 1 },
-  periodDate: { fontSize: fs(14), lineHeight: 25, ...ff('400'), marginBottom: 2 },
-  periodMeta: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
-  periodTotal: { fontSize: fs(14), lineHeight: 25, ...ff('400'), marginBottom: 4 },
+  periodDate: { fontSize: fs(14), lineHeight: km ? 33 : 25, ...ff('400'), marginBottom: 2 },
+  periodMeta: { fontSize: fs(12), lineHeight: km ? 29 : 22, ...ff('400') },
+  periodTotal: { fontSize: fs(14), lineHeight: km ? 33 : 25, ...ff('400'), marginBottom: 4 },
   periodStatusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  periodStatusText: { fontSize: fs(10), lineHeight: 20, ...ff('600') },
+  periodStatusText: { fontSize: fs(10), lineHeight: km ? 26 : 20, ...ff('600') },
 
   // Payments
   payRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   payIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   payInfo: { flex: 1 },
-  payDate: { fontSize: fs(14), lineHeight: 25, ...ff('400'), marginBottom: 2 },
-  payMeta: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
-  payNotes: { fontSize: fs(11), lineHeight: 21, ...ff('400'), marginTop: 2 },
-  payTotal: { fontSize: fs(15), lineHeight: 26, ...ff('400') },
+  payDate: { fontSize: fs(14), lineHeight: km ? 33 : 25, ...ff('400'), marginBottom: 2 },
+  payMeta: { fontSize: fs(12), lineHeight: km ? 29 : 22, ...ff('400') },
+  payNotes: { fontSize: fs(11), lineHeight: km ? 27 : 21, ...ff('400'), marginTop: 2 },
+  payTotal: { fontSize: fs(15), lineHeight: km ? 34 : 26, ...ff('400') },
 
   // Agreement badge
   agreementBadge: {
@@ -826,15 +832,15 @@ const makeStyles = (fs, ff) => StyleSheet.create({
     borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7,
     marginTop: 12,
   },
-  agreementText: { fontSize: fs(12), lineHeight: 22, ...ff('600'), flex: 1 },
-  sendLinkSub:   { fontSize: fs(11), lineHeight: 20, ...ff('400'), marginTop: 1 },
+  agreementText: { fontSize: fs(12), lineHeight: km ? 29 : 22, ...ff('600'), flex: 1 },
+  sendLinkSub:   { fontSize: fs(11), lineHeight: km ? 26 : 20, ...ff('400'), marginTop: 1 },
 
   // Mark paid
   markPaidBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginTop: 20, paddingVertical: 14, borderRadius: 14, borderWidth: 1,
   },
-  markPaidText: { fontSize: fs(14), lineHeight: 25, ...ff('600') },
+  markPaidText: { fontSize: fs(14), lineHeight: km ? 33 : 25, ...ff('600') },
 
   // FAB
   fab: {
@@ -846,12 +852,13 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   // Monthly checklist (open-ended loans)
   monthRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   monthCheck: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  monthLabel: { fontSize: fs(14), lineHeight: 25, ...ff('400'), marginBottom: 2 },
-  monthMeta:  { fontSize: fs(12), lineHeight: 22, ...ff('400') },
+  monthLabel: { fontSize: fs(14), lineHeight: km ? 33 : 25, ...ff('400'), marginBottom: 2 },
+  monthMeta:  { fontSize: fs(12), lineHeight: km ? 29 : 22, ...ff('400') },
 
   // Misc
   openModeNote: { fontSize: fs(14), textAlign: 'center', marginTop: 8 },
   emptyText: { fontSize: fs(14) },
 });
+};
 
 export default LoanDetailScreen;

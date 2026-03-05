@@ -120,7 +120,7 @@ export default function AdminScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const { language, fs, ff } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs, ff), [fs, ff]);
+  const styles = useMemo(() => makeStyles(fs, ff, language), [fs, ff, language]);
 
   const { loans, borrowers } = useData();
 
@@ -226,25 +226,25 @@ export default function AdminScreen({ navigation }) {
         {/* Avatar + name + status */}
         <View style={styles.userTop}>
           <View style={[styles.avatar, { backgroundColor: ACCENT + '22' }]}>
-            <Text style={[styles.avatarText, ff('800'), { color: ACCENT, fontSize: fs(17), lineHeight: 22 }]}>
+            <Text style={[styles.avatarText, ff('800'), { color: ACCENT, fontSize: fs(17), lineHeight: 29 }]}>
               {(group.displayName || '?').charAt(0).toUpperCase()}
             </Text>
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.userNameRow}>
-              <Text style={[styles.userName, ff('700'), { color: colors.text, fontSize: fs(15), lineHeight: 20 }]} numberOfLines={1}>
+              <Text style={[styles.userName, ff('700'), { color: colors.text, fontSize: fs(15) }]} numberOfLines={1}>
                 {group.displayName}
               </Text>
               {isMe && (
                 <View style={[styles.youBadge, { backgroundColor: ACCENT }]}>
-                  <Text style={[styles.youBadgeText, ff('700'), { fontSize: fs(9), lineHeight: 13 }]}>YOU</Text>
+                  <Text style={[styles.youBadgeText, ff('700'), { fontSize: fs(9), lineHeight: 17 }]}>YOU</Text>
                 </View>
               )}
             </View>
             <View style={styles.statusRow}>
               <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-              <Text style={[styles.statusLabel, ff('600'), { color: statusColor, fontSize: fs(12), lineHeight: 16 }]}>{statusLabel}</Text>
-              <Text style={[{ color: colors.textMuted, fontSize: fs(12), lineHeight: 16 }, ff('400')]}>
+              <Text style={[styles.statusLabel, ff('600'), { color: statusColor, fontSize: fs(12), lineHeight: 21 }]}>{statusLabel}</Text>
+              <Text style={[{ color: colors.textMuted, fontSize: fs(12), lineHeight: 21 }, ff('400')]}>
                 · {timeAgo(group.latestSeen)} · {group.sessions.length} {t.devices}
               </Text>
             </View>
@@ -261,8 +261,8 @@ export default function AdminScreen({ navigation }) {
           ].map((s, i, arr) => (
             <React.Fragment key={s.label + i}>
               <View style={styles.statCell}>
-                <Text style={[styles.statNum, ff('700'), { color: s.color, fontSize: fs(18), lineHeight: 23 }]}>{s.n}</Text>
-                <Text style={[styles.statLabel, ff('400'), { color: colors.textMuted, fontSize: fs(10), lineHeight: 13 }]}>{s.label}</Text>
+                <Text style={[styles.statNum, ff('700'), { color: s.color, fontSize: fs(18), lineHeight: 30 }]}>{s.n}</Text>
+                <Text style={[styles.statLabel, ff('400'), { color: colors.textMuted, fontSize: fs(10), lineHeight: 17 }]}>{s.label}</Text>
               </View>
               {i < arr.length - 1 && (
                 <View style={[styles.statDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]} />
@@ -283,21 +283,21 @@ export default function AdminScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                  <Text style={[styles.deviceName, ff('600'), { color: colors.text, fontSize: fs(13), lineHeight: 18 }]}>{s.deviceModel || 'Unknown'}</Text>
+                  <Text style={[styles.deviceName, ff('600'), { color: colors.text, fontSize: fs(13), lineHeight: 23 }]}>{s.deviceModel || 'Unknown'}</Text>
                   {s.uid === myUid && (
                     <View style={[styles.thisBadge, { backgroundColor: ACCENT + '18' }]}>
-                      <Text style={[ff('700'), { color: ACCENT, fontSize: fs(9), lineHeight: 13 }]}>THIS</Text>
+                      <Text style={[ff('700'), { color: ACCENT, fontSize: fs(9), lineHeight: 17 }]}>THIS</Text>
                     </View>
                   )}
                 </View>
-                <Text style={[ff('400'), { color: colors.textMuted, fontSize: fs(11), lineHeight: 15 }]}>
+                <Text style={[ff('400'), { color: colors.textMuted, fontSize: fs(11), lineHeight: 20 }]}>
                   {s.platform === 'ios' ? 'iOS' : 'Android'} {s.osVersion}  ·  {timeAgo(s.lastSeen)}
                 </Text>
                 <View style={styles.secRow}>
                   {s.biometricEnabled && (
                     <View style={[styles.secChip, { backgroundColor: ACCENT + '18' }]}>
                       <Ionicons name={s.biometricType === 'faceId' ? 'scan-outline' : 'finger-print'} size={10} color={ACCENT} />
-                      <Text style={[ff('600'), { color: ACCENT, fontSize: fs(10), lineHeight: 14 }]}>
+                      <Text style={[ff('600'), { color: ACCENT, fontSize: fs(10), lineHeight: 18 }]}>
                         {s.biometricType === 'faceId' ? t.secFaceId : t.secFingerprint}
                       </Text>
                     </View>
@@ -305,13 +305,13 @@ export default function AdminScreen({ navigation }) {
                   {s.pinEnabled && (
                     <View style={[styles.secChip, { backgroundColor: '#10B98118' }]}>
                       <Ionicons name="keypad-outline" size={10} color="#10B981" />
-                      <Text style={[ff('600'), { color: '#10B981', fontSize: fs(10), lineHeight: 14 }]}>{t.secPin}</Text>
+                      <Text style={[ff('600'), { color: '#10B981', fontSize: fs(10), lineHeight: 18 }]}>{t.secPin}</Text>
                     </View>
                   )}
                   {!s.biometricEnabled && !s.pinEnabled && s.hasOwnProperty('pinEnabled') && (
                     <View style={[styles.secChip, { backgroundColor: '#EF444418' }]}>
                       <Ionicons name="lock-open-outline" size={10} color="#EF4444" />
-                      <Text style={[ff('600'), { color: '#EF4444', fontSize: fs(10), lineHeight: 14 }]}>{t.secNone}</Text>
+                      <Text style={[ff('600'), { color: '#EF4444', fontSize: fs(10), lineHeight: 18 }]}>{t.secNone}</Text>
                     </View>
                   )}
                 </View>
@@ -344,10 +344,10 @@ export default function AdminScreen({ navigation }) {
           <Ionicons name={ic.name} size={16} color={ic.color} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[ff('400'), { color: colors.text, fontSize: fs(13), lineHeight: 18, marginBottom: 2 }]} numberOfLines={1}>
+          <Text style={[ff('400'), { color: colors.text, fontSize: fs(13), lineHeight: 23, marginBottom: 2 }]} numberOfLines={1}>
             {t[item.type]} {t.for} <Text style={ff('600')}>{item.subject}</Text>
           </Text>
-          <Text style={[ff('400'), { color: colors.textMuted, fontSize: fs(11), lineHeight: 15 }]}>
+          <Text style={[ff('400'), { color: colors.textMuted, fontSize: fs(11), lineHeight: 20 }]}>
             {t.by} {item.byName}  ·  {timeAgo(item.ts)}
           </Text>
         </View>
@@ -365,8 +365,8 @@ export default function AdminScreen({ navigation }) {
             <Ionicons name="chevron-back" size={26} color={colors.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.title, ff('800'), { color: colors.text, fontSize: fs(24), lineHeight: 30 }]}>{t.title}</Text>
-            <Text style={[ff('400'), { color: colors.textMuted, fontSize: fs(13), lineHeight: 18, marginTop: 1 }]}>{t.subtitle}</Text>
+            <Text style={[styles.title, ff('800'), { color: colors.text, fontSize: fs(24), lineHeight: 39 }]}>{t.title}</Text>
+            <Text style={[ff('400'), { color: colors.textMuted, fontSize: fs(13), lineHeight: 23, marginTop: 1 }]}>{t.subtitle}</Text>
           </View>
           <View style={[styles.crownWrap, { backgroundColor: '#F59E0B20' }]}>
             <Ionicons name="shield-checkmark" size={20} color="#F59E0B" />
@@ -387,13 +387,13 @@ export default function AdminScreen({ navigation }) {
             {onlineCount > 0 && (
               <View style={[styles.onlinePill, { backgroundColor: '#10B98120' }]}>
                 <View style={[styles.onlineDot, { backgroundColor: '#10B981' }]} />
-                <Text style={[ff('600'), { color: '#10B981', fontSize: fs(10), lineHeight: 14 }]}>{onlineCount} {t.online}</Text>
+                <Text style={[ff('600'), { color: '#10B981', fontSize: fs(10), lineHeight: 18 }]}>{onlineCount} {t.online}</Text>
               </View>
             )}
           </View>
           {userGroups.length === 0 ? (
             <GlassCard style={{ marginBottom: 20 }}>
-              <Text style={[ff('400'), { color: colors.textMuted, fontSize: fs(14), lineHeight: 20, padding: 20, textAlign: 'center' }]}>{t.noSessions}</Text>
+              <Text style={[ff('400'), { color: colors.textMuted, fontSize: fs(14), lineHeight: 26, padding: 20, textAlign: 'center' }]}>{t.noSessions}</Text>
             </GlassCard>
           ) : (
             <View style={{ marginBottom: 20 }}>
@@ -405,7 +405,7 @@ export default function AdminScreen({ navigation }) {
           <Text style={[styles.sectionLabel, ff('700'), { color: colors.textMuted, fontSize: fs(11) }]}>{t.recentActivity}</Text>
           <GlassCard style={{ marginBottom: 32 }}>
             {activityFeed.length === 0 ? (
-              <Text style={[ff('400'), { color: colors.textMuted, fontSize: fs(14), lineHeight: 20, padding: 20, textAlign: 'center' }]}>{t.noActivity}</Text>
+              <Text style={[ff('400'), { color: colors.textMuted, fontSize: fs(14), lineHeight: 26, padding: 20, textAlign: 'center' }]}>{t.noActivity}</Text>
             ) : (
               activityFeed.map((item, i) => renderActivityItem(item, i === activityFeed.length - 1))
             )}
@@ -419,7 +419,9 @@ export default function AdminScreen({ navigation }) {
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
-const makeStyles = (fs, ff) => StyleSheet.create({
+const makeStyles = (fs, ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   root:     { flex: 1 },
   header:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 4, paddingBottom: 12, gap: 8 },
   backBtn:  { padding: 4 },
@@ -466,3 +468,4 @@ const makeStyles = (fs, ff) => StyleSheet.create({
   actRow:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   actIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });
+};

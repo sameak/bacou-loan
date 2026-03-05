@@ -112,7 +112,7 @@ const T = {
 };
 
 const ToggleGroup = ({ options, value, onChange, colors, isDark }) => {
-  const { ff, fs } = useLanguage();
+  const { ff, fs, language } = useLanguage();
   return (
     <View style={[{ flexDirection: 'row', borderRadius: 12, padding: 3, marginBottom: 4 }, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
       {options.map(opt => {
@@ -124,7 +124,7 @@ const ToggleGroup = ({ options, value, onChange, colors, isDark }) => {
             onPress={() => onChange(opt.value)}
             activeOpacity={0.8}
           >
-            <Text style={[{ fontSize: fs(13), lineHeight: 18, letterSpacing: 0, ...ff('600') }, { color: active ? (isDark ? '#000' : '#fff') : colors.textMuted }]}>
+            <Text style={[{ fontSize: fs(13), lineHeight: 23, letterSpacing: 0, ...ff('600') }, { color: active ? (isDark ? '#000' : '#fff') : colors.textMuted }]}>
               {opt.label}
             </Text>
           </TouchableOpacity>
@@ -139,7 +139,7 @@ const CreateLoanScreen = ({ navigation, route }) => {
   const { language, ff, fi, fs } = useLanguage();
   const t = T[language] || T.en;
   const isKhmer = language === 'km';
-  const styles = useMemo(() => makeStyles(ff, fs, isKhmer), [ff, fs, isKhmer]);
+  const styles = useMemo(() => makeStyles(ff, fs, isKhmer, language), [ff, fs, isKhmer, language]);
   const scrollRef = useRef(null);
 
   // Pre-fill from BorrowerDetail or DashboardScreen FAB
@@ -499,15 +499,17 @@ const CreateLoanScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (ff, fs, isKhmer = false) => StyleSheet.create({
+const makeStyles = (ff, fs, isKhmer = false, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 64, paddingVertical: 4 },
-  headerBtnText: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('500') },
-  headerTitle: { fontSize: fs(18), lineHeight: 29, letterSpacing: 0, ...ff('700') },
+  headerBtnText: { fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0, ...ff('500') },
+  headerTitle: { fontSize: fs(18), lineHeight: km ? 38 : 29, letterSpacing: 0, ...ff('700') },
   content: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 80, gap: 8 },
   presetChip: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -516,19 +518,19 @@ const makeStyles = (ff, fs, isKhmer = false) => StyleSheet.create({
     marginBottom: 8,
   },
   presetIcon: { fontSize: 22 },
-  presetTitle: { fontSize: fs(14), lineHeight: 25, letterSpacing: 0, ...ff('700'), marginBottom: 1 },
-  presetHint: { fontSize: fs(12), lineHeight: 22, letterSpacing: 0, opacity: 0.8 },
-  label: { fontSize: isKhmer ? fs(12) : fs(11), lineHeight: 21, letterSpacing: 0, ...ff('700'), marginBottom: 4, marginTop: 24 },
+  presetTitle: { fontSize: fs(14), lineHeight: km ? 33 : 25, letterSpacing: 0, ...ff('700'), marginBottom: 1 },
+  presetHint: { fontSize: fs(12), lineHeight: km ? 29 : 22, letterSpacing: 0, opacity: 0.8 },
+  label: { fontSize: isKhmer ? fs(12) : fs(11), lineHeight: km ? 27 : 21, letterSpacing: 0, ...ff('700'), marginBottom: 4, marginTop: 24 },
   input: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: fs(15), letterSpacing: 0, ...ff('400') },
   multiline: { height: 90, paddingTop: 14, textAlignVertical: 'top' },
   inputError: { borderWidth: 1.5, borderColor: '#EF4444' },
-  errText: { fontSize: fs(12), lineHeight: 16, letterSpacing: 0, color: '#EF4444', marginTop: 4, marginLeft: 4 },
+  errText: { fontSize: fs(12), lineHeight: km ? 21 : 16, letterSpacing: 0, color: '#EF4444', marginTop: 4, marginLeft: 4 },
   currencyRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
   currencyBtn: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0, ...ff('700') },
+  currencyText: { fontSize: fs(13), lineHeight: km ? 23 : 18, letterSpacing: 0, ...ff('700') },
   rateWrap: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 14, paddingHorizontal: 16 },
   rateInput: { flex: 1, fontSize: fs(15), letterSpacing: 0, ...ff('400') },
-  rateSuffix: { fontSize: fs(16), lineHeight: 21, letterSpacing: 0, ...ff('700'), marginLeft: 8 },
+  rateSuffix: { fontSize: fs(16), lineHeight: km ? 27 : 21, letterSpacing: 0, ...ff('700'), marginLeft: 8 },
   pickerRow: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 14, paddingHorizontal: 16 },
   pickerText: { flex: 1, fontSize: fs(15), letterSpacing: 0, ...ff('400') },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth },
@@ -536,7 +538,7 @@ const makeStyles = (ff, fs, isKhmer = false) => StyleSheet.create({
     height: 56, borderRadius: 16, backgroundColor: ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
-  saveBtnText: { color: '#fff', fontSize: fs(16), lineHeight: 21, letterSpacing: 0, ...ff('700') },
+  saveBtnText: { color: '#fff', fontSize: fs(16), lineHeight: km ? 27 : 21, letterSpacing: 0, ...ff('700') },
   // Borrower picker modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   pickerSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%', paddingBottom: 24 },
@@ -552,12 +554,13 @@ const makeStyles = (ff, fs, isKhmer = false) => StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  addBorrowerText: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('600') },
+  addBorrowerText: { fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0, ...ff('600') },
   borrowerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14 },
   borrowerAvatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  borrowerAvatarText: { fontSize: fs(16), lineHeight: 21, letterSpacing: 0, ...ff('700') },
-  borrowerName: { fontSize: fs(15), lineHeight: 20, letterSpacing: 0, ...ff('500'), marginBottom: 1 },
-  borrowerPhone: { fontSize: fs(13), lineHeight: 18, letterSpacing: 0 },
+  borrowerAvatarText: { fontSize: fs(16), lineHeight: km ? 27 : 21, letterSpacing: 0, ...ff('700') },
+  borrowerName: { fontSize: fs(15), lineHeight: km ? 26 : 20, letterSpacing: 0, ...ff('500'), marginBottom: 1 },
+  borrowerPhone: { fontSize: fs(13), lineHeight: km ? 23 : 18, letterSpacing: 0 },
 });
+};
 
 export default CreateLoanScreen;

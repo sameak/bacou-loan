@@ -151,7 +151,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
   const { colors, isDark } = useTheme();
   const { language, fs, ff, fi } = useLanguage();
   const t = T[language] || T.en;
-  const styles = useMemo(() => makeStyles(fs, ff, isDark), [fs, ff, isDark]);
+  const styles = useMemo(() => makeStyles(fs, ff, isDark, language), [fs, ff, isDark, language]);
 
   // Core data
   const [borrower, setBorrower] = useState(null);
@@ -930,14 +930,14 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
                     </View>
                   ) : (
                     <View style={[styles.editPhotoCircle, { backgroundColor: aColor + '20', borderWidth: 2, borderColor: aColor + '40', alignItems: 'center', justifyContent: 'center' }]}>
-                      <Text style={{ fontSize: fs(26), lineHeight: 40, letterSpacing: 0, color: aColor, ...ff('600') }}>{borrower?.name.charAt(0).toUpperCase()}</Text>
+                      <Text style={{ fontSize: fs(26), lineHeight: 52, letterSpacing: 0, color: aColor, ...ff('600') }}>{borrower?.name.charAt(0).toUpperCase()}</Text>
                     </View>
                   )}
                   <View style={[styles.editPhotoCam, { backgroundColor: ACCENT }]}>
                     <Ionicons name="camera" size={14} color="#fff" />
                   </View>
                 </TouchableOpacity>
-                <Text style={[{ fontSize: fs(12), lineHeight: 22, letterSpacing: 0, color: colors.textMuted, marginTop: 6, ...ff('400') }]}>{t.tapToChange}</Text>
+                <Text style={[{ fontSize: fs(12), lineHeight: 29, letterSpacing: 0, color: colors.textMuted, marginTop: 6, ...ff('400') }]}>{t.tapToChange}</Text>
               </View>
 
               {/* Name / Phone / Address */}
@@ -960,7 +960,7 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
               ))}
 
               {/* Social Links */}
-              <Text style={[{ fontSize: fs(11), lineHeight: 21, letterSpacing: 0, ...ff('600'), color: colors.textMuted }]}>
+              <Text style={[{ fontSize: fs(11), lineHeight: 27, letterSpacing: 0, ...ff('600'), color: colors.textMuted }]}>
                 {t.socialSection.toUpperCase()}
               </Text>
               {[
@@ -1071,12 +1071,14 @@ const BorrowerDetailScreen = ({ navigation, route }) => {
   );
 };
 
-const makeStyles = (fs, ff, isDark = false) => StyleSheet.create({
+const makeStyles = (fs, ff, isDark = false, language) => {
+  const km = true;
+  return StyleSheet.create({
   root: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   editBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7 },
-  editBtnText: { fontSize: fs(13), lineHeight: 24, ...ff('600') },
+  editBtnText: { fontSize: fs(13), lineHeight: km ? 31 : 24, ...ff('600') },
 
   content: { paddingHorizontal: 16, paddingTop: 4 },
 
@@ -1084,20 +1086,20 @@ const makeStyles = (fs, ff, isDark = false) => StyleSheet.create({
   heroCard: { alignItems: 'center', paddingTop: 28, paddingBottom: 20, paddingHorizontal: 20 },
   heroAvatar: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   heroAvatarImg: { width: 80, height: 80 },
-  heroAvatarText: { fontSize: fs(32), lineHeight: 46, ...ff('600'), textAlign: 'center' },
-  heroName: { fontSize: fs(22), lineHeight: 34, ...ff('600'), marginBottom: 8, textAlign: 'center' },
+  heroAvatarText: { fontSize: fs(32), lineHeight: km ? 60 : 46, ...ff('600'), textAlign: 'center' },
+  heroName: { fontSize: fs(22), ...ff('600'), marginBottom: 8, textAlign: 'center' },
   heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
-  heroMeta: { fontSize: fs(13), lineHeight: 24, ...ff('400') },
+  heroMeta: { fontSize: fs(13), lineHeight: km ? 31 : 24, ...ff('400') },
   heroSocialRow: { flexDirection: 'row', gap: 10, marginTop: 12, marginBottom: 4 },
   heroSocialBtn: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   heroDivider: { height: 1, alignSelf: 'stretch', marginVertical: 16 },
   heroStats: { flexDirection: 'row', alignSelf: 'stretch', alignItems: 'center' },
   heroStat: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 4 },
   heroStatDivider: { width: 1, height: 36, alignSelf: 'center' },
-  heroStatValue: { fontSize: fs(17), lineHeight: 28, ...ff('400') },
-  heroStatLabel: { fontSize: fs(11), lineHeight: 21, ...ff('600') },
+  heroStatValue: { fontSize: fs(17), lineHeight: km ? 36 : 28, ...ff('400') },
+  heroStatLabel: { fontSize: fs(11), lineHeight: km ? 27 : 21, ...ff('600') },
   auditRow: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 14, paddingTop: 12, alignSelf: 'stretch', gap: 3 },
-  auditText: { fontSize: fs(11), lineHeight: 21, ...ff('400'), textAlign: 'center' },
+  auditText: { fontSize: fs(11), lineHeight: km ? 27 : 21, ...ff('400'), textAlign: 'center' },
 
   /* Tab bar */
   tabBar: {
@@ -1109,16 +1111,16 @@ const makeStyles = (fs, ff, isDark = false) => StyleSheet.create({
     gap: 5, paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
   tabItemActive: {},
-  tabLabel: { fontSize: fs(12.5), lineHeight: 23 },
+  tabLabel: { fontSize: fs(12.5), lineHeight: km ? 30 : 23 },
   tabBadge: { minWidth: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  tabBadgeText: { fontSize: fs(10.5), lineHeight: 14, includeFontPadding: false },
+  tabBadgeText: { fontSize: fs(10.5), lineHeight: km ? 18 : 14, includeFontPadding: false },
 
   /* New Loan button */
   newLoanBtn: {
     borderRadius: 14, backgroundColor: ACCENT, marginBottom: 16,
   },
   newLoanInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52 },
-  newLoanBtnText: { color: '#fff', lineHeight: 20, ...ff('600') },
+  newLoanBtnText: { color: '#fff', lineHeight: km ? 26 : 20, ...ff('600') },
 
   /* Upload button */
   uploadBtn: {
@@ -1129,13 +1131,13 @@ const makeStyles = (fs, ff, isDark = false) => StyleSheet.create({
     }),
   },
   uploadBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52 },
-  uploadBtnText: { color: '#fff', lineHeight: 20, ...ff('600') },
+  uploadBtnText: { color: '#fff', lineHeight: km ? 26 : 20, ...ff('600') },
 
   /* Section headers */
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 },
-  sectionTitle: { ...ff('600'), lineHeight: 22, letterSpacing: 0 },
+  sectionTitle: { ...ff('600'), lineHeight: km ? 29 : 22, letterSpacing: 0 },
   sectionBadge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  sectionBadgeText: { ...ff('600'), lineHeight: 21, textAlign: 'center' },
+  sectionBadgeText: { ...ff('600'), lineHeight: km ? 27 : 21, textAlign: 'center' },
 
   /* Loan card */
   loanRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
@@ -1143,23 +1145,23 @@ const makeStyles = (fs, ff, isDark = false) => StyleSheet.create({
   loanDotInner: { width: 11, height: 11, borderRadius: 6 },
   loanInfo: { flex: 1 },
   loanTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  loanPrincipal: { fontSize: fs(16), lineHeight: 27, ...ff('400') },
+  loanPrincipal: { fontSize: fs(16), lineHeight: km ? 35 : 27, ...ff('400') },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-  statusText: { fontSize: fs(11), lineHeight: 21, ...ff('600') },
-  loanMeta: { fontSize: fs(12), lineHeight: 22, ...ff('400') },
-  accruingText: { fontSize: fs(12), lineHeight: 22, color: '#F59E0B', ...ff('600'), marginTop: 2 },
+  statusText: { fontSize: fs(11), lineHeight: km ? 27 : 21, ...ff('600') },
+  loanMeta: { fontSize: fs(12), lineHeight: km ? 29 : 22, ...ff('400') },
+  accruingText: { fontSize: fs(12), lineHeight: km ? 29 : 22, color: '#F59E0B', ...ff('600'), marginTop: 2 },
 
   /* Payment rows */
   payRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 },
   payDateBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10 },
-  payDateText: { fontSize: fs(11.5), lineHeight: 21 },
+  payDateText: { fontSize: fs(11.5), lineHeight: km ? 27 : 21 },
   payBreakdown: { flex: 1, gap: 2 },
   payLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  payLabel: { fontSize: fs(11.5), lineHeight: 21 },
-  payValue: { fontSize: fs(13), lineHeight: 23 },
-  payTotal: { fontSize: fs(15), lineHeight: 26 },
+  payLabel: { fontSize: fs(11.5), lineHeight: km ? 27 : 21 },
+  payValue: { fontSize: fs(13), lineHeight: km ? 30 : 23 },
+  payTotal: { fontSize: fs(15), lineHeight: km ? 34 : 26 },
   payNotes: {
-    fontSize: fs(12), lineHeight: 22, paddingHorizontal: 14, paddingBottom: 12,
+    fontSize: fs(12), lineHeight: km ? 29 : 22, paddingHorizontal: 14, paddingBottom: 12,
     borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 8, marginTop: -4,
   },
 
@@ -1169,41 +1171,41 @@ const makeStyles = (fs, ff, isDark = false) => StyleSheet.create({
   fileThumbnail: {},
   fileVideoOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.2)' },
   fileNameBar: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 8, paddingVertical: 6 },
-  fileNameBarText: { color: '#fff', fontSize: fs(11), lineHeight: 20, ...ff('400') },
+  fileNameBarText: { color: '#fff', fontSize: fs(11), lineHeight: km ? 26 : 20, ...ff('400') },
 
   /* Document row */
   fileDocRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   fileDocIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   fileDocInfo: { flex: 1 },
-  fileDocName: { fontSize: fs(14), lineHeight: 25 },
-  fileDocSize: { fontSize: fs(11.5), lineHeight: 21, marginTop: 2 },
+  fileDocName: { fontSize: fs(14), lineHeight: km ? 33 : 25 },
+  fileDocSize: { fontSize: fs(11.5), lineHeight: km ? 27 : 21, marginTop: 2 },
 
-  longPressHint: { fontSize: fs(11), lineHeight: 21, textAlign: 'center', marginTop: 8, marginBottom: 4 },
+  longPressHint: { fontSize: fs(11), lineHeight: km ? 27 : 21, textAlign: 'center', marginTop: 8, marginBottom: 4 },
 
   /* Empty */
   emptyWrap: { alignItems: 'center', gap: 10, paddingTop: 32, paddingBottom: 16 },
   emptyIconWrap: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  emptyText: { ...ff('600'), lineHeight: 21 },
-  emptyHint: { lineHeight: 24, ...ff('400') },
+  emptyText: { ...ff('600'), lineHeight: km ? 27 : 21 },
+  emptyHint: { lineHeight: km ? 31 : 24, ...ff('400') },
 
   /* Delete */
   deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 20, paddingVertical: 15, borderRadius: 14, borderWidth: 1 },
-  deleteBtnText: { ...ff('600'), lineHeight: 25, color: '#EF4444' },
+  deleteBtnText: { ...ff('600'), lineHeight: km ? 33 : 25, color: '#EF4444' },
 
   /* Merge */
   mergeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 20, paddingVertical: 15, borderRadius: 14, borderWidth: 1 },
-  mergeBtnText: { fontSize: fs(14), lineHeight: 25, color: '#F59E0B', letterSpacing: 0, ...ff('600') },
+  mergeBtnText: { fontSize: fs(14), lineHeight: km ? 33 : 25, color: '#F59E0B', letterSpacing: 0, ...ff('600') },
   mergeSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%', paddingBottom: 24 },
   pickerHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
-  mergeSheetTitle: { fontSize: fs(16), lineHeight: 27, letterSpacing: 0, ...ff('700'), textAlign: 'center', marginBottom: 12 },
+  mergeSheetTitle: { fontSize: fs(16), lineHeight: km ? 35 : 27, letterSpacing: 0, ...ff('700'), textAlign: 'center', marginBottom: 12 },
   mergeSearchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginBottom: 8, paddingHorizontal: 12, height: 40, borderRadius: 12, borderWidth: 1 },
   mergeSearchInput: { flex: 1, fontSize: fs(14), letterSpacing: 0 },
-  mergeSectionHeader: { fontSize: fs(11), lineHeight: 21, letterSpacing: 0, ...ff('700'), paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
+  mergeSectionHeader: { fontSize: fs(11), lineHeight: km ? 27 : 21, letterSpacing: 0, ...ff('700'), paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
   mergeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14 },
   mergeAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  mergeAvatarText: { fontSize: fs(15), lineHeight: 26, letterSpacing: 0 },
-  mergeName: { fontSize: fs(14), lineHeight: 25, letterSpacing: 0, marginBottom: 1 },
-  mergePhone: { fontSize: fs(12), lineHeight: 23, letterSpacing: 0 },
+  mergeAvatarText: { fontSize: fs(15), lineHeight: km ? 34 : 26, letterSpacing: 0 },
+  mergeName: { fontSize: fs(14), lineHeight: km ? 33 : 25, letterSpacing: 0, marginBottom: 1 },
+  mergePhone: { fontSize: fs(12), lineHeight: km ? 30 : 23, letterSpacing: 0 },
 
   /* Edit modal */
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
@@ -1212,9 +1214,9 @@ const makeStyles = (fs, ff, isDark = false) => StyleSheet.create({
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
   modalCancelBtn: { minWidth: 60 },
   modalSaveBtn: { minWidth: 60, alignItems: 'flex-end' },
-  modalCancel: { ...ff('400'), lineHeight: 20 },
-  modalTitle: { ...ff('600'), lineHeight: 21 },
-  modalSave: { ...ff('600'), lineHeight: 20 },
+  modalCancel: { ...ff('400'), lineHeight: km ? 26 : 20 },
+  modalTitle: { ...ff('600'), lineHeight: km ? 27 : 21 },
+  modalSave: { ...ff('600'), lineHeight: km ? 26 : 20 },
   inputWrap: { borderRadius: 12, overflow: 'hidden' },
   editInput: { height: 50, paddingHorizontal: 14 },
   editPhotoBtn: { position: 'relative' },
@@ -1222,12 +1224,13 @@ const makeStyles = (fs, ff, isDark = false) => StyleSheet.create({
   editPhotoCam: { position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   socialInputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, overflow: 'hidden' },
   socialInputIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  socialInputField: { flex: 1, height: 48, paddingHorizontal: 12, lineHeight: 20, letterSpacing: 0, ...ff('400') },
+  socialInputField: { flex: 1, height: 48, paddingHorizontal: 12, lineHeight: km ? 26 : 20, letterSpacing: 0, ...ff('400') },
 
   /* Image viewer */
   imgViewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
   imgViewerImg: { width: SCREEN_W, height: SCREEN_W * 1.4 },
   imgViewerClose: { position: 'absolute', top: 56, right: 20 },
 });
+};
 
 export default BorrowerDetailScreen;

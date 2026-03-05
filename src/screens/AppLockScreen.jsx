@@ -63,7 +63,8 @@ export default function AppLockScreen() {
   const [error,   setError]   = useState(false);
   const [showPIN, setShowPIN] = useState(!biometricEnabled && pinEnabled);
 
-  const styles = useMemo(() => makeStyles(ff), [ff]);
+  const isKhmer = true;
+  const styles = useMemo(() => makeStyles(ff, language), [ff, language]);
 
   useEffect(() => {
     if (biometricEnabled) triggerBiometric();
@@ -124,7 +125,7 @@ export default function AppLockScreen() {
           </View>
 
           <Text style={[styles.title, { color: colors.text, fontSize: fs(26) }]}>{t.locked}</Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted, fontSize: fs(15) }]}>{t.authMsg}</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted, fontSize: fs(15), lineHeight: isKhmer ? 26 : 20 }]}>{t.authMsg}</Text>
 
           <TouchableOpacity
             style={[styles.unlockBtn, { backgroundColor: ACCENT }]}
@@ -140,6 +141,17 @@ export default function AppLockScreen() {
               <Text style={[styles.switchText, { color: colors.textMuted, fontSize: fs(14) }]}>{t.usePin}</Text>
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            onPress={() => Alert.alert(t.forgotTitle, t.forgotMsg, [
+              { text: t.signOut, style: 'destructive', onPress: () => signOut(auth) },
+              { text: t.cancel, style: 'cancel' },
+            ])}
+            style={[styles.switchRow, { marginTop: 8 }]}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.switchText, { color: '#EF4444', fontSize: fs(13) }]}>{t.signOut}</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -154,7 +166,7 @@ export default function AppLockScreen() {
         </View>
 
         <Text style={[styles.title, { color: colors.text, fontSize: fs(26) }]}>{t.enterPin}</Text>
-        <Text style={[styles.subtitle, { color: error ? '#EF4444' : colors.textMuted, fontSize: fs(14) }]}>
+        <Text style={[styles.subtitle, { color: error ? '#EF4444' : colors.textMuted, fontSize: fs(14), lineHeight: isKhmer ? 23 : 18 }]}>
           {error ? t.wrongPin : t.pinMsg}
         </Text>
 
@@ -216,7 +228,9 @@ export default function AppLockScreen() {
   );
 }
 
-const makeStyles = (ff) => StyleSheet.create({
+const makeStyles = (ff, language) => {
+  const km = true;
+  return StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 999,
@@ -235,7 +249,7 @@ const makeStyles = (ff) => StyleSheet.create({
     marginBottom: 20,
   },
   title:    { ...ff('700'), letterSpacing: 0, marginBottom: 6, textAlign: 'center' },
-  subtitle: { marginBottom: 32, textAlign: 'center', lineHeight: 20 },
+  subtitle: { marginBottom: 32, textAlign: 'center' },
 
   // Biometric
   unlockBtn:     { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 34, paddingVertical: 15, borderRadius: 16 },
@@ -259,3 +273,4 @@ const makeStyles = (ff) => StyleSheet.create({
   },
   keyText: { fontSize: 26, ...ff('400') },
 });
+};
