@@ -245,7 +245,7 @@ function LiquidGlassTabBar({ state, navigation }) {
   const activeColor    = isDark ? '#FFFFFF' : '#1C1C1E';
   const inactiveColor  = isDark ? 'rgba(255,255,255,0.42)' : 'rgba(0,0,0,0.35)';
   const pillColor      = isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.07)';
-  const tintColor      = isDark ? 'rgba(0,0,0,0.25)' : 'rgba(242,242,247,0.88)';
+  const tintColor      = isDark ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.15)';
   const shellBgColor   = isDark ? 'rgba(28,28,30,0.65)' : 'rgba(242,242,247,0.92)';
 
   const lastTapTimes = useRef({});
@@ -435,12 +435,12 @@ function LiquidGlassTabBar({ state, navigation }) {
       {/* Visual glass bar — shadow/borderRadius contained here */}
       <View style={[tabStyles.outerShell, { shadowOpacity: isDark ? 0.35 : 0.12 }]}>
         <View style={[tabStyles.innerShell, { backgroundColor: shellBgColor }]}>
-          {/* 1. Glass blur */}
-          <BlurView
-            intensity={isDark ? 62 : 78}
-            tint={isDark ? 'dark' : 'light'}
-            style={StyleSheet.absoluteFillObject}
-          />
+          {/* 1. Glass blur (dark mode) / solid base (light mode) */}
+          {isDark ? (
+            <BlurView intensity={62} tint="dark" style={StyleSheet.absoluteFillObject} />
+          ) : (
+            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(235,235,240,0.96)' }]} />
+          )}
           {/* 2. Tint overlay */}
           <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: tintColor }]} />
           {/* 6. Bloom — soft expanding glow */}
