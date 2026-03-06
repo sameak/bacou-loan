@@ -245,8 +245,8 @@ function LiquidGlassTabBar({ state, navigation }) {
   const activeColor    = isDark ? '#FFFFFF' : '#1C1C1E';
   const inactiveColor  = isDark ? 'rgba(255,255,255,0.42)' : 'rgba(0,0,0,0.35)';
   const pillColor      = isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.07)';
-  const tintColor      = isDark ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.55)';
-  const shellBgColor   = isDark ? 'rgba(28,28,30,0.65)' : 'rgba(242,242,247,0.90)';
+  const tintColor      = isDark ? 'rgba(0,0,0,0.25)' : 'rgba(242,242,247,0.88)';
+  const shellBgColor   = isDark ? 'rgba(28,28,30,0.65)' : 'rgba(242,242,247,0.92)';
 
   const lastTapTimes = useRef({});
 
