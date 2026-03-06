@@ -423,6 +423,17 @@ function LiquidGlassTabBar({ state, navigation }) {
             </View>
           </LiquidGlassView>
         </LiquidGlassContainerView>
+        {/* Light mode overlay: LiquidGlass respects iOS system dark mode, not the app theme.
+            When app is light but system is dark, the glass renders dark — override it. */}
+        {!isDark && (
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFillObject, {
+              backgroundColor: 'rgba(235,235,240,0.82)',
+              borderRadius: 28,
+            }]}
+          />
+        )}
       </RAnimated.View>
     );
   }
@@ -435,13 +446,15 @@ function LiquidGlassTabBar({ state, navigation }) {
       {/* Visual glass bar — shadow/borderRadius contained here */}
       <View style={[tabStyles.outerShell, { shadowOpacity: isDark ? 0.35 : 0.12 }]}>
         <View style={[tabStyles.innerShell, { backgroundColor: shellBgColor }]}>
-          {/* 1. Glass blur (dark mode) / solid base (light mode) */}
-          {isDark ? (
-            <BlurView intensity={62} tint="dark" style={StyleSheet.absoluteFillObject} />
-          ) : (
-            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(235,235,240,0.96)' }]} />
-          )}
-          {/* 2. Tint overlay */}
+          {/* 1. Glass blur */}
+          <BlurView
+            intensity={isDark ? 62 : 78}
+            tint={isDark ? 'dark' : 'light'}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {/* 2. DIAGNOSTIC: always force light — remove once confirmed */}
+          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(235,235,240,0.97)' }]} />
+          {/* 3. Tint overlay */}
           <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: tintColor }]} />
           {/* 6. Bloom — soft expanding glow */}
           <RAnimated.View style={[tabStyles.pill, {
