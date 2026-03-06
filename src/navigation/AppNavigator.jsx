@@ -34,6 +34,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -152,6 +153,7 @@ const TabItem = React.memo(function TabItem({
 
 function LiquidGlassTabBar({ state, navigation }) {
   const { isDark }         = useTheme();
+  const systemScheme       = useColorScheme(); // 'dark' | 'light' | null
   const { language, fs, ff } = useLanguage();
   const insets             = useSafeAreaInsets();
   const { width: screenW } = Dimensions.get('window');
@@ -378,13 +380,15 @@ function LiquidGlassTabBar({ state, navigation }) {
   });
 
   // ── iOS 26+: real Apple Liquid Glass ────────────────────────────────────────
-  // Uses individual Pressable per tab instead of PanResponder to avoid coordinate
-  // issues caused by LiquidGlassContainerView/LiquidGlassView layout wrappers.
-  if (isLiquidGlassSupported) {
+  // LiquidGlassView follows the iOS system color scheme (not the app custom theme).
+  // Only use it when systemScheme matches the app's isDark — otherwise fall back
+  // to the BlurView path which we can tint/color ourselves.
+  const appScheme = isDark ? 'dark' : 'light';
+  if (isLiquidGlassSupported && systemScheme === appScheme) {
     return (
       <RAnimated.View style={[tabStyles.wrap, { bottom }, tabAnimStyle]} pointerEvents="box-none">
         <LiquidGlassContainerView spacing={24} style={tabStyles.nativeWrap}>
-          <LiquidGlassView style={tabStyles.nativeBar} effect="regular" interactive={false} colorScheme={isDark ? 'dark' : 'light'}>
+          <LiquidGlassView style={tabStyles.nativeBar} effect="regular" interactive={false}>
             <View style={tabStyles.row}>
               {state.routes.map((route, index) => {
                 const focused = state.index === index;
@@ -441,9 +445,7 @@ function LiquidGlassTabBar({ state, navigation }) {
             tint={isDark ? 'dark' : 'light'}
             style={StyleSheet.absoluteFillObject}
           />
-          {/* 2. DIAGNOSTIC: always force light — remove once confirmed */}
-          <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(235,235,240,0.97)' }]} />
-          {/* 3. Tint overlay */}
+          {/* 2. Tint overlay */}
           <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: tintColor }]} />
           {/* 6. Bloom — soft expanding glow */}
           <RAnimated.View style={[tabStyles.pill, {
