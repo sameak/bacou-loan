@@ -423,17 +423,15 @@ function LiquidGlassTabBar({ state, navigation }) {
             </View>
           </LiquidGlassView>
         </LiquidGlassContainerView>
-        {/* Light mode overlay: LiquidGlass respects iOS system dark mode, not the app theme.
-            When app is light but system is dark, the glass renders dark — override it. */}
-        {!isDark && (
-          <View
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFillObject, {
-              backgroundColor: 'rgba(235,235,240,0.82)',
-              borderRadius: 28,
-            }]}
-          />
-        )}
+        {/* Theme overlay: LiquidGlass follows iOS system mode, not the app theme.
+            Force the correct appearance so it always matches the app's isDark setting. */}
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFillObject, {
+            backgroundColor: isDark ? 'rgba(28,28,30,0.75)' : 'rgba(235,235,240,0.82)',
+            borderRadius: 28,
+          }]}
+        />
       </RAnimated.View>
     );
   }
