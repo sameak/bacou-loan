@@ -384,11 +384,7 @@ function LiquidGlassTabBar({ state, navigation }) {
     return (
       <RAnimated.View style={[tabStyles.wrap, { bottom }, tabAnimStyle]} pointerEvents="box-none">
         <LiquidGlassContainerView spacing={24} style={tabStyles.nativeWrap}>
-          <LiquidGlassView style={tabStyles.nativeBar} effect="regular" interactive={false}>
-            {/* Theme overlay behind tab items — LiquidGlass follows iOS system, not app theme */}
-            <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, {
-              backgroundColor: isDark ? 'rgba(28,28,30,0.75)' : 'rgba(235,235,240,0.82)',
-            }]} />
+          <LiquidGlassView style={tabStyles.nativeBar} effect="regular" interactive={false} colorScheme={isDark ? 'dark' : 'light'}>
             <View style={tabStyles.row}>
               {state.routes.map((route, index) => {
                 const focused = state.index === index;
